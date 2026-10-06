@@ -42,6 +42,7 @@ curl -s https://navora.network/node/blockchain/info
 | Network status and downloads | [navora.network](https://navora.network) |
 | Seed node | `navora.network:9655` (pre-configured in the image) |
 | Public node for wallets | `https://navora.network/node` (planned, see below) |
+| Network stats | [navora.network/stats.html](https://navora.network/stats.html) |
 | Latest snapshot | [navora.network/snapshots](https://navora.network/snapshots/) |
 | Source | [github.com/navoranetwork/zenprotocol](https://github.com/navoranetwork/zenprotocol/tree/node-upgrade-script) |
 
@@ -82,7 +83,7 @@ cd ~/zenprotocol
 DOMAIN=your.domain bash site/setup-site.sh
 ```
 
-The script adds a separate Nginx site (existing sites are untouched), publishes the newest snapshot and issues an auto-renewing HTTPS certificate. Without `DOMAIN` it uses `navora.network`.
+The script adds a separate Nginx site (existing sites are untouched), publishes the newest snapshot, installs the `zen-stats` timer (rebuilds `stats.json` for the stats page every 5 minutes from the local API; visitors never reach the node) and issues an auto-renewing HTTPS certificate. Without `DOMAIN` it uses `navora.network`.
 
 ### Refreshing the snapshot (monthly)
 
