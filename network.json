@@ -4,6 +4,9 @@
   "seeds": [
     "navora.network"
   ],
+  "testnetSeeds": [
+    "navora.network"
+  ],
   "snapshotSources": [
     "https://navora.network/snapshots",
     "https://github.com/navoranetwork/zenprotocol/releases/download/snapshot-latest"
