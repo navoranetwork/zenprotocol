@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zen Chain Run a node</title>
+<meta name="description" content="Install a node with Docker, load a snapshot and connect to the seed.">
+<link rel="stylesheet" href="/shell/shell.css">
+<script src="/shell/shell.js" defer></script>
+</head>
+<body class="zp">
+<main>
+<h1>Run a node</h1>
+<p class="lead">Docker on Linux, macOS or Windows. A snapshot skips most of the initial sync.</p>
+<h2>Install</h2>
+<pre>git clone -b node-upgrade-script https://github.com/navoranetwork/zenprotocol.git
+cd zenprotocol
+docker compose build
+docker compose run --rm --no-deps --entrypoint /load-snapshot.sh zen-node
+docker compose up -d</pre>
+<p>Seed address of this site: <code><span class="host">this-site</span>:9655</code></p>
+<p><a href="https://github.com/navoranetwork/zenprotocol/tree/node-upgrade-script/Docker">Full setup guide on GitHub</a></p>
+<h2>Snapshot</h2>
+<div id="snap">Loading…</div>
+<h2>Status of this site's node</h2>
+<div class="status"><span class="dot" id="dot"></span><span id="state">Checking…</span></div>
+<div class="stats">
+ <div><div class="k">Block height</div><div class="v" id="height">–</div></div>
+ <div><div class="k">Chain time</div><div class="v" id="age">–</div></div>
+ <div><div class="k">Peers of this node</div><div class="v" id="peers">–</div></div>
+ <div><div class="k">Difficulty</div><div class="v" id="diff">–</div></div>
+</div>
+
+</main>
+<script>
+const $ = id => document.getElementById(id), fmt = n => Number(n).toLocaleString('en-US');
+async function ask(p, tries = 3) { for (let i = 0; i < tries; i++) { const c = new AbortController(), t = setTimeout(() => c.abort(), 8000); try { const r = await fetch(p, { cache: 'no-store', signal: c.signal }); if (r.ok) return await r.text(); } catch (e) {} finally { clearTimeout(t); } if (i < tries - 1) await new Promise(r => setTimeout(r, 2000)); } return null; }
+let failed = 0;
+async function refresh() {
+  let info = null; try { const t = await ask('/api/info'); info = t && JSON.parse(t); } catch (e) {}
+  if (info && Number.isFinite(Number(info.blocks))) {
+    failed = 0; $('height').textContent = fmt(info.blocks); $('diff').textContent = Number(info.difficulty).toFixed(0);
+    const s = Math.max(0, (Date.now() - info.medianTime) / 1000); $('age').textContent = s < 90 ? Math.round(s) + ' s ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : s < 172800 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago';
+    let cls = 'ok', text = 'Synced and following the chain';
+    if (info.initialBlockDownload || info.blocks < info.headers) { cls = 'warn'; text = 'Syncing: ' + fmt(info.blocks) + ' / ' + fmt(info.headers); }
+    else if (s / 60 > 120) { cls = 'warn'; text = 'No new blocks for ' + Math.round(s / 60) + ' minutes'; }
+    $('dot').className = 'dot ' + cls; $('state').textContent = text;
+  } else { failed++; if (failed >= 3) { $('dot').className = 'dot bad'; $('state').textContent = 'Node unreachable'; } else { $('dot').className = 'dot warn'; $('state').textContent = 'Node is busy, retrying...'; } }
+  const p = await ask('/api/peers'); if (p !== null && /^\s*\d+\s*$/.test(p) && $('peers')) $('peers').textContent = p.trim();
+}
+refresh(); setInterval(refresh, 30000);
+
+(async () => { const el = $('snap'); if (!el) return; try { const s = await (await fetch('/snapshots/latest.json', { cache: 'no-store' })).json();
+  const gb = (s.bytes / 1e9).toFixed(2), row = document.createElement('div');
+  const a = document.createElement('a'); a.className = 'btn'; a.href = '/snapshots/' + encodeURIComponent(s.file); a.textContent = 'Download (' + gb + ' GB)';
+  const i = document.createElement('p'); i.textContent = 'Up to block ' + fmt(s.height) + ' · created ' + s.date;
+  const h = document.createElement('p'); const hc = document.createElement('code'); hc.style.wordBreak = 'break-all'; hc.textContent = 'SHA-256 ' + s.sha256; h.append(hc);
+  const u = document.createElement('p'); u.append('Or let a Docker node fetch it: '); const uc = document.createElement('code'); uc.textContent = 'SNAPSHOT_URL=' + location.origin + '/snapshots/' + s.file; u.append(uc);
+  el.replaceChildren(a, i, h, u); } catch (e) { el.textContent = 'No snapshot published yet.'; } })();
+document.querySelectorAll('.host').forEach(e => e.textContent = location.hostname);
+</script>
+</body>
+</html>
