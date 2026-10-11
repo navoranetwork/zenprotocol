@@ -143,3 +143,5 @@ docker compose -f docker-compose.testnet-stack.yml logs faucet | grep "faucet ad
 curl -s -X POST -H 'Content-Type: application/json' -d '{"outputs":[{"address":"<faucet address>","asset":"00","amount":"2000000000000"}],"password":"testnet"}' http://127.0.0.1:31567/wallet/send
 ```
 (20,000 ZP = 200 gifts.)
+
+After that it refills itself: every hour `scripts/faucet-topup.sh` (cron, installed by `site/setup-testnet-web.sh`) sends the faucet up to 20,000 ZP from the node's wallet when it holds less than 5,000, never taking the node's wallet below a 10,000 ZP reserve (the oracle, market maker and bridge pay from it) and sending nothing under 1,000; it refuses to run against any chain but the testnet. Log: `/var/log/zen-faucet-topup.log`. Settings: `FAUCET_LOW`, `FAUCET_TOPUP`, `FAUCET_RESERVE`, `FAUCET_MIN`.

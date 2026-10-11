@@ -19,6 +19,10 @@ if [ -n "$VOL" ]; then
 CRON
   for f in stats assets cgp-history community-votes history; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
 fi
+# faucet top-up: every hour, the node wallet refills the faucet when it runs low (keeps a reserve; scripts/faucet-topup.sh)
+cat > /etc/cron.d/zen-faucet-topup <<CRON
+17 * * * * root bash $REPO/scripts/faucet-topup.sh >> /var/log/zen-faucet-topup.log 2>&1
+CRON
 for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
 cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
