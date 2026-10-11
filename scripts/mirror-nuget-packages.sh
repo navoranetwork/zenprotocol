@@ -5,6 +5,9 @@
 # write access to navoranetwork/zenprotocol. Safe to run again: existing assets are skipped.
 #   bash scripts/mirror-nuget-packages.sh
 set -euo pipefail
+command -v gh >/dev/null || { echo "gh is not installed: apt-get install -y gh && gh auth login"; exit 1; }
+command -v curl >/dev/null || { echo "curl is not installed: apt-get install -y curl"; exit 1; }
+gh auth status >/dev/null 2>&1 || { echo "gh is not logged in: gh auth login"; exit 1; }
 REPO=navoranetwork/zenprotocol; TAG=upstream-mirror
 cd "$(dirname "$0")/.."
 have=$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')
