@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testnet Faucet</title>
+<meta name="description" content="Free test ZP for developers: enter a testnet address and receive coins to try the network.">
+<link rel="stylesheet" href="/shell/shell.css">
+<style>
+  .zp .fbox { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 20px; margin: 18px 0; max-width: 640px; }
+  .zp .fbox label { display: block; font-weight: 600; margin-bottom: 6px; }
+  .zp .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .zp .row input { flex: 1 1 320px; min-width: 0; font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 10px 12px;
+                   border: 1px solid var(--s-line); border-radius: 8px; background: var(--s-bg); color: var(--s-ink); }
+  .zp .row input:focus { outline: 2px solid var(--s-accent); outline-offset: 1px; }
+  .zp .row button { font: inherit; font-weight: 600; background: var(--s-accent); color: var(--s-accent-ink); border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+  .zp .row button[disabled] { opacity: .6; cursor: wait; }
+  .zp .msg { margin-top: 14px; padding: 10px 14px; border-radius: 8px; overflow-wrap: anywhere; }
+  .zp .msg.ok { background: rgba(31, 154, 85, .12); } .zp .msg.err { background: rgba(196, 48, 48, .1); }
+  .zp .small { font-size: 14px; color: var(--s-muted); }
+  .zp code.addr { word-break: break-all; }
+</style>
+<script src="/shell/shell.js" defer></script>
+</head>
+<body class="zp">
+<main>
+<h1>Testnet faucet</h1>
+<p class="lead">Free test ZP to try the network: wallets, transfers, contracts, the Dex and CGP votes. Testnet coins have no value and only work on the testnet.</p>
+
+<div class="fbox">
+  <form id="f" autocomplete="off">
+    <label for="addr">Your testnet address</label>
+    <div class="row">
+      <input id="addr" name="addr" placeholder="tzn1…" spellcheck="false" required>
+      <button id="go" type="submit">Send me test ZP</button>
+    </div>
+  </form>
+  <div id="msg" class="msg" hidden></div>
+  <p class="small" id="terms" style="margin:14px 0 0">Loading…</p>
+</div>
+
+<h2>No testnet address yet?</h2>
+<ol>
+  <li>Open the <a href="/wallet/">ZP Wallet</a> and create a new wallet. Use a throwaway recovery phrase, never one you use for real coins.</li>
+  <li>Make sure the wallet is on the testnet (the "Testnet" tag in its top bar).</li>
+  <li>Copy the receive address: it starts with <code>tzn1</code>. Mainnet addresses (<code>zen1</code>) are refused.</li>
+</ol>
+<p>The coins arrive with the next block, usually within a few minutes. Need more for a larger test? <a href="/guide.html">The testnet guide</a> explains how to mine your own.</p>
+
+<h2>Faucet status</h2>
+<div class="stats">
+  <div><div class="k">Per request</div><div class="v" id="s-amount">–</div></div>
+  <div><div class="k">Left in the faucet</div><div class="v" id="s-balance">–</div></div>
+  <div><div class="k">Given in 24 hours</div><div class="v" id="s-given">–</div></div>
+</div>
+<p class="small">Keep the faucet full for others: send unused test ZP back to <code class="addr" id="s-address">–</code></p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const show = (cls, html) => { const m = $('msg'); m.className = 'msg ' + cls; m.innerHTML = html; m.hidden = false; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function status() {
+  try {
+    const s = await (await fetch('/faucet/status', { cache: 'no-store' })).json();
+    if (s.error) throw new Error(s.error);
+    $('s-amount').textContent = s.amount + ' ZP'; $('s-balance').textContent = s.balance + ' ZP'; $('s-given').textContent = s.given24h;
+    $('s-address').textContent = s.address;
+    $('terms').textContent = `${s.amount} test ZP per request. One request per address every ${s.perAddressHours} hours, up to ${s.perIpDay} a day per visitor.`;
+  } catch (e) { $('terms').textContent = 'The faucet is not reachable right now. Please try again later.'; }
+}
+try { const last = localStorage.getItem('faucet-addr'); if (last) $('addr').value = last; } catch (e) {}
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const a = $('addr').value.trim();
+  if (!/^tzn1[0-9a-z]{20,100}$/.test(a)) { show('err', a.startsWith('zen1') ? 'That is a mainnet address. Use a testnet address (tzn1…).' : 'Enter a testnet address: it starts with tzn1.'); return; }
+  $('go').disabled = true; $('go').textContent = 'Sending…';
+  try {
+    const r = await fetch('/faucet/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: a }) });
+    const j = await r.json().catch(() => ({ error: 'The faucet did not answer.' }));
+    if (r.ok && j.tx) {
+      try { localStorage.setItem('faucet-addr', a); } catch (e2) {}
+      show('ok', `<b>${esc(j.amount)} test ZP sent.</b> It arrives with the next block, usually within a few minutes.<br>Transaction <a class="mono" href="/explorer.html?tx=${encodeURIComponent(j.tx)}">${esc(j.tx.slice(0, 16))}…</a>`);
+      status();
+    } else show('err', esc(j.error || 'Could not send. Please try again later.'));
+  } catch (err) { show('err', 'The faucet is not reachable right now. Please try again later.'); }
+  $('go').disabled = false; $('go').textContent = 'Send me test ZP';
+});
+status();
+</script>
+</body>
+</html>

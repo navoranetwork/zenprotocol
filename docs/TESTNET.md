@@ -131,3 +131,15 @@ Edit `testnetSeeds` in `network.json`; every node reads it at start. A seed is a
 2. Activate the CGP and voting contracts in a testnet genesis, so the CGP voting screens can be tested.
 3. Chain parameters from a configuration file (`--chain-file`), for private networks with their own genesis, block time and CGP interval, without recompiling. Never accepted for mainnet.
 4. Scenario tests in CI: fork and reorg, CGP vote, contract activation, old node against new node on the same chain.
+
+## Faucet
+
+`/faucet.html` on the testnet site gives test ZP to any testnet address (`tzn1…`): 100 ZP per request, one request per address every 24 hours, up to 3 a day per visitor and 30 an hour in total (`FAUCET_AMOUNT`, `FAUCET_ADDRESS_HOURS`, `FAUCET_IP_PER_DAY`, `FAUCET_PER_HOUR`). The service is `site/faucet/faucet.mjs` (the `faucet` service of `docker-compose.testnet-stack.yml`, 127.0.0.1:8095, published by nginx as `/faucet/status` and `/faucet/request` with an extra request-rate limit). It has its **own wallet**: a recovery phrase it makes on first start and keeps in its data volume (`faucet-data`, file `faucet-wallet.json`, mode 600). It never uses the node's wallet or password, so it can only give away what was put into it. It signs with the ZP Wallet library and publishes through the node, and keeps 40 coins of exactly the gift amount ready (it splits a larger coin itself), so several gifts fit in one block without waiting for change. Self test: `node site/faucet/faucet.mjs selftest`.
+
+Fill it from the node's wallet (on the testnet server; the address is in the log and on the page):
+
+```
+docker compose -f docker-compose.testnet-stack.yml logs faucet | grep "faucet address"
+curl -s -X POST -H 'Content-Type: application/json' -d '{"outputs":[{"address":"<faucet address>","asset":"00","amount":"2000000000000"}],"password":"testnet"}' http://127.0.0.1:31567/wallet/send
+```
+(20,000 ZP = 200 gifts.)

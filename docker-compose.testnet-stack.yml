@@ -5,6 +5,7 @@
 #   explorer  read-only API over that index                127.0.0.1:11581
 #   marketmaker  keeps a buy and a sell order on the Dex (needs ZP and zUSDC in the wallet; see docs/INSTRUMENTS.md)
 #   bridge    USDC bridge prototype (mock EVM until BRIDGE_EVM is set)   127.0.0.1:8090
+#   faucet    gives test ZP from its own wallet (site/faucet/faucet.mjs)     127.0.0.1:8095
 # All use the host network and talk to the node on 127.0.0.1:31567.
 x-tools: &tools
   image: zen-tools
@@ -41,7 +42,14 @@ services:
     working_dir: /r
     command: node /r/site/marketmaker/maker.mjs
     environment: { MM_NODE: "http://127.0.0.1:31567", MM_EXPLORER: "http://127.0.0.1:11581/explorer/api", MM_PASSWORD: "${TESTNET_PASSWORD:-testnet}" }
+  faucet:
+    <<: *web
+    working_dir: /r
+    command: node /r/site/faucet/faucet.mjs
+    volumes: ["./:/r:ro", "faucet-data:/data"]
+    environment: { FAUCET_NODE: "http://127.0.0.1:31567", FAUCET_DATA: /data, FAUCET_PORT: "8095", FAUCET_AMOUNT: "${FAUCET_AMOUNT:-100}" }
 volumes:
+  faucet-data:
   oracle-data:
   stack-data:
   bridge-data:

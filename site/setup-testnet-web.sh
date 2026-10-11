@@ -7,7 +7,7 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 WEB=/var/www/zen-testnet
-NODE=${NODE_PORT:-31567}; EXPLORER=${EXPLORER_PORT:-11581}; ORACLE=${ORACLE_PORT:-8085}; BRIDGE=${BRIDGE_PORT:-8090}
+NODE=${NODE_PORT:-31567}; EXPLORER=${EXPLORER_PORT:-11581}; ORACLE=${ORACLE_PORT:-8085}; BRIDGE=${BRIDGE_PORT:-8090}; FAUCET=${FAUCET_PORT:-8095}
 VOL=$(docker volume inspect "$(basename "$REPO")_stack-data" --format '{{.Mountpoint}}' 2>/dev/null || true)
 
 command -v nginx >/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx; }
@@ -19,7 +19,7 @@ if [ -n "$VOL" ]; then
 CRON
   for f in stats assets cgp-history community-votes history; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
 fi
-for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
+for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
 cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings. DOMAIN (e.g. testnet.example.org) turns on HTTPS; MAIN_URL links to the mainnet site.
@@ -37,6 +37,7 @@ fi
 
 cat > /etc/nginx/sites-available/zen-testnet <<CONF
 limit_req_zone \$binary_remote_addr zone=zentest:10m rate=10r/s;
+limit_req_zone \$binary_remote_addr zone=zenfaucet:10m rate=6r/m;
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -61,6 +62,10 @@ server {
         proxy_pass http://127.0.0.1:$ORACLE/\$1\$is_args\$args;
         add_header Cache-Control "no-cache"; add_header Access-Control-Allow-Origin "*";
     }
+    # faucet: the service keeps its own per-address, per-visitor and hourly limits; nginx adds a request rate limit
+    location = /faucet/status  { limit_except GET { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$FAUCET/faucet/status; add_header Cache-Control "no-store"; }
+    location = /faucet/request { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k;
+                                 proxy_set_header X-Real-IP \$remote_addr; proxy_pass http://127.0.0.1:$FAUCET/faucet/request; add_header Cache-Control "no-store"; }
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
 
     # files the indexer writes (assets, ...)
