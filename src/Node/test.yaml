@@ -6,7 +6,7 @@ externalIp: null
 listen: true
 bind: "*:29555"
 seeds:
-  - navora.network
+  - testnet.navora.network
 
 api:
   enabled: true

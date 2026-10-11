@@ -82,4 +82,4 @@ The wallet keeps its own keys; the node only serves chain data. The API stays bo
 ## Notes
 - The API (port 11567) is bound to localhost only. Never expose it – it controls the wallet.
 - Port 9655 is P2P. Opening it lets other nodes connect to you.
-- `navora.network` (and the old name `navora.network`) are pre-configured as seeds in the image.
+- `navora.network` is pre-configured as a seed in the image.

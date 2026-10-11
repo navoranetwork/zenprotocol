@@ -47,6 +47,6 @@ export class NodeClient {
 }
 
 export const DEFAULT_NODES = {
-  main: ['https://navora.network/node', 'https://navora.network/node'],
+  main: ['https://navora.network/node'],
   test: ['https://testnet.navora.network/node'],
 };

@@ -26,7 +26,7 @@ COPY Docker/create-snapshot.sh /create-snapshot.sh
 RUN sed -i "s/\r$//" /entrypoint.sh /load-snapshot.sh /create-snapshot.sh \
  && chmod +x /entrypoint.sh /load-snapshot.sh /create-snapshot.sh \
  && (chmod +x /zen/z3-linux 2>/dev/null || true) \
- && (grep -q "navora.network" /zen/main.yaml || sed -i 's|^seeds:\s*$|seeds:\n  - navora.network\n  - navora.network|' /zen/main.yaml) \
+ && (grep -q "navora.network" /zen/main.yaml || sed -i 's|^seeds:\s*$|seeds:\n  - navora.network|' /zen/main.yaml) \
  && grep -q "navora.network" /zen/main.yaml
 
 WORKDIR /zen

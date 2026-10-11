@@ -62,13 +62,13 @@ The pages use whatever domain they are served from, so only the server name, the
 
 ```
 cd ~/zenprotocol && git pull
-DOMAIN=new.example.org EXTRA_DOMAINS=navora.network bash site/setup-site.sh
+DOMAIN=new.example.org EXTRA_DOMAINS=old.example.org bash site/setup-site.sh
 ```
 
 3. In the repository, edit `network.json`: add the new name first in `seeds`, `snapshotSources` and `publicNodes` (keep the old one below it). Installed nodes read the seeds from it at every start and the snapshot loader reads the sources, so no image or script change is needed. Also add the new seed as the first line of `seeds` in `src/Node/main.yaml` (used when `network.json` cannot be reached). Update the links in `Docker/README.md` and this file.
 4. After a few months, when old installations have updated, drop the old name: run `DOMAIN=new.example.org EXTRA_DOMAINS=" " bash site/setup-site.sh` and remove the old seed and DNS record.
 
-The move to `navora.network` (October 2026) followed these steps; `navora.network` is still served and listed as a second seed.
+The network moved to `navora.network` in October 2026.
 
 The replay reference lives in the `reference-data` branch of the repository, not on the domain, so it is unaffected.
 
@@ -77,7 +77,7 @@ The replay reference lives in the `reference-data` branch of the repository, not
 | Component | Address |
 | --- | --- |
 | Network status and downloads | [navora.network](https://navora.network) |
-| Seed node | `navora.network:9655` (pre-configured in the image; the old name `navora.network` still works) |
+| Seed node | `navora.network:9655` (pre-configured in the image) |
 | Public node for wallets | `https://navora.network/node/` (whitelisted read-only API + `publishtransaction`) |
 | Network stats | [navora.network/stats.html](https://navora.network/stats.html) |
 | Latest snapshot | [navora.network/snapshots](https://navora.network/snapshots/) |
@@ -154,7 +154,7 @@ Use a new Ubuntu 22.04/24.04 server with 2 GB RAM and 40 GB disk, as root, nothi
 
 1. Run the command above. Expected: `== Checks` through `== Start`, then a `blockchain/info` line with `"chain":"main"`.
 2. Within a few minutes `curl -s http://127.0.0.1:11567/blockchain/info` shows `blocks` close to the public tip; `docker compose ps` shows **Up**.
-3. `docker compose logs zen-node | head` shows `seeds from network.json: navora.network navora.network`.
+3. `docker compose logs zen-node | head` shows `seeds from network.json: navora.network`.
 4. Run the command a second time: it must update and restart without reloading the snapshot.
 5. Compare the tip with `https://navora.network/stats.html`.
 6. Optional failure tests: block `ghcr.io` (`echo '0.0.0.0 ghcr.io' >> /etc/hosts`) to see the local build fallback; start with a wrong `SNAPSHOT_URL` to see the next source being used.
@@ -190,7 +190,7 @@ cd ~/zenprotocol
 DOMAIN=your.domain bash site/setup-site.sh
 ```
 
-The script adds a separate Nginx site (existing sites are untouched), publishes the newest snapshot, installs the `zen-stats` timer (rebuilds `stats.json` for the stats page every 5 minutes from the local API; visitors never reach the node) and issues an auto-renewing HTTPS certificate. Without `DOMAIN` it uses `navora.network` and also serves the old name `navora.network` (`EXTRA_DOMAINS`).
+The script adds a separate Nginx site (existing sites are untouched), publishes the newest snapshot, installs the `zen-stats` timer (rebuilds `stats.json` for the stats page every 5 minutes from the local API; visitors never reach the node) and issues an auto-renewing HTTPS certificate. Without `DOMAIN` it uses `navora.network`.
 
 It also installs the `zen-index` timer: `site/chain-index.mjs` (Node 22 in a Docker container, decoding blocks with the wallet's tested serializer) reads the chain in batches of 2,000 blocks from the local API into `/var/lib/zen-stats/chain-index.sqlite` and keeps every block (hash, parent, time, difficulty, transactions, reward, fees, ZP moved, miner) and every transaction (input and output addresses with assets and amounts, contract and command) for a future explorer. It writes `assets.json` (all assets: tokens outstanding, holders, transactions) and `cgp-history.json` (every CGP interval: ballots with voter and weight at the snapshot block, allocation in force and decided, payouts) for the pages `assets.html` and `cgp.html`. The first index from genesis takes a few hours in 5-minute steps (`journalctl -u zen-index` shows progress); afterwards each run adds the new blocks. The block explorer page `explorer.html` (latest blocks, every block with its summary and transactions, transactions, search) reads this index through `site/explorer-api.mjs`, a read-only service on 127.0.0.1:11580 (`zen-explorer`, published by nginx as `/explorer/api/`); blocks not indexed yet are read from the node. The explorer also has an address page (`?address=`: live balance from the node's address index, and every transaction of the address with ZP received, sent and net, paged, filterable) and advanced search (`?find=blocks`: by date, number of transactions, ZP transferred and miner; `?find=txs`: by address, date, ZP amount, asset and type; sorting, page size and jump to any page). The queries are read-only, parameterised, capped (100 rows per page, 100,000 results) and the dates are UTC; they run on the index, so they only cover blocks indexed so far. The address table and the ZP amount per transaction were added after the first release of the index: the first `zen-index` run after the update fills them from the existing index (a few minutes for the whole chain; new blocks are indexed once it is done). Tests: `node --test site/test/explorer.test.mjs` (real blocks, backfill, every search). Names of assets and contracts: `site/asset-names.json`, `site/contract-names.json`. To rebuild the index: `rm /var/lib/zen-stats/chain-index.sqlite*`. (`/blockchain/block?blockNumber=` walks back from the tip for every call, about 10 s each, so it is not used.)
 

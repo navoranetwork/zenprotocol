@@ -7,9 +7,8 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-navora.network}"
-# Other names served by the same site. Default: the old domain, kept while installations that use it as seed update.
-# Drop it later with EXTRA_DOMAINS=" " (a single space).
-EXTRA_DOMAINS="${EXTRA_DOMAINS:-navora.network}"
+# Other names served by the same site, e.g. an old domain while moving: EXTRA_DOMAINS="old.example.org"
+EXTRA_DOMAINS="${EXTRA_DOMAINS:-}"
 WEB=/var/www/zen
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SNAPDIR="$REPO/zen-data/snapshots"
