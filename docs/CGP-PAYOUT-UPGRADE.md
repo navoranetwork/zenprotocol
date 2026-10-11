@@ -69,3 +69,10 @@ Every step needs the maintainer's approval before it runs; nothing is done on ma
 3. **Switch the community node** to the new image (a few minutes of downtime), keeping the old data folder for rollback.
 4. **Switch the mining node** (the one whose rewards go to the mining wallet): only this one makes payouts automatic. Before the next mainnet payout block with a winner, check with `wallet/tools/cgp-check.sh --net main`.
 5. Until step 4 is done: before a mainnet payout block with a winner, send the payout by hand with `scripts/cgp-payout.sh`.
+
+## Mainnet rollout log
+
+| Date (UTC) | Step | Result |
+|---|---|---|
+| 2026-10-11 07:20 | 1. Shadow node on 77.42.12.190: image `ghcr.io/navoranetwork/zen-node:net10@sha256:e6905e2896abcc8cb5d422d96bfd0bd45ebc23623121790a996bb01b8becdd66`, loaded from the snapshot made by the 1.0.13 node (block 1,052,929) | Loaded; synced the remaining ~1,650 mainnet blocks within 90 s |
+| 2026-10-11 07:21 | 2. First compare (`scripts/shadow-compare.sh`) | Height 1,054,595: same tip `000000000019d533…0a10`, same CGP state (interval 106, allocation 90, no payout winner). 24-hour compare follows |
