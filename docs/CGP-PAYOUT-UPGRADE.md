@@ -12,12 +12,16 @@ In the block that pays the winner of a CGP payout vote, the protocol requires a 
 - Every node checks that this block contains exactly the payout the vote decided: recipient and amounts. A block without it, or with a different payout, is invalid. Nobody can change the recipient or the amount, hold the money back, or redirect it.
 - The transaction needs no key and no permission: anyone can send it (`POST /wallet/contract/cgp`, `scripts/cgp-payout.sh`). It only carries out what the vote already decided.
 
+## The relay (added 2026-10-11)
+
+The only miner on mainnet today is a third party, most likely running release 1.0.13, so a change in the miner alone does not protect mainnet. Every upgraded node therefore also acts as a **relay**: once per tip, when the next block is a payout block with a winner and no payout transaction is in its mempool, it creates the transaction (no wallet, no coins needed: it only executes the CGP contract) and sends it to its peers like any transaction. A miner running 1.0.13 receives it and its payout block is valid. One upgraded node anywhere in the network is enough. `ZEN_CGP_PAYOUT=off` switches both the miner's payout and the relay off (behaves like 1.0.13; used by the test). Code: `createCgpPayout` and `relayCgpPayout` in `src/Blockchain/Handler.fs`, run from the blockchain service's one-second tick, not during initial block download.
+
 ## Before and after
 
 | | Release 1.0.13 (today on mainnet) | This upgrade |
 |---|---|---|
 | Who sends the payout transaction | someone, by hand, before the payout block | the mining node, automatically, when a winner exists and the transaction is not in its mempool |
-| If nobody sends it | every block at the payout height is rejected (`No payout Tx`); the chain stops for all users until it is sent | cannot happen while an upgraded node mines |
+| If nobody sends it | every block at the payout height is rejected (`No payout Tx`); the chain stops for all users until it is sent | cannot happen while one upgraded node is online: it relays the transaction to every miner |
 | Who decides recipient and amount | the vote (consensus rule) | unchanged: the vote |
 | Validation rules | — | unchanged (the same code validates blocks) |
 | Other nodes | — | need no upgrade: the block they receive is exactly what 1.0.13 requires |
@@ -47,6 +51,7 @@ The first version (2026-10-09) made every payout block fail with `commitments mi
 | 2 | The same with the first version (before the byte fix) | CI runs 38022704486, 38024888341, 38027628831 | FAIL as on the testnet (`commitments mismatch` at 610); this is how the cause was found |
 | 3 | Full cycle on the public testnet (node at 720b88e, real network, 4-minute blocks): snapshot 1090, nominations 1091–1095 (A→X, B→X, C→Y, D→Z), payout votes 1096–1100 (A→X, B→Y, C→Y, D→X) | testnet server, `cgp-sim` | PASS: winner tzn1qav9w7…08uq, 2 ZP; the miner created the payout; it is in block 1110 (transaction 689e0f01…767f); no `commitments mismatch`, no `failed validation`; the chain went on (1121 at the check) |
 | 4 | Mainnet replay of the .NET 10 build from genesis against the reference made by release 1.0.13 (1,053 block hashes, CGP and supply state) | replay runner | PASS (2026-10-06/07, see MIGRATION.md). The upgrade changes no validation code, so the replay still holds |
+| 6 | Payout relay: a two-node devnet, the mining node behaves exactly like release 1.0.13 (`ZEN_CGP_PAYOUT=off`: creates no payout), the second node does not mine and relays the payout (`scripts/cgp-devnet-test.sh relay`, on the testnet server because GitHub Actions is disabled) | testnet server, branch cgp-relay 9cc4764, 2026-10-11 | PASS: votes A→X, B→Y, C→Y, D→X; node 1 logged `Relaying the CGP payout transaction 60c17d01… for block 610`; the 1.0.13-like miner mined block 610 with it; chain on to 621; winner tzn1qav9w7…08uq, 2 ZP |
 | 5 | The upgraded image starts on mainnet and syncs | CI `image-net10` (423da4b, includes the fix) | PASS |
 
 Test 3 is the decisive one: a real network, real block times, a real vote, the payout created by the miner and accepted.
