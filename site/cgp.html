@@ -81,7 +81,8 @@
   .v { font-weight: 600; font-variant-numeric: tabular-nums; }
   .ivn { font-size: 18px; font-weight: 700; }
   @media (max-width: 760px) { details.iv > summary { grid-template-columns: 1fr 1fr; } details.iv > summary::after { display: none; } }
-  .quiet { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 16px; margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .quiet { display: block; width: 100%; text-align: left; font: inherit; background: none; cursor: pointer; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 16px; margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .quiet:hover { border-color: var(--accent); } .quiet .more { color: var(--accent); font-weight: 600; white-space: nowrap; }
   .in { padding: 4px 16px 18px; }
   .results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
   .results > div { min-width: 0; }
@@ -134,7 +135,7 @@
 
   <div class="hist-head">
     <h2>Past intervals</h2>
-    <label class="tog"><input type="checkbox" id="showQuiet"> Show intervals with no activity</label>
+    <label class="tog"><input type="checkbox" id="showQuiet"> Show every interval, also those with no ballots</label>
   </div>
   <div id="list"></div>
   <footer>Indexed from the chain by the community node of <span class="host">this site</span>, updated every 5 minutes. Interval numbers as in the community wallets<span id="offnote"></span>. Community-run. Not affiliated with or endorsed by Zen Protocol Ltd.</footer>
@@ -283,7 +284,7 @@ function renderList() {
   const flush = () => {
     if (!quiet.length) return;
     const a = ivNo(quiet[quiet.length - 1]), b = ivNo(quiet[0]), p = quiet[0].allocationDecided ?? quiet[0].allocationInForce;
-    html += `<div class="quiet">${quiet.length === 1 ? 'Interval ' + a : 'Intervals ' + a + '–' + b}: no ballots and no payout${p != null ? `; the fund kept ${p}% of each block reward` : ''}.</div>`;
+    html += `<button type="button" class="quiet" data-show-quiet>${quiet.length === 1 ? 'Interval ' + a : 'Intervals ' + a + '–' + b}: no ballots and no payout${p != null ? `; the fund kept ${p}% of each block reward` : ''}. <span class="more">Show ${quiet.length === 1 ? 'it' : 'them'}</span></button>`;
     quiet = [];
   };
   for (const i of past) {
@@ -295,6 +296,7 @@ function renderList() {
 }
 
 $('list').addEventListener('click', e => {
+  if (e.target.closest('[data-show-quiet]')) { $('showQuiet').checked = true; renderList(); return; }
   const btn = e.target.closest('.seg button'); if (!btn) return;
   const det = btn.closest('details.iv'), i = D.intervals.find(x => String(x.interval) === det.dataset.iv);
   det.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
