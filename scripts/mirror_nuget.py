@@ -88,7 +88,9 @@ def read_package(data):
                 deps.append((d.get("id"), low(d.get("version"))))
     rmap = {}
     if "runtime.json" in z.namelist():
-        rt = json.loads(z.read("runtime.json").decode("utf-8-sig")).get("runtimes", {})
+        text = z.read("runtime.json").decode("utf-8-sig")
+        text = re.sub(r",(\s*[}\]])", r"\1", text)        # NuGet tolerates trailing commas; json does not
+        rt = json.loads(text).get("runtimes", {})
         for rid in RIDS:
             for key, impls in (rt.get(rid) or {}).items():
                 if isinstance(impls, dict):
@@ -157,7 +159,10 @@ def main():
                     subprocess.check_call(["gh", "release", "upload", TAG, path, "--repo", REPO], stdout=subprocess.DEVNULL)
                     print(f"added {pid} {ver}")
                 added.append(name)
-            _, _, deps, rmap = read_package(data)
+            try:
+                _, _, deps, rmap = read_package(data)
+            except Exception as e:                 # report it, keep going with the rest
+                print(f"CANNOT READ {pid} {ver}: {e}"); missing.append(f"{pid} {ver} (unreadable)"); continue
             for k, impls in rmap.items():
                 runtime_maps.setdefault(k, []).extend(impls)
             todo += deps
