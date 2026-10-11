@@ -337,10 +337,13 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
         {
             chain = chain.name
             blocks = state.tipState.tip.header.blockNumber
+            // state.headers only grows from headers announced by peers, so blocks mined on this node
+            // left it behind the tip (testnet with a local miner). Never report fewer headers than blocks.
             headers =
                 InitialBlockDownload.getPeerHeader state.initialBlockDownload
                 |> Option.map (fun bh -> bh.blockNumber)
                 |> Option.defaultValue state.headers
+                |> max state.tipState.tip.header.blockNumber
             medianTime = EMA.earliest state.tipState.ema
             difficulty = difficulty
             initialBlockDownload = syncing
