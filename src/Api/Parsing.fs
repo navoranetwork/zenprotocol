@@ -215,7 +215,11 @@ let parseContractActivateJson json =
         else if json.NumberOfBlocks = 0 then
             Error "Number of blocks is zero"
         else
-            Ok (json.Code, uint32 json.NumberOfBlocks, rlimit,  json.Password)
+            match json.Version with
+            | None | Some 0 -> Ok (json.Code, uint32 json.NumberOfBlocks, rlimit, json.Password, 0u)
+            | Some 1 when Option.isSome rlimit -> Error "rlimit applies to version 0 contracts only"
+            | Some 1 -> Ok (json.Code, uint32 json.NumberOfBlocks, None, json.Password, 1u)
+            | Some v -> Error (sprintf "Unsupported contract version %d" v)
     with _ as ex ->
         Error ("Json is invalid: " + ex.Message)
 

@@ -22,8 +22,12 @@ let contractActivateRequestJson code rlimit blocks password =
         code, 
         rlimit,
         blocks,
-        password
+        password,
+        None
     )).JsonValue
+
+let contractActivateV1RequestJson code blocks password =
+    (new ContractActivateRequestJson.Root(code, None, blocks, password, Some 1)).JsonValue
 
 let contractExecuteFromTransactionJson address command messageBody sender tx =
     (new ContractExecuteFromTransactionJson.Root(

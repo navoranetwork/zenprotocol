@@ -33,8 +33,29 @@ cost commitment, state commitment, prefix and mask checks. On top of that, the V
 (`ZenAbi.Rules.Rejection`): a call fails when it runs out of gas (main runs with exactly the
 declared cost as budget), declares more than `MaxGasPerCall`, or overflows an asset total.
 
+## Wallet and API
+
+`POST /wallet/contract/activate` with `"version": 1` activates a V1 contract from the node's wallet:
+
+```json
+{ "code": "<F* source>", "numberOfBlocks": 100, "password": "…", "version": 1 }
+```
+
+The wallet builds `HighV (1, UTF-8 source)` with the sacrifice (`sacrificePerByteBlock` × source
+length × blocks, as V0) and a fee equal to the activation weight, signs and publishes it; the
+node builds the contract when it validates the transaction. The response is the same as for V0
+(`address`, `contractId`, `txHash`, `numberOfBlocks`). Without `version` (or with 0) the request
+is the V0 activation; `rlimit` applies to V0 only. Extension (`/wallet/contract/extend`) and calls
+(`/wallet/contract/execute`, `/blockchain/contract/execute`) take a V1 contract's address like
+any other contract. In code: `Messaging.Services.Wallet.activateContractV1`.
+
 ## Tests
 
 `src/Consensus.Tests/ContractV1Tests.fs` (needs `ZP_V1_TOOLCHAIN`; skipped otherwise): fork
 height, invalid UTF-8, activation and build, cost and result, a valid call validated in context,
 a wrong cost commitment, an under-declared cost stopped by gas, reload from disk, weight.
+`src/Api.Tests/ContractV1ApiTests.fs`: request parsing (version, rlimit), and end to end: activate
+through the wallet API, check the transaction, call the contract through the API.
+
+Run one module: `ZP_V1_TOOLCHAIN=… FSTAR_HOME=… dotnet fsi scripts/run-test-module.fsx
+src/Api.Tests/bin/Release Api.Tests.ContractV1ApiTests` (the API tests need liblmdb).

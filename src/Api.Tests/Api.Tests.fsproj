@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContractTests.fs" />
+    <Compile Include="ContractV1ApiTests.fs" />
     <Compile Include="AddressDBTests.fs" />
     <Compile Include="SimpleApiTests.fs" />
   </ItemGroup>

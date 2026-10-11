@@ -68,6 +68,12 @@ type ContractActivateRequestJson = JsonProvider<"""
         "code": "string",
         "numberOfBlocks": 1,
         "password": "password"
+    },
+    {
+        "code": "string",
+        "numberOfBlocks": 1,
+        "password": "password",
+        "version": 1
     }
 ]
 """,SampleIsList=true>

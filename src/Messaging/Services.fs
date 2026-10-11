@@ -270,6 +270,7 @@ module Wallet =
         | ImportSeed of string list * password:string
         | Send of publish:bool*outputs:List<Lock * Spend> * password:string
         | ActivateContract of publish:bool* code:string * numberOfBlocks:uint32 * rlimit:uint32 option * password:string
+        | ActivateContractV1 of publish:bool * code:string * numberOfBlocks:uint32 * password:string
         | ExtendContract of publish:bool*ContractId * uint32 * password:string
         | ExecuteContract of publish:bool*ContractId * string * data option * provideReturnAddress:bool * sign:string option * Map<Asset, uint64> * password:string
         | ExecuteCGP of publish:bool * password:string
@@ -327,6 +328,11 @@ module Wallet =
 
     let activateContract client publish code numberOfBlocks rlimit password =
         ActivateContract (publish, code, numberOfBlocks, rlimit, password)
+        |> sendRequest<ActivateContractResponse> client
+
+    /// Activate a V1 contract (HighV (1, UTF-8 source)); the node builds it when it validates the transaction.
+    let activateContractV1 client publish code numberOfBlocks password =
+        ActivateContractV1 (publish, code, numberOfBlocks, password)
         |> sendRequest<ActivateContractResponse> client
 
     let extendContract client publish address numberOfBlocks password =

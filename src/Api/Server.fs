@@ -997,8 +997,11 @@ module Wallet =
             =
                 match parseContractActivateJson body with
                 | Error error -> config.replyError error
-                | Ok (code, numberOfBlocks, rlimit, password) ->
-                    match Wallet.activateContract config.client true code numberOfBlocks rlimit password with
+                | Ok (code, numberOfBlocks, rlimit, password, version) ->
+                    let activation =
+                        if version = 1u then Wallet.activateContractV1 config.client true code numberOfBlocks password
+                        else Wallet.activateContract config.client true code numberOfBlocks rlimit password
+                    match activation with
                     | Ok (tx, contractId) ->
                         let txHash  = Transaction.hash tx
                         let address =

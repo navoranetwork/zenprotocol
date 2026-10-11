@@ -334,6 +334,32 @@ let createActivateContractTransaction chainParams dataAccess session view passwo
         return! createTransactionFromOutputs chainParams dataAccess session view password contract outputs
     }
 
+/// A V1 contract is activated as HighV (1, its UTF-8 source). There are no hints: the node builds
+/// the contract with the V1 toolchain when it validates the activation. The sacrifice is the same
+/// rule as V0 (per character of the source, per block); the fee pays the activation weight.
+let createActivateContractV1Transaction chainParams dataAccess session view password (code:string) (numberOfBlocks:uint32) =
+    result {
+        if String.length code = 0 then
+            return! Error "Contract code is empty"
+
+        let bytes = System.Text.Encoding.UTF8.GetBytes code
+        let! _ = ContractV1.decodeSource bytes      // the node refuses source that is not canonical UTF-8
+        let contract = HighV (Version1, bytes)
+
+        let codeLength = String.length code |> uint64
+
+        let activationFee = Weight.activationWeight contract |> uint64
+        let activationSacrifice = chainParams.sacrificePerByteBlock * codeLength * (uint64 numberOfBlocks)
+
+        let outputs =
+            [
+                { spend = { amount = activationSacrifice; asset = Asset.Zen }; lock = ActivationSacrifice }
+                { spend = { amount = activationFee; asset = Asset.Zen }; lock = Fee }
+            ]
+
+        return! createTransactionFromOutputs chainParams dataAccess session view password (Some contract) outputs
+    }
+
 let createExtendContractTransaction dataAccess session view (getContract:ContractId->ActiveContract option) chainParams password (contractId:ContractId) (numberOfBlocks:uint32)=
     result {
         let! code =

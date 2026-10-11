@@ -182,7 +182,8 @@ let requestHandler chain client (requestId:RequestId) request dataAccess session
             error
             |> reply<Transaction> requestId
             NoAccount
-        | ActivateContract _ ->
+        | ActivateContract _
+        | ActivateContractV1 _ ->
             error
             |> reply<ActivateContractResponse> requestId
             NoAccount
@@ -323,6 +324,12 @@ let requestHandler chain client (requestId:RequestId) request dataAccess session
                 let tx =
                     TransactionCreator.createActivateContractTransaction chainParams dataAccess session view password code numberOfBlocks rlimit
                     <@> fun tx -> tx, Consensus.Contract.makeContractId Version0 code
+                reply<ActivateContractResponse> requestId tx
+                publishTx dataAccess session client view publish (Result.map fst tx)
+        | ActivateContractV1 (publish, code, numberOfBlocks, password) ->
+                let tx =
+                    TransactionCreator.createActivateContractV1Transaction chainParams dataAccess session view password code numberOfBlocks
+                    <@> fun tx -> tx, Consensus.Contract.makeContractId Version1 code
                 reply<ActivateContractResponse> requestId tx
                 publishTx dataAccess session client view publish (Result.map fst tx)
         | ExtendContract (publish, contractId, numberOfBlocks, password) ->
