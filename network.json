@@ -2,16 +2,20 @@
   "_comment": "Single place for every address a node or an installer needs. Nodes and installers read this file from the repository, so moving to another server only means editing it (see docs/SETUP.md, Moving to a new domain).",
   "chain": "main",
   "seeds": [
+    "navora.network",
     "navora.network"
   ],
   "testnetSeeds": [
+    "testnet.navora.network",
     "91.98.3.17"
   ],
   "snapshotSources": [
     "https://navora.network/snapshots",
+    "https://navora.network/snapshots",
     "https://github.com/navoranetwork/zenprotocol/releases/download/snapshot-latest"
   ],
   "publicNodes": [
+    "https://navora.network/node",
     "https://navora.network/node"
   ],
   "upstreamMirror": "https://github.com/navoranetwork/zenprotocol/releases/download/upstream-mirror",

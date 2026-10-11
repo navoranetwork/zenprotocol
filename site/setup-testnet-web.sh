@@ -24,7 +24,7 @@ cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings. DOMAIN (e.g. testnet.example.org) turns on HTTPS; MAIN_URL links to the mainnet site.
 old() { grep -o "\"$1\":\"[^\"]*\"" "$WEB/site-config.json" 2>/dev/null | cut -d'"' -f4 || true; }   # values from the last run are kept
-DOMAIN="${DOMAIN:-}"; MAIN_URL="${MAIN_URL:-$(old mainUrl)}"; SITE_NAME="${SITE_NAME:-$(old name)}"; SITE_NAME="${SITE_NAME:-Zen Chain}"
+DOMAIN="${DOMAIN:-}"; MAIN_URL="${MAIN_URL:-$(old mainUrl)}"; MAIN_URL="${MAIN_URL:-https://navora.network}"; SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"
 printf '{"kind":"test","name":"%s","mainUrl":"%s","github":"https://github.com/navoranetwork/zenprotocol"}\n' "$SITE_NAME" "$MAIN_URL" > "$WEB/site-config.json"
 # ZP Wallet on the same site: its node is this site's /node/ (config.json names it), so the testnet works at once. Plain HTTP: test coins only.
 IP=$(curl -s -m 5 https://api.ipify.org || hostname -I | awk '{print $1}')

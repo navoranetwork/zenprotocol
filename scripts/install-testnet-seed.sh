@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-testnet-seed.sh | bash
 #
 # Options (environment variables):
-#   SEEDS=navora.network   other seeds to connect to (host or ip:port, comma separated); default: network.json
+#   SEEDS=testnet.navora.network   other seeds to connect to (host or ip:port, comma separated); default: network.json
 #   MINER_THREADS=0            mine with N CPU threads (own hardware only: cloud providers forbid mining)
 #   DIR=...                    install folder (default ~/zenprotocol-testnet)
 # It runs next to a mainnet node on the same machine (different ports: testnet P2P 29555, API 127.0.0.1:31567).

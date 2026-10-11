@@ -16,7 +16,7 @@ set -euo pipefail
 NETWORK_URL="${NETWORK_URL:-https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/network.json}"
 FALLBACK="https://node-backups.s3-eu-west-1.amazonaws.com/zen-node.zip"
 # used when network.json cannot be fetched
-DEFAULT_SOURCES="https://navora.network/snapshots https://github.com/navoranetwork/zenprotocol/releases/download/snapshot-latest"
+DEFAULT_SOURCES="https://navora.network/snapshots https://navora.network/snapshots https://github.com/navoranetwork/zenprotocol/releases/download/snapshot-latest"
 DATA=/data
 TMP="$DATA/.snapshot-tmp"
 CHAIN="${CHAIN:-main}"

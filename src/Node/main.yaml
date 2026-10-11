@@ -7,6 +7,7 @@ listen: true
 bind: "*:9655"
 seeds:
   - navora.network
+  - navora.network
   - seed1.zp.io
   - seed2.zp.io
   - seed3.zp.io

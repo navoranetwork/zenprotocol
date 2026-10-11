@@ -4,7 +4,7 @@ Works on Linux, macOS and Windows (Docker Desktop). On Windows use Docker – th
 
 Full guide (server, home miner, snapshots, troubleshooting): [docs/SETUP.md](../docs/SETUP.md) · .NET 8 migration plan: [docs/MIGRATION.md](../docs/MIGRATION.md)
 
-Network status, seed and snapshots: **https://navora.network**
+Network status, seed and snapshots: **https://navora.network** (maintained by Navora, the community team behind the ZP network)
 
 ## 1. Install and load a snapshot
 
@@ -82,4 +82,4 @@ The wallet keeps its own keys; the node only serves chain data. The API stays bo
 ## Notes
 - The API (port 11567) is bound to localhost only. Never expose it – it controls the wallet.
 - Port 9655 is P2P. Opening it lets other nodes connect to you.
-- `navora.network` is pre-configured as a seed in the image.
+- `navora.network` (and the old name `navora.network`) are pre-configured as seeds in the image.

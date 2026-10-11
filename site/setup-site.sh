@@ -7,8 +7,9 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-navora.network}"
-# Other names served by the same site, e.g. the old domain while moving: EXTRA_DOMAINS="navora.network"
-EXTRA_DOMAINS="${EXTRA_DOMAINS:-}"
+# Other names served by the same site. Default: the old domain, kept while installations that use it as seed update.
+# Drop it later with EXTRA_DOMAINS=" " (a single space).
+EXTRA_DOMAINS="${EXTRA_DOMAINS:-navora.network}"
 WEB=/var/www/zen
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SNAPDIR="$REPO/zen-data/snapshots"
@@ -24,7 +25,7 @@ for f in index about how-it-works community node mine developers stats assets cg
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings (menus, name, link to the other network). Set SITE_NAME / TEST_URL once; they are kept in the file for later runs.
 old() { grep -o "\"$1\":\"[^\"]*\"" "$WEB/site-config.json" 2>/dev/null | cut -d'"' -f4 || true; }   # values from the last run are kept
-SITE_NAME="${SITE_NAME:-$(old name)}"; SITE_NAME="${SITE_NAME:-Zen Chain}"; TEST_URL="${TEST_URL:-$(old testUrl)}"
+SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"; TEST_URL="${TEST_URL:-$(old testUrl)}"; TEST_URL="${TEST_URL:-https://testnet.navora.network}"
 printf '{"kind":"main","name":"%s","testUrl":"%s","github":"https://github.com/navoranetwork/zenprotocol"}\n' "$SITE_NAME" "$TEST_URL" > "$WEB/site-config.json"
 
 echo "== ZP Wallet (built in a throwaway node container: nothing to install on the server)"

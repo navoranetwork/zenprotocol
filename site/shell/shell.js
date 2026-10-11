@@ -1,6 +1,6 @@
 // Shared header (menus) and footer for every page of the site. Reads /site-config.json, written by the setup scripts:
-//   { "kind": "main" | "test", "name": "Zen Chain", "mainUrl": "https://example.org", "testUrl": "https://testnet.example.org", "github": "https://github.com/navoranetwork/zenprotocol" }
-// Missing file: a main site named "Zen Chain" without cross links. Every string is set with textContent: nothing from the config is parsed as HTML.
+//   { "kind": "main" | "test", "name": "Navora", "mainUrl": "https://example.org", "testUrl": "https://testnet.example.org", "github": "https://github.com/navoranetwork/zenprotocol" }
+// Missing file: a main site named "Navora" without cross links. Every string is set with textContent: nothing from the config is parsed as HTML.
 (() => {
   const el = (tag, attrs = {}, kids = []) => {
     const e = document.createElement(tag);
@@ -31,7 +31,7 @@
 
   const start = cfg => {
     const kind = cfg.kind === 'test' ? 'test' : 'main';
-    const name = typeof cfg.name === 'string' && cfg.name.length < 40 ? cfg.name : 'Zen Chain';
+    const name = typeof cfg.name === 'string' && cfg.name.length < 40 ? cfg.name : 'Navora';
     const mainUrl = safeUrl(cfg.mainUrl), testUrl = safeUrl(cfg.testUrl), github = safeUrl(cfg.github) || 'https://github.com/navoranetwork/zenprotocol';
     document.querySelectorAll('main > nav').forEach(n => n.remove());       // the pages' old link rows
     const menu = kind === 'test' ? TEST : MAIN;
@@ -80,7 +80,7 @@
       col('Project', [['Developers', '/developers.html'], ['Source code', github], ...(other ? [[kind === 'test' ? 'Mainnet' : 'Testnet', other]] : [])]),
       el('div', { class: 'zs-legal', text: 'Community-run. Not affiliated with or endorsed by Zen Protocol Ltd. Nothing here is financial advice. ' + (kind === 'test' ? 'Testnet coins have no value.' : '') })]));
     document.body.append(foot);
-    document.title = document.title.replace(/^(ZP|Zen Chain)\b/, name);
+    document.title = document.title.replace(/^(ZP|Zen Chain|Navora)\b/, name);
   };
 
   fetch('/site-config.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({})).then(c => start(c && typeof c === 'object' ? c : {}));

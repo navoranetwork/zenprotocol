@@ -66,7 +66,9 @@ DOMAIN=new.example.org EXTRA_DOMAINS=navora.network bash site/setup-site.sh
 ```
 
 3. In the repository, edit `network.json`: add the new name first in `seeds`, `snapshotSources` and `publicNodes` (keep the old one below it). Installed nodes read the seeds from it at every start and the snapshot loader reads the sources, so no image or script change is needed. Also add the new seed as the first line of `seeds` in `src/Node/main.yaml` (used when `network.json` cannot be reached). Update the links in `Docker/README.md` and this file.
-4. After a few months, when old installations have updated, drop the old name: run `DOMAIN=new.example.org bash site/setup-site.sh` without `EXTRA_DOMAINS` and remove the old seed and DNS record.
+4. After a few months, when old installations have updated, drop the old name: run `DOMAIN=new.example.org EXTRA_DOMAINS=" " bash site/setup-site.sh` and remove the old seed and DNS record.
+
+The move to `navora.network` (October 2026) followed these steps; `navora.network` is still served and listed as a second seed.
 
 The replay reference lives in the `reference-data` branch of the repository, not on the domain, so it is unaffected.
 
@@ -75,10 +77,11 @@ The replay reference lives in the `reference-data` branch of the repository, not
 | Component | Address |
 | --- | --- |
 | Network status and downloads | [navora.network](https://navora.network) |
-| Seed node | `navora.network:9655` (pre-configured in the image) |
+| Seed node | `navora.network:9655` (pre-configured in the image; the old name `navora.network` still works) |
 | Public node for wallets | `https://navora.network/node/` (whitelisted read-only API + `publishtransaction`) |
 | Network stats | [navora.network/stats.html](https://navora.network/stats.html) |
 | Latest snapshot | [navora.network/snapshots](https://navora.network/snapshots/) |
+| Testnet | [testnet.navora.network](https://testnet.navora.network) (seed `testnet.navora.network:29555`) |
 | Source | [github.com/navoranetwork/zenprotocol](https://github.com/navoranetwork/zenprotocol/tree/node-upgrade-script) |
 
 The status page exposes only two read-only node endpoints (`/api/info`, `/api/peers`). The `/node/` path exposes a fixed whitelist of read-only chain and address endpoints plus `publishtransaction` (needed to send and vote), rate-limited. Wallet, mining and resync endpoints are never reachable.
@@ -151,7 +154,7 @@ Use a new Ubuntu 22.04/24.04 server with 2 GB RAM and 40 GB disk, as root, nothi
 
 1. Run the command above. Expected: `== Checks` through `== Start`, then a `blockchain/info` line with `"chain":"main"`.
 2. Within a few minutes `curl -s http://127.0.0.1:11567/blockchain/info` shows `blocks` close to the public tip; `docker compose ps` shows **Up**.
-3. `docker compose logs zen-node | head` shows `seeds from network.json: navora.network`.
+3. `docker compose logs zen-node | head` shows `seeds from network.json: navora.network navora.network`.
 4. Run the command a second time: it must update and restart without reloading the snapshot.
 5. Compare the tip with `https://navora.network/stats.html`.
 6. Optional failure tests: block `ghcr.io` (`echo '0.0.0.0 ghcr.io' >> /etc/hosts`) to see the local build fallback; start with a wrong `SNAPSHOT_URL` to see the next source being used.

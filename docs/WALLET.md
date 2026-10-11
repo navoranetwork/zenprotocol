@@ -2,7 +2,7 @@
 
 ZP Wallet is the community web wallet for the ZP network. It is non-custodial: recovery phrases and private keys are created, stored and used only in the user's browser. The server hosts static files, and the public node only ever sees addresses and already-signed transactions.
 
-Live at `https://<site domain>/wallet/` (today `https://navora.network/wallet/`). Source code: `wallet/`. License: MIT. It is a community project, not affiliated with Zen Protocol Ltd.
+Live at `https://<site domain>/wallet/` (today `https://navora.network/wallet/`; testnet: `https://testnet.navora.network/wallet/`). Source code: `wallet/`. License: MIT. It is a community project, not affiliated with Zen Protocol Ltd.
 
 ## What it does (version 0.1)
 
