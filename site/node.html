@@ -48,11 +48,11 @@
 </div>
 <h2>What the line does</h2>
 <ol class="what">
-  <li><b>Prepares the server.</b> Waits for the first automatic updates, adds 2 GB swap when RAM is under 4 GB, installs Git and Docker.</li>
+  <li><b>Prepares the server.</b> Waits for the first automatic updates, adds 2 GB swap when RAM is under 4 GB and there is no swap, installs Git and Docker if they are missing, and opens port 9655 in ufw when ufw is on.</li>
   <li><b>Fetches the setup.</b> Downloads this community repository to <code>~/zenprotocol</code>: the Docker settings and helper scripts, not the chain.</li>
-  <li><b>Gets the node image.</b> A ready image with the official Zen Protocol node release 1.0.13, unchanged, with this site added as a seed. If the registry is unreachable it builds the same image on the server.</li>
-  <li><b>Loads a snapshot.</b> The newest chain snapshot (about 5 GB), checked against its SHA-256. Chain data only, never a wallet. Without it the node syncs from block 0, which takes days.</li>
-  <li><b>Starts the node.</b> In the background, restarting after a reboot, capped at 1 CPU and 2 GB RAM. Port 9655 is open for peers; the API (port 11567) stays on the server only, because it controls the node's wallet.</li>
+  <li><b>Gets the node image.</b> A ready image with the official Zen Protocol node release 1.0.13 (program unchanged, on the Mono 6.12 runtime); only its seed list is extended with this site and the seeds in <code>network.json</code>. If the registry is unreachable it builds the same image on the server from the official release package.</li>
+  <li><b>Loads a snapshot.</b> The newest community chain snapshot (about 5 GB), checked against its SHA-256 and test-extracted. Chain data only, never a wallet. If no community snapshot is reachable it uses the official Feb-2023 snapshot and syncs the rest from the network. Without a snapshot the node syncs from block 0, which takes many hours.</li>
+  <li><b>Starts the node.</b> In the background, restarting after a reboot, capped at 1 CPU and 2 GB RAM. Port 9655 is published for peers (a cloud firewall must allow it, see below); the API (port 11567) stays on the server only, because it controls the node's wallet.</li>
 </ol>
 
 <h2>Check it</h2>
