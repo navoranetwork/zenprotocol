@@ -4,7 +4,7 @@ Works on Linux, macOS and Windows (Docker Desktop). On Windows use Docker – th
 
 Full guide (server, home miner, snapshots, troubleshooting): [docs/SETUP.md](../docs/SETUP.md) · .NET 8 migration plan: [docs/MIGRATION.md](../docs/MIGRATION.md)
 
-Network status, seed and snapshots: **https://navora.network**
+Network status, seed and snapshots: **https://navora.network** (maintained by Navora, the community team behind the ZP network)
 
 ## 1. Install and load a snapshot
 

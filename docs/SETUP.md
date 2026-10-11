@@ -62,7 +62,7 @@ The pages use whatever domain they are served from, so only the server name, the
 
 ```
 cd ~/zenprotocol && git pull
-DOMAIN=new.example.org EXTRA_DOMAINS=navora.network bash site/setup-site.sh
+DOMAIN=new.example.org EXTRA_DOMAINS=old.example.org bash site/setup-site.sh
 ```
 
 3. In the repository, edit `network.json`: add the new name first in `seeds`, `snapshotSources` and `publicNodes` (keep the old one below it). Installed nodes read the seeds from it at every start and the snapshot loader reads the sources, so no image or script change is needed. Also add the new seed as the first line of `seeds` in `src/Node/main.yaml` (used when `network.json` cannot be reached). Update the links in `Docker/README.md` and this file.

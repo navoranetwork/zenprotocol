@@ -7,7 +7,7 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-navora.network}"
-# Other names served by the same site, e.g. the old domain while moving: EXTRA_DOMAINS="navora.network"
+# Other names served by the same site, e.g. the old domain while moving: EXTRA_DOMAINS="old.example.org"
 EXTRA_DOMAINS="${EXTRA_DOMAINS:-}"
 WEB=/var/www/zen
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -132,8 +132,10 @@ echo "== HTTPS"
 if ! command -v certbot >/dev/null; then apt-get install -y certbot python3-certbot-nginx; fi
 # Always run: copying nginx-zen.conf above replaces the HTTPS block certbot added last time.
 # With an existing certificate this only re-installs it (no new issuance).
-certbot --nginx -d "$DOMAIN" $(for d in $EXTRA_DOMAINS; do echo -n " -d $d"; done) --non-interactive --agree-tos --register-unsafely-without-email \
-  --redirect --keep-until-expiring
+# --cert-name: one certificate per site domain, so a certificate left from an older domain never blocks the run.
+# --expand: adding or dropping an EXTRA_DOMAINS name re-issues it without a question.
+certbot --nginx --cert-name "$DOMAIN" -d "$DOMAIN" $(for d in $EXTRA_DOMAINS; do echo -n " -d $d"; done) --non-interactive --agree-tos --register-unsafely-without-email \
+  --redirect --keep-until-expiring --expand
 
 echo "== Check"
 curl -fsS "https://$DOMAIN/api/info" && echo
