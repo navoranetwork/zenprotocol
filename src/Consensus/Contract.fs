@@ -141,7 +141,25 @@ let private computeHash version (code:string) =
 let makeContractId version code =
     ContractId (version, computeHash version code)
 
+let private loadV1 contractsPath expiry code contractId =
+    ContractV1.load contractsPath contractId
+    |> Result.map (fun runner ->
+        {
+            contractId = contractId
+            mainFn = fun tx ctx cid command sender body wallet state -> runner.Main tx ctx cid command sender body wallet state
+            costFn = fun tx ctx command sender body wallet state -> runner.Cost tx ctx command sender body wallet state
+            expiry = expiry
+            code = code
+        })
+
+/// Build a V1 contract with the V1 toolchain (see ContractV1).
+let compileV1 contractsPath (code: string) =
+    let contractId = makeContractId Version1 code
+    ContractV1.compile contractsPath code contractId
+    |> Result.map (fun () -> contractId)
+
 let load contractsPath expiry code (ContractId (version,hash)) =
+    if version = Version1 then loadV1 contractsPath expiry code (ContractId (version,hash)) else
     getModuleName hash
     |> ZFStar.load contractsPath
     |> Result.bind getMainFunction

@@ -18,6 +18,8 @@ let getOutputs = UtxoSet.tryGetOutputs
 let activationWeight contract =
     match contract with
     | V0 contract -> contract.queries * contract.rlimit / 100ul |> bigint
+    // V1: building costs grow with the source size (draft factor; set from measurements)
+    | HighV (version, bytes) when version = Version1 -> bigint bytes.Length * 10_000I
     | HighV _ -> 0I
 
 type State =

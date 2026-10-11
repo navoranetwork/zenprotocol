@@ -39,6 +39,7 @@
     <Compile Include="Transaction.fs" />
     <Compile Include="UtxoSet.fs" />
     <Compile Include="Weight.fs" />
+    <Compile Include="ContractV1.fs" />
     <Compile Include="Contract.fs" />
     <Compile Include="ContractCache.fs" />
     <Compile Include="ContractStates.fs" />
@@ -100,6 +101,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <ProjectReference Include="..\Infrastructure\Infrastructure.fsproj" />
+    <ProjectReference Include="..\ZenAbi\ZenAbi.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FsPickler" />

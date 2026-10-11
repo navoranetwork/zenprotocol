@@ -48,6 +48,7 @@
     <Compile Include="SampleContract.fs" />
     <Compile Include="ContractTests.fs" />
     <Compile Include="ContractActivationTests.fs" />
+    <Compile Include="ContractV1Tests.fs" />
     <Compile Include="BlockTests.fs" />
     <Compile Include="ContractMessageTests.fs" />
     <Compile Include="SerializationTests.fs" />

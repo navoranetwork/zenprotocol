@@ -104,8 +104,48 @@ let private activateContract (chainParams : Chain.ChainParameters) contractPath 
                             return contract, contractCache
                     }
                     return ActiveContractSet.add contract.contractId contract acs, contractCache
+            | HighV (version, bytes) when version = Version1 && blockNumber >= chainParams.v1ContractsHeight ->
+                let! code = ContractV1.decodeSource bytes |> Result.mapError General
+                let contractId = Contract.makeContractId Version1 code
+
+                let! activationSacrifices = getActivationSacrifice tx
+
+                let! numberOfBlocks = getSacrificeBlocks chainParams code activationSacrifices
+                let expiry = blockNumber + numberOfBlocks - 1ul
+
+                match ActiveContractSet.tryFind contractId acs with
+                | Some contract ->
+                    let contract = {contract with expiry = contract.expiry + numberOfBlocks}
+                    return ActiveContractSet.add contractId contract acs, contractCache
+                | None ->
+                    let! contract, contractCache = result {
+                        match ContractCache.tryFind contractId contractCache with
+                        | Some (mainFn, costFn) ->
+                            return (
+                                {
+                                    contractId = contractId
+                                    mainFn = mainFn
+                                    costFn = costFn
+                                    expiry = expiry
+                                    code = code
+                                } : Contract.T), contractCache
+                        | None ->
+                            let build () =
+                                Contract.compileV1 contractPath code
+                                |> Result.bind (fun _ -> Contract.load contractPath expiry code contractId)
+                                |> Result.mapError (fun error ->
+                                    eventX "V1 contract activation failed: {error}"
+                                    >> setField "error" (sprintf "%A" error)
+                                    |> Log.info
+                                    BadContract)
+
+                            let! contract = Measure.measure (sprintf "building V1 contract %A" contractId) (lazy (build ()))
+                            let contractCache = ContractCache.add contract contractCache
+
+                            return contract, contractCache
+                    }
+                    return ActiveContractSet.add contract.contractId contract acs, contractCache
             | HighV _ ->
-                //return acs, contractCache
                 yield! GeneralError "High version contracts not supported"
         | None ->
             return acs, contractCache

@@ -34,6 +34,8 @@ type ChainParameters =
         upperAllocationBound: byte
         thresholdFactor: uint64 * uint64
         genesisTotal: uint64
+        /// first block at which V1 contracts (HighV (1, source)) may be activated
+        v1ContractsHeight: uint32
     }
 
 let mainParameters =
@@ -58,6 +60,7 @@ let mainParameters =
         upperAllocationBound=90uy
         thresholdFactor=(3UL, 100UL)
         genesisTotal=20_000_000UL * 100_000_000UL
+        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
     }
 
 let testParameters =
@@ -85,6 +88,7 @@ let testParameters =
         upperAllocationBound=90uy
         thresholdFactor=(3UL, 100UL)
         genesisTotal=1UL
+        v1ContractsHeight=System.UInt32.MaxValue // not active: set after testing
     }
 
 let localGenesisHash = Hash.fromString "6d678ab961c8b47046da8d19c0de5be07eb0fe1e1e82ad9a5b32145b5d4811c7" |> Option.get
@@ -100,6 +104,7 @@ let localParameters = {
         genesisTime=1515594186383UL
         networkId=1002ul
         thresholdFactor=(1UL, 500UL)
+        v1ContractsHeight=1ul
 }
 
 let getChainParameters = function

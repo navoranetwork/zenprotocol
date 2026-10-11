@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ZenAbi: the interface between the node and V1 contract DLLs (plain .NET types, no
+       FSharp.Core). Vendored from navoranetwork/zp-contracts-v1 abi/; keep the .cs files identical. -->
+  <PropertyGroup>
+    <AssemblyName>ZenAbi</AssemblyName>
+    <RootNamespace>ZenAbi</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ZenAbi.cs" />
+    <Compile Include="Node.cs" />
+    <Compile Include="Loader.cs" />
+  </ItemGroup>
+</Project>

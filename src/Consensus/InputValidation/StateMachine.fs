@@ -12,7 +12,7 @@ let private validateInputs chainParams blockNumber timestamp acs getContractStat
     | Lock head :: tail ->
         match head with
         | Contract contractId ->
-            if ContractId.version contractId <> Version0 then
+            if ContractId.version contractId <> Version0 && ContractId.version contractId <> Version1 then
                 Invalid <| General "contract version not supported"
             else
                 ContractV0.validate blockNumber timestamp acs getContractState contractStates txHash tx witnesses inputs
@@ -32,7 +32,7 @@ let rec private validateNext chainParams blockNumber timestamp acs (txHash:Hash.
         validateInputs chainParams blockNumber timestamp acs getContractState contractStates txHash tx witnesses inputs
         |> validateNext chainParams blockNumber timestamp acs txHash tx getContractState
     | ExpectChainedContract (chainedContract, witnesses, inputs, contractStates) ->
-        if ContractId.version chainedContract.recipient <> Version0 then
+        if ContractId.version chainedContract.recipient <> Version0 && ContractId.version chainedContract.recipient <> Version1 then
             Invalid <| General "contract version not supported"
         else
             ContractV0.validateChainedContract blockNumber timestamp acs getContractState contractStates txHash tx witnesses inputs chainedContract
