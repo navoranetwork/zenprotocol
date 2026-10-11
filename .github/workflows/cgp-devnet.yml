@@ -4,6 +4,8 @@ name: cgp-devnet
 # through the payout block (block 610) and keeps mining. Used to test the miner change that builds the CGP payout transaction.
 on:
   workflow_dispatch:
+    inputs:
+      mode: { description: 'miner = the mining node creates the payout; relay = the miner behaves like 1.0.13 and a second node relays the payout', default: 'miner' }
   push:
     branches: [node-upgrade-script, cgp-miner-fix]
     paths: ['src/Blockchain/**', 'src/Consensus/**', 'wallet/tools/cgp-sim.mjs', '.github/workflows/cgp-devnet.yml']
@@ -20,7 +22,9 @@ jobs:
         run: set -o pipefail; docker build -f Docker/Dockerfile.devnet -t zen-devnet . 2>&1 | tail -n 40
       - name: Start one node with a miner
         run: |
-          docker run -d --name zen-devnet -p 127.0.0.1:20000:20000 -e NODES=1 -e MINER_THREADS=1 zen-devnet
+          if [ "${{ inputs.mode }}" = relay ]; then RUN="-e NODES=2 -e MINER_CGP_PAYOUT=off"; else RUN="-e NODES=1"; fi
+          echo "::notice title=mode::${{ inputs.mode || 'miner' }} ($RUN)"
+          docker run -d --name zen-devnet -p 127.0.0.1:20000:20000 $RUN -e MINER_THREADS=1 zen-devnet
           for i in $(seq 120); do sleep 5; T=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p' || true); [ -n "$T" ] && [ "$T" -ge 40 ] && break; done
           echo "block $T after start"; [ -n "$T" ] && [ "$T" -ge 40 ]
       - name: Activate the CGP and voting contracts
@@ -49,10 +53,15 @@ jobs:
           set +e
           for i in $(seq 90); do T=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p'); [ -n "$T" ] && [ "$T" -ge 620 ] && break; sleep 5; done
           CGP=$(curl -fs http://127.0.0.1:20000/blockchain/cgp)
-          LOG=$(docker exec zen-devnet sh -c 'grep -E "commitments mismatch|Miner created the CGP|Could not create the CGP|No payout|failed validation" /data/logs/node0.log | tail -n 12 | cut -c1-600')
+          LOG=$(docker exec zen-devnet sh -c 'for f in /data/logs/node*.log; do grep -H -E "commitments mismatch|Miner created the CGP|Relaying the CGP|Could not create the CGP|No payout|failed validation|You should create" $f | tail -n 8; done | cut -c1-400')
           echo "tip $T; cgp $CGP"; echo "$LOG"
           printf 'tip %s%%0Acgp %s%%0A%s' "$T" "$CGP" "$(echo "$LOG" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')" | xargs -0 -I{} echo "::notice title=cgp payout result::{}"
-          [ -n "$T" ] && [ "$T" -ge 620 ]
+          [ -n "$T" ] && [ "$T" -ge 620 ] || exit 1
+          if [ "${{ inputs.mode }}" = relay ]; then
+            echo "$LOG" | grep -q "node0.log.*Miner created the CGP" && { echo "::error title=relay test::the miner made the payout itself, so the relay was not tested"; exit 1; }
+            echo "$LOG" | grep -q "node1.log.*Relaying the CGP" || { echo "::error title=relay test::node 1 did not relay the payout"; exit 1; }
+            echo "::notice title=relay test::PASS: the miner (as 1.0.13) mined the payout block with the transaction relayed by node 1"
+          fi
       - name: Sim output
         if: always()
         run: |

@@ -2,6 +2,7 @@
 # ZP devnet: NODES nodes of the built-in `local` chain in one container (Debug build, see docs/DEVNET.md).
 #   node i: P2P 127.0.0.1:10000+i (inside the container), API *:20000+i, address index on.
 #   node 0 mines (MINER_THREADS, 0 = off) to a wallet imported from DEVNET_MNEMONIC.
+#   MINER_CGP_PAYOUT=off: node 0 neither creates nor relays the CGP payout (as release 1.0.13); the other nodes still relay it.
 # The default mnemonic is PUBLIC and worthless: anyone can spend the devnet coins. That is intended.
 set -u
 NODES="${NODES:-3}"
@@ -31,7 +32,7 @@ PIDS=()
 for i in $(seq 0 $((NODES - 1))); do
   EXTRA=()
   [ "$i" = 0 ] && [ "$MINER_THREADS" -gt 0 ] && EXTRA=(--miner "$MINER_THREADS")
-  if [ "$i" = 0 ]; then dotnet zen-node.dll $(args $i) "${EXTRA[@]}" 2>&1 | tee /data/logs/node0.log &
+  if [ "$i" = 0 ]; then ZEN_CGP_PAYOUT="${MINER_CGP_PAYOUT:-on}" dotnet zen-node.dll $(args $i) "${EXTRA[@]}" 2>&1 | tee /data/logs/node0.log &
   else dotnet zen-node.dll $(args $i) "${EXTRA[@]}" > "/data/logs/node$i.log" 2>&1 &
   fi
   PIDS+=($!)
