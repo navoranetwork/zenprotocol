@@ -81,3 +81,6 @@ Every step needs the maintainer's approval before it runs; nothing is done on ma
 |---|---|---|
 | 2026-10-11 07:20 | 1. Shadow node on 77.42.12.190: image `ghcr.io/navoranetwork/zen-node:net10@sha256:e6905e2896abcc8cb5d422d96bfd0bd45ebc23623121790a996bb01b8becdd66`, loaded from the snapshot made by the 1.0.13 node (block 1,052,929) | Loaded; synced the remaining ~1,650 mainnet blocks within 90 s |
 | 2026-10-11 07:21 | 2. First compare (`scripts/shadow-compare.sh`) | Height 1,054,595: same tip `000000000019d533…0a10`, same CGP state (interval 106, allocation 90, no payout winner). 24-hour compare follows |
+| 2026-10-11 ~09:40 | Relay shadow node: `zen-node:relay-2d0a7b0` built on the server (Actions disabled), `PUBLIC_NODE=1`, same data folder as the first shadow | Up, synced |
+| 2026-10-11 19:19 local | 2. Compare after ~6 h | Height 1,054,728: same tip `00000000003361cc…6e55`, same CGP state (interval 106, allocation 90, no winner), 0 validation errors |
+| 2026-10-11 19:21 local | 3. Community node switched: `ZEN_IMAGE=zen-node:relay-2d0a7b0` (it already ran the .NET 10 image `ghcr.io/navoranetwork/zen-node:net10` without the relay; same data folder) | Up at once at 1,054,728; explorer answers. Rollback: `ZEN_IMAGE=ghcr.io/navoranetwork/zen-node:net10` and `docker compose up -d` |
