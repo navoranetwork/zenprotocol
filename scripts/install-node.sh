@@ -122,7 +122,7 @@ main() {
   echo "public IP: ${EXTERNAL_IP:-unknown}, mining threads: ${MINER_THREADS:-0}, public node: ${PUBLIC_NODE:-0}"
 
   echo "== Node image"
-  $D compose pull -q zen-node </dev/null 2>/dev/null || { echo "Registry not reachable: building the image here (10-20 minutes)"; $D compose build </dev/null; }
+  $D compose pull -q zen-node </dev/null 2>/dev/null || { echo "Registry not reachable: building the .NET 10 image here from the source (can take 20 minutes or more)"; $D compose build </dev/null; }
 
   HAVE_CHAIN=0
   if [ -n "$ZEN_DATA" ] && [ "${ZEN_DATA#*/}" = "$ZEN_DATA" ]; then   # a Docker volume
