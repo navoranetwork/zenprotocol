@@ -25,7 +25,7 @@ Fixes the tests forced: the wallet only sees outputs locked to its tracked keys,
 | Market maker: an ask at 0.101 and a bid at 0.099 USD per ZP around 0.10 | working; found and fixed duplicate orders (waiting for the index), a wait that started before the order was sent, and surplus copies are now cancelled |
 | Bridge deposit on **Base Sepolia**: a link signed with the EVM key, 10 test USDC sent to the bridge, zUSDC issued to the linked ZP address | working |
 | Bridge withdrawal: 5,000,000 zUSDC units sent to the bridge address, burned, 5 USDC paid back to the EVM address | working |
-| Pages over plain HTTP on the server's IP (`site/setup-testnet-web.sh`) | working |
+| Pages over HTTPS at `testnet.navora.network` (`site/setup-testnet-web.sh`) | working |
 
 Fixes the live tests forced: public RPC nodes refuse log queries over ~500 blocks (the bridge now asks in 450-block ranges); and a withdrawal now checks the requested EVM address's own link, because one ZP address can be linked to several EVM addresses.
 

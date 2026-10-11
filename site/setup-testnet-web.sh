@@ -1,7 +1,7 @@
 #!/bin/bash
-# Publishes the testnet pages (Dex, Oracle, Explorer, Assets) of this server over plain HTTP on its IP, next to the testnet stack
+# Publishes the testnet pages (Dex, Oracle, Explorer, Assets) of this server over HTTPS at testnet.navora.network, next to the testnet stack
 # (scripts/install-testnet-stack.sh). Read-only: the node's wallet and send endpoints are never exposed. Safe to run again.
-# HTTPS and a domain come later (setup-site.sh does it for the community site): do not enter keys or passwords on this plain-HTTP page.
+# The domain is kept from the last run. Another server: DOMAIN=testnet.example.org; plain HTTP on the IP (no DNS yet): DOMAIN= (empty).
 #
 #   cd ~/zenprotocol-testnet && bash site/setup-testnet-web.sh
 set -euo pipefail
@@ -24,9 +24,9 @@ cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings. DOMAIN (e.g. testnet.example.org) turns on HTTPS; MAIN_URL links to the mainnet site.
 old() { grep -o "\"$1\":\"[^\"]*\"" "$WEB/site-config.json" 2>/dev/null | cut -d'"' -f4 || true; }   # values from the last run are kept
-DOMAIN="${DOMAIN:-}"; MAIN_URL="${MAIN_URL:-$(old mainUrl)}"; MAIN_URL="${MAIN_URL:-https://navora.network}"; SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"
-printf '{"kind":"test","name":"%s","mainUrl":"%s","github":"https://github.com/navoranetwork/zenprotocol"}\n' "$SITE_NAME" "$MAIN_URL" > "$WEB/site-config.json"
-# ZP Wallet on the same site: its node is this site's /node/ (config.json names it), so the testnet works at once. Plain HTTP: test coins only.
+if [ -z "${DOMAIN+x}" ]; then DOMAIN=$(old domain); DOMAIN="${DOMAIN:-testnet.navora.network}"; fi; MAIN_URL="${MAIN_URL:-$(old mainUrl)}"; MAIN_URL="${MAIN_URL:-https://navora.network}"; SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"
+printf '{"kind":"test","name":"%s","mainUrl":"%s","domain":"%s","github":"https://github.com/navoranetwork/zenprotocol"}\n' "$SITE_NAME" "$MAIN_URL" "$DOMAIN" > "$WEB/site-config.json"
+# ZP Wallet on the same site: its node is this site's /node/ (config.json names it), so the testnet works at once.
 IP=$(curl -s -m 5 https://api.ipify.org || hostname -I | awk '{print $1}')
 BASE=${DOMAIN:+https://$DOMAIN}; BASE=${BASE:-http://$IP}
 if command -v docker >/dev/null; then

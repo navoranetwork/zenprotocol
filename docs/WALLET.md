@@ -21,7 +21,7 @@ Live at `https://<site domain>/wallet/` (today `https://navora.network/wallet/`;
 | Lock | A password unlocks the browser vault. The wallet locks itself after 15 minutes without activity, and "Lock now" is in Settings. |
 | Backup | Shows the 24 words or key of a wallet after the password is entered again. |
 
-A site that hosts the wallet next to its own node can name it in `config.json` next to `index.html` (`{ "testNode": "https://host/node" }`); `site/setup-testnet-web.sh` does this for the testnet server (plain HTTP on the IP until a domain exists).
+A site that hosts the wallet next to its own node can name it in `config.json` next to `index.html` (`{ "testNode": "https://host/node" }`); `site/setup-testnet-web.sh` does this for the testnet server (`https://testnet.navora.network/node`).
 
 Coming next (see `wallet/README.md`, plan steps 4, 5 and 7): voting from the wallet, running and deploying contracts, and other chains.
 
