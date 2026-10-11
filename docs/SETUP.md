@@ -120,7 +120,7 @@ Every download is checked against its sha256 before use. A snapshot is only a sh
 ## One-command node install: what it does and what is checked
 
 ```
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
 | Step | What happens | Stops or falls back when |
@@ -172,10 +172,10 @@ A running node needs none of them: the image already contains the compiled 1.0.1
 3. Install, in one command:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
-The script (`scripts/install-node.sh`) checks for 20 GB of free disk and free ports 9655 and 11567, installs Docker, clones the code to `~/zenprotocol`, pulls the ready node image (builds it when the registry is unreachable), loads the newest chain snapshot (verified against its sha256, tried from every source in `network.json`), starts a node capped at 1 CPU and 2 GB RAM and shows the sync status. Run it again to update; the chain data is kept. Options: `PUBLIC_NODE=1`, `MINER_THREADS=2` (own hardware only), `SKIP_SNAPSHOT=1`, `DIR=/other/folder`.
+The script (`scripts/install-node.sh`, published by `site/setup-site.sh` as `https://navora.network/install.sh`) needs nothing installed beforehand on Ubuntu 22.04/24.04. It waits for the first-boot automatic updates to release apt, checks for 20 GB of free disk and free ports 9655 and 11567, adds a 2 GB swap file when the server has under 4 GB RAM and no swap (`NO_SWAP=1` skips it), installs Git and Docker, clones the code to `~/zenprotocol`, pulls the ready node image (builds it when the registry is unreachable), loads the newest chain snapshot (verified against its sha256, tried from every source in `network.json`), starts a node capped at 1 CPU and 2 GB RAM and shows the sync status. Run it again to update; the chain data and the settings in `.env` are kept (an option given again overrides its saved value, e.g. `MINER_THREADS=0` stops mining). Options: `PUBLIC_NODE=1`, `MINER_THREADS=2` (own hardware only), `SKIP_SNAPSHOT=1`, `DIR=/other/folder`.
 
 **Firewall:** allow inbound TCP 9655 (in the Hetzner Cloud Firewall, if you use one). The API port (11567) stays reachable from the server only.
 

@@ -26,6 +26,9 @@
   .zp ol.what li::before { content: counter(w); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--s-card); border: 1px solid var(--s-line); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--s-accent); }
   .zp ol.what code { font-size: 13px; }
   .zp .small { font-size: 14px; color: var(--s-muted); }
+  .zp .quick { background: var(--s-card); border: 1px solid var(--s-accent); border-radius: 10px; padding: 16px 18px; margin: 14px 0 22px; min-width: 0; }
+  .zp .quick h3 { margin-top: 0; }
+  .zp .quick pre { background: var(--s-bg); margin: 8px 0 6px; font-size: 15px; }
 </style>
 <script src="/shell/shell.js" defer></script>
 </head>
@@ -44,7 +47,13 @@
 <p class="small">A small cloud server is enough, for example 2 vCPU, 2–4 GB RAM, 40 GB disk on Ubuntu 22.04 or 24.04. Most cloud providers forbid mining; mine only on your own hardware.</p>
 
 <h2>Install</h2>
-<p>Choose your system:</p>
+<div class="quick">
+  <h3>New Ubuntu server: one line</h3>
+  <p>Install Ubuntu 22.04 or 24.04, connect with <code>ssh root@&lt;server-ip&gt;</code> and paste:</p>
+  <div class="cmd"><pre>curl -fsSL https://navora.network/install.sh | bash</pre></div>
+  <p class="small">Nothing else to install first. It waits for the server's first automatic updates, adds swap on servers with under 4 GB RAM, installs Git and Docker, downloads the node image, loads the newest verified snapshot, opens port 9655 in ufw, starts the node (it restarts after a reboot) and prints the sync status. About 10–20 minutes, most of it the 5 GB snapshot. Run the same line again to update; the chain and your settings are kept. <a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/scripts/install-node.sh">Read the script on GitHub</a>.</p>
+</div>
+<p>Other systems, options and the manual steps:</p>
 <div class="tabs" role="tablist" aria-label="Operating system">
   <button role="tab" id="t-linux" aria-controls="p-linux" aria-selected="true">Linux</button>
   <button role="tab" id="t-mac" aria-controls="p-mac" aria-selected="false" tabindex="-1">macOS</button>
@@ -53,7 +62,7 @@
 
 <div class="pane" role="tabpanel" id="p-linux" aria-labelledby="t-linux">
   <h3>One command (Ubuntu, Debian and most distributions)</h3>
-  <div class="cmd"><pre>curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash</pre></div>
+  <div class="cmd"><pre>curl -fsSL https://navora.network/install.sh | bash</pre></div>
   <p class="small">Installs Docker if it is missing, then does steps 1–5 below. Run it again later to update; the chain data is kept. Options go in front of <code>bash</code>, for example <code>MINER_THREADS=2 bash</code> to mine on your own hardware.</p>
   <h3>Or step by step</h3>
   <div class="cmd"><pre>git clone -b node-upgrade-script https://github.com/navoranetwork/zenprotocol.git
@@ -68,7 +77,7 @@ docker compose up -d</pre></div>
   <h3>Before you start</h3>
   <p>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it and wait until it shows <b>Engine running</b>. Git comes with the Xcode command line tools (<code>xcode-select --install</code>).</p>
   <h3>One command, in Terminal</h3>
-  <div class="cmd"><pre>curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash</pre></div>
+  <div class="cmd"><pre>curl -fsSL https://navora.network/install.sh | bash</pre></div>
   <h3>Or step by step</h3>
   <div class="cmd"><pre>git clone -b node-upgrade-script https://github.com/navoranetwork/zenprotocol.git
 cd zenprotocol

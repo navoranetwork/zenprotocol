@@ -11,7 +11,7 @@ Network status, seed and snapshots: **https://navora.network** (maintained by Na
 One command (Linux, macOS; installs Docker on Linux, loads the verified snapshot, starts the node):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
 Or step by step (this is also the Windows way):

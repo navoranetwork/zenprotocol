@@ -22,6 +22,8 @@ echo "== Files"
 mkdir -p "$WEB/snapshots"
 for f in index about how-it-works community node mine developers stats assets cgp votes explorer contract; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
+# the one-line node installer: curl -fsSL https://<domain>/install.sh | bash
+cp "$REPO/scripts/install-node.sh" "$WEB/install.sh"
 # Site frame settings (menus, name, link to the other network). Set SITE_NAME / TEST_URL once; they are kept in the file for later runs.
 old() { grep -o "\"$1\":\"[^\"]*\"" "$WEB/site-config.json" 2>/dev/null | cut -d'"' -f4 || true; }   # values from the last run are kept
 SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"; TEST_URL="${TEST_URL:-$(old testUrl)}"; TEST_URL="${TEST_URL:-https://testnet.navora.network}"
