@@ -1,4 +1,14 @@
 <Project>
+  <!-- FSharpx.Extras and FSharpx.Async declare their dependencies (FSharpx.Async, FSharpx.Collections,
+       FSharp.Control.AsyncSeq) without a version. With central
+       transitive pinning, recent NuGet reports that as a downgrade from 0.0.0 (NU1109, an error).
+       Referencing the two packages directly, at the versions already pinned, resolves the same
+       graph without the error. -->
+  <ItemGroup Condition="'@(PackageReference->AnyHaveMetadataValue('Identity','FSharpx.Extras'))' == 'true'">
+    <PackageReference Include="FSharpx.Async" Condition="'@(PackageReference->AnyHaveMetadataValue('Identity','FSharpx.Async'))' != 'true'" />
+    <PackageReference Include="FSharp.Control.AsyncSeq" Condition="'@(PackageReference->AnyHaveMetadataValue('Identity','FSharp.Control.AsyncSeq'))' != 'true'" />
+    <PackageReference Include="FSharpx.Collections" Condition="'@(PackageReference->AnyHaveMetadataValue('Identity','FSharpx.Collections'))' != 'true'" />
+  </ItemGroup>
   <!-- The zen packages' own build targets assume the paket packages/ folder; their files are copied here instead. -->
   <ItemGroup>
     <PackageReference Update="Zulib;ZFStar;zen_z3_linux;zen_secp256k1_linux;CGPContract" ExcludeAssets="build" GeneratePathProperty="true" />

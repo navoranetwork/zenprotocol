@@ -121,6 +121,8 @@ def main():
         get_have = lambda name: fetch(f"{BASE}/{assets[name[:-6].lower()]}")
 
     pins = pinned("src/Directory.Packages.props")
+    # packages the SDK adds by itself (net47 reference assemblies for src/ContractTool)
+    pins += [("Microsoft.NETFramework.ReferenceAssemblies", "1.0.3")]
     pinned_ids = {i.lower() for i, _ in pins}
     todo = list(pins)
     seen, added, missing = set(), [], []
