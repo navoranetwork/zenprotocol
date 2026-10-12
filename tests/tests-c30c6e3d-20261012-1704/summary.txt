@@ -1,0 +1,1 @@
+[2026-10-12 17:04] node tests on c30c6e3d lab testnet (work in progress): 3 local nodes cross the V1 fork, activate, call, reorg
