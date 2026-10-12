@@ -6,7 +6,7 @@ fix lands with a test.
 
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
-| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | open; confirmed by measurement |
+| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | in progress: equality fixed (stage 1, below); Zulib functions and input strings next |
 | C2 | Free builds in the mempool: every V1 activation was built (20-30 s) on arrival, before anyone paid; failing variants spending one input could be repeated | critical | fixed (below) |
 | C3 | A build that fails for a local reason (disk, memory, offline restore, missing toolchain) rejects the block on that node, permanently: a chain split | critical | fixed (below) |
 | C4 | Contract output depending on the machine's locale | — | not applicable: the node runs with invariant globalization (`zen-node.runtimeconfig.json`); hardening of the runtime still useful, low priority |
@@ -59,3 +59,24 @@ failed here" comes first.
   `assert_norm`, `reveal_opaque`, tactics), so type-check time follows the source size (at most
   64 KiB); a build has 10 minutes, past which it counts as environment.
 - DLLs and FSharp.Core are written under a temporary name and renamed.
+
+## C1: plan and what changed
+
+Fixed at compile time, in three stages (each with measurements that show the gap closing):
+
+1. **Equality** (done, zp-contracts-v1 9f81ba4). In code a contract runs, `=` / `<>` are
+   Zulib's `Zen.Eq` operators (the elaborator rewrites them and opens `Zen.Eq`), defined only
+   for types whose comparison is bounded: numbers, booleans, strings up to 1,024 characters,
+   byte arrays up to 64 bytes (hashes, keys), contract ids, assets, locks, spends, outpoints,
+   outputs, senders, and options, tuples and refinements of these. Comparing lists, `data`,
+   dictionaries or transactions does not type-check: the activation is invalid. An overlong
+   value (a lax-built "hash" of 1,000 bytes) fails the call after 64 steps. The attack
+   measured above is now refused; the costliest allowed comparison runs at 456 ns/gas, about
+   the normal rate.
+2. **Zulib functions** (next): 21 pure functions walk a list without charging (`length`,
+   `Array.get`, `Wallet.size`, `TxSkeleton.available`, `Asset.zeros`...), and some charged ones
+   are underpriced (`Sha3.finalize`, `TxSkeleton` at 64 for O(n) work, `Array.Indexed` copies):
+   make them charge by size, or hide them from contracts.
+3. **Input strings**: the 1,024 limit covers strings a contract makes, not those arriving in a
+   message; `FStar.String` functions on them need the same bound or a price per character.
+
