@@ -1,0 +1,41 @@
+# ZP node with V1 contracts (branch v1-contracts), for the V0 replay and the testnet.
+# Same as Dockerfile.net10, but restores from our package mirror (scripts/restore-from-mirror.sh
+# fills ./packages-mirror first), with nuget.org only for what the mirror lacks
+# (Microsoft.NETFramework.ReferenceAssemblies, used to build the V0 contract tool).
+#
+#   bash scripts/restore-from-mirror.sh
+#   docker build -f Docker/Dockerfile.v1 -t zen-node:v1 .
+
+# ---- build ----
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY packages-mirror ./packages-mirror
+COPY src ./src
+RUN printf '<?xml version="1.0" encoding="utf-8"?>\n<configuration><packageSources><clear />\n<add key="mirror" value="/src/packages-mirror" />\n<add key="nuget.org" value="https://api.nuget.org/v3/index.json" />\n</packageSources></configuration>\n' > nuget.v1.config \
+ && for p in ContractTool Node Cli; do dotnet restore src/$p/$p.fsproj --configfile nuget.v1.config || exit 1; done \
+ && for p in ContractTool Node Cli; do dotnet build src/$p/$p.fsproj -c Release --no-restore -v minimal || exit 1; done \
+ && mkdir -p /out \
+ && cp -r src/Node/bin/Release/. /out/ \
+ && cp -rn src/Cli/bin/Release/. /out/ \
+ && test -f /out/contract-tool/zen-contract-tool.exe && test -f /out/libsecp256k1.so && test -x /out/z3-linux
+
+# ---- runtime: .NET 10 + Mono (for F* and the V0 contract tool only) ----
+FROM mcr.microsoft.com/dotnet/runtime:10.0
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends mono-devel liblmdb-dev libgomp1 curl unzip zip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /out /zen
+COPY Docker/entrypoint.sh /entrypoint.sh
+COPY Docker/load-snapshot.sh /load-snapshot.sh
+COPY Docker/create-snapshot.sh /create-snapshot.sh
+RUN sed -i "s/\r$//" /entrypoint.sh /load-snapshot.sh /create-snapshot.sh \
+ && chmod +x /entrypoint.sh /load-snapshot.sh /create-snapshot.sh /zen/z3-linux /zen/contract-tool/z3-linux \
+ && (grep -q "navora.network" /zen/main.yaml || sed -i 's|^seeds:\s*$|seeds:\n  - navora.network|' /zen/main.yaml)
+
+WORKDIR /zen
+VOLUME /data
+EXPOSE 9655 11567
+HEALTHCHECK --interval=2m --timeout=10s --start-period=10m \
+  CMD curl -fs http://127.0.0.1:11567/blockchain/info >/dev/null || exit 1
+ENTRYPOINT ["/entrypoint.sh"]
