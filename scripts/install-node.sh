@@ -94,6 +94,17 @@ main() {
 
   echo "== Code"
   if [ -d "$DIR/.git" ]; then
+    # older installs cloned the repository from its previous GitHub home: point them at the current one
+    CUR=$(git -C "$DIR" remote get-url origin 2>/dev/null || true)
+    case "$CUR" in
+      "$REPO"|"${REPO%.git}") ;;
+      https://github.com/*/zenprotocol|https://github.com/*/zenprotocol.git)
+        echo "moving the code source to $REPO"; git -C "$DIR" remote set-url origin "$REPO" ;;
+    esac
+    # same for a node image pinned to the previous registry owner
+    if [ -f "$DIR/.env" ] && grep -qE '^ZEN_IMAGE=ghcr\.io/[^/]+/zen-node' "$DIR/.env" && ! grep -q '^ZEN_IMAGE=ghcr\.io/navoranetwork/' "$DIR/.env"; then
+      sed -i.bak -E 's#^ZEN_IMAGE=ghcr\.io/[^/]+/zen-node#ZEN_IMAGE=ghcr.io/navoranetwork/zen-node#' "$DIR/.env"
+    fi
     git -C "$DIR" fetch -q origin "$BRANCH" && git -C "$DIR" checkout -q "$BRANCH" && git -C "$DIR" pull -q --ff-only
   else
     git clone -q -b "$BRANCH" "$REPO" "$DIR"
