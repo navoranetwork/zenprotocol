@@ -1,0 +1,14 @@
+21:34:15 Bitcoin block 971131 (3330 transactions), transaction ed2fc8054eb7f48b5ca18640417e74e36d91c8c92bc4b3fb3a9c9ab7f0ccf622 at position 1, output 0: 499952061 sat to 001491f2404270c25796a980fad3ea47785ce8ac26a7
+21:34:15 activation sent: 00000001997ce0d0167d8879ad5f0d79cf9e704ea163d0c3bd09d8d4bb0c039e9232149f
+21:34:32 contract active
+21:34:35 PASS checkpoint at Bitcoin block 971131 
+21:34:37 PASS add block 971132 
+21:34:39 PASS add block 971133 
+21:34:41 PASS add block 971134 
+21:34:43 PASS add block 971135 
+21:34:43 PASS pay at 5 confirmations refused (the block has fewer than 6 confirmations)
+21:34:45 PASS add block 971136 
+21:34:47 PASS pay at 6 confirmations accepted in ZP transaction ac44c49bf38eb75c6299e073e4b3ac31d47d7b6ef609730f0fb7463ef737a826
+21:34:47 PASS amount above the output refused (the output pays less than the amount)
+21:34:47 PASS another script refused (the output pays another script)
+21:34:47 RESULT: PASS
