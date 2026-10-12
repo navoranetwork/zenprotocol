@@ -223,6 +223,7 @@ let makeTransactionList chain (session:DatabaseContext.Session) (state:State) ti
             CGP.filterCGPExecutions txs { chain=chain ; cgp=state.cgp }
         else
             txs
-        |> List.sortBy (fun (_,wt) -> wt)
+        // kept in arrival order (MemPool.toList), not sorted by weight: a wallet builds a contract call on the state left
+        // by its earlier calls in the mempool, so the calls must reach the template in the order they were made
     return selectOrderedTransactions chain session state.tipState.tip.header.blockNumber timestamp state.tipState.activeContractSet state.memoryState.contractCache txs
 }
