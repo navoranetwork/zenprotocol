@@ -3,3 +3,5 @@
 [2026-10-12 17:16] cgp-devnet-test relay: RESULT: PASS (relay): the chain passed the payout block 610 and is at 620
 [2026-10-12 17:16] cgp-devnet-test miner: start
 [2026-10-12 17:26] cgp-devnet-test miner: RESULT: PASS (miner): the chain passed the payout block 610 and is at 620
+[2026-10-12 17:26] stall-repro: SKIPPED (this token cannot read navoranetwork/bitzen)
+[2026-10-12 17:26] done
