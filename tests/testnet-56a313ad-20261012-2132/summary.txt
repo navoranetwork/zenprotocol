@@ -1,0 +1,1 @@
+[2026-10-12 21:32] lab testnet on 56a313ad lab-testnet-run: nodejs for T5b; publish the built contract DLL and dotnet --info; SKIP_TESTNET=1
