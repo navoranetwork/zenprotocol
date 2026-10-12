@@ -152,8 +152,9 @@ http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     if (req.method === 'GET' && u.pathname === '/status') {
       const outstanding = Object.values(done).filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - Object.values(done).filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
+      const reserves = await evmReserves();   // first: it also learns chainId
       return json(res, 200, { chain: 'testnet', evm: EVM.startsWith('mock:') ? 'mock' : EVM, chainId, bridgeEvm: bridgeEvm(), bridgeZp: await bridgeZp(), usdc: USDC, contract: CONTRACT, asset: ASSET,
-        confirmations: CONF, reserves: await evmReserves(),
+        confirmations: CONF, reserves,
         links: Object.keys(links).length, deposits: Object.values(done).filter(d => d.zpTx).length, withdrawals: Object.values(done).filter(d => d.burn).length,
         zusdcOutstanding: String(outstanding), pendingDeposits: pendingDeposits.length });
     }
