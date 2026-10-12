@@ -1,0 +1,88 @@
+#!/bin/bash
+# The three-node V1 lab testnet (scripts/lab-testnet-v1.sh) on the lab server (zp-lab-1), as a
+# second machine: same scenario, and the contract DLL's SHA-256 to compare with a build on
+# another machine and CPU. Installs what the V1 build needs (the pinned .NET SDK and F*, the
+# toolchain repo zp-contracts-v1, which the token must be able to read), builds the node in
+# Debug, runs the scenario, and posts the report to the branch `replay-results`
+# (tests/<run>/: summary.txt, report.txt, node logs).
+#
+# On zp-lab-1, as root (/etc/zp-lab.env holds GH_TOKEN):
+#   cd /opt/zp-lab && git pull -q && systemd-run --unit zp-testnet --property=EnvironmentFile=/etc/zp-lab.env \
+#     bash /opt/zp-lab/scripts/lab-testnet-run.sh
+#   journalctl -u zp-testnet -f
+set -uo pipefail
+: "${GH_TOKEN:?}"
+DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; TC=/opt/zp-contracts-v1
+FSTAR_VERSION=v2026.09.27
+FSTAR_SHA256=cafbbb8960efeb26f5d30bc447b61ab8a507968948507a2580585afd1397781d
+cd "$DIR"
+git fetch -q origin v1-contracts && git checkout -q -f -B v1-contracts origin/v1-contracts
+RUN="testnet-$(git rev-parse --short HEAD)-$(date -u +%Y%m%d-%H%M)"
+OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"
+export GIT_AUTHOR_NAME=zp-lab GIT_AUTHOR_EMAIL=zp-lab@navora.network GIT_COMMITTER_NAME=zp-lab GIT_COMMITTER_EMAIL=zp-lab@navora.network
+export DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
+log() { echo "[$(date -u +%F' '%H:%M)] $*" | tee -a "$OUT/summary.txt"; }
+publish() {
+  local wt="$DIR/replay-results"
+  if [ ! -e "$wt/.git" ]; then
+    rm -rf "$wt"; git worktree prune
+    git fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results:replay-results
+    git worktree add -q "$wt" replay-results
+  fi
+  git -C "$wt" pull -q --rebase "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results 2>/dev/null
+  mkdir -p "$wt/tests/$RUN" && cp "$OUT"/*.txt "$wt/tests/$RUN/" 2>/dev/null
+  for n in A B C; do [ -f "$OUT/net/$n.log" ] && tail -300 "$OUT/net/$n.log" > "$wt/tests/$RUN/node-$n.log"; done
+  [ -f "$OUT/net/report.txt" ] && cp "$OUT/net/report.txt" "$wt/tests/$RUN/report.txt"
+  git -C "$wt" add -A tests
+  git -C "$wt" commit -q -m "tests $RUN: $1" || true
+  git -C "$wt" push -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results 2>&1 | tail -1
+}
+stop() { log "STOPPED: $*"; publish "stopped: $*"; exit 1; }
+
+log "lab testnet on $(git log --oneline -1)"
+publish "started"
+
+# 1. tools
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y -q curl git python3 ca-certificates libgomp1 libgmp10 > /dev/null 2>&1 || stop "apt"
+SDK=10.0.112
+if ! dotnet --list-sdks 2>/dev/null | grep -q "^$SDK "; then
+  if [ ! -x /opt/dotnet/dotnet ] || ! /opt/dotnet/dotnet --list-sdks | grep -q "^$SDK "; then
+    curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh || stop "dotnet-install download"
+    bash /tmp/dotnet-install.sh --version "$SDK" --install-dir /opt/dotnet > "$OUT/dotnet-install.txt" 2>&1 || stop "dotnet-install"
+  fi
+  export PATH=/opt/dotnet:$PATH DOTNET_ROOT=/opt/dotnet
+fi
+log "dotnet: $(command -v dotnet), SDKs: $(dotnet --list-sdks | tr '\n' ' ')"
+if ! /opt/fstar/bin/fstar.exe --version 2>/dev/null | grep -q "${FSTAR_VERSION#v}"; then
+  curl -fsSL -o /tmp/fstar.tgz "https://github.com/FStarLang/FStar/releases/download/$FSTAR_VERSION/fstar-$FSTAR_VERSION-Linux-x86_64.tar.gz" || stop "F* download"
+  echo "$FSTAR_SHA256  /tmp/fstar.tgz" | sha256sum -c --quiet - || stop "F* checksum"
+  rm -rf /opt/fstar && tar -xzf /tmp/fstar.tgz -C /opt && rm /tmp/fstar.tgz
+fi
+export FSTAR_HOME=/opt/fstar
+log "F*: $($FSTAR_HOME/bin/fstar.exe --version | head -1)"
+
+# 2. the V1 toolchain (private repo)
+if [ -d "$TC/.git" ]; then
+  git -C "$TC" fetch -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/zp-contracts-v1.git" main \
+    && git -C "$TC" checkout -q -f FETCH_HEAD || stop "toolchain fetch"
+else
+  git clone -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/zp-contracts-v1.git" "$TC" 2>/dev/null \
+    || stop "this token cannot read navoranetwork/zp-contracts-v1 (give it read access to that repo)"
+fi
+log "toolchain: zp-contracts-v1 $(git -C "$TC" log --oneline -1 | cut -c1-70)"
+(cd "$TC" && bash scripts/verify-zulib.sh) > "$OUT/verify-zulib.txt" 2>&1
+n_ok=$(grep -c '^ok' "$TC/verify-report.txt"); n_all=$(wc -l < "$TC/verify-report.txt")
+[ "$n_ok" = "$n_all" ] || stop "Zulib: $n_ok of $n_all modules verify"
+log "Zulib: all $n_ok modules verify"
+
+# 3. the node, Debug (the local chain)
+[ -d packages-mirror ] || bash scripts/restore-from-mirror.sh > /dev/null || stop "package mirror"
+dotnet build src/Node/Node.fsproj -c Debug --configfile nuget.mirror.config -v q > "$OUT/node-build.txt" 2>&1 || stop "node build (node-build.txt)"
+log "node built (Debug)"
+
+# 4. the scenario
+OUT="$OUT/net" ZP_V1_TOOLCHAIN="$TC" bash scripts/lab-testnet-v1.sh > "$OUT/testnet.txt" 2>&1; rc=$?
+log "lab-testnet-v1.sh: exit $rc; $(grep -E 'PASSED|FAIL' "$OUT/net/report.txt" | tail -1)"
+log "$(grep 'contract DLL SHA-256' "$OUT/net/report.txt" | sed 's/^.*4. //')"
+publish "done (exit $rc)"
