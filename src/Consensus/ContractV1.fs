@@ -239,9 +239,12 @@ let compile (contractsPath: string) (code: string) (ContractId (_, hash)) : Resu
 /// Load a built V1 contract; its main and cost functions in the node's contract form.
 let load (contractsPath: string) (contractId: ContractId) =
     let (ContractId (_, hash)) = contractId
-    let dir = folder contractsPath
+    let dir = Path.GetFullPath (folder contractsPath)     // the node's contracts path is relative
     let dll = Path.Combine(dir, moduleName hash + ".dll")
     if not (File.Exists dll) then Error "compiled V1 contract DLL file not found"
+    // its load context takes FSharp.Core from the same folder; without it the node's own (4.3.4)
+    // cannot stand in, and the contract would only fail when called
+    elif not (File.Exists (Path.Combine(dir, "FSharp.Core.dll"))) then Error "V1 contract runtime (FSharp.Core.dll) not found"
     else
         try
             let runner = Runner(ZenAbi.ContractLoadContext.Load(dll, dir), contractId)

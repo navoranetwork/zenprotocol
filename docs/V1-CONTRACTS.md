@@ -25,7 +25,9 @@ verified (`scripts/verify-zulib.sh`):
 
 ## Running
 
-Each V1 contract is loaded in its own load context with its own FSharp.Core; the node talks to
+Each V1 contract is loaded in its own load context with its own FSharp.Core (the build copies it
+next to the contract; a contract without it is refused at load); the context is kept alive with
+the contract, and ZenAbi in it is always the node's own copy (version 1.0.0.0). The node talks to
 it only through ZenAbi (`src/ZenAbi`, vendored from zp-contracts-v1 `abi/`, keep identical).
 `Consensus/ContractV1.fs` converts between node types and ZenAbi and gives the contract the same
 main/cost functions as V0, so call validation (`InputValidation/ContractV0.fs`) is shared:
@@ -49,11 +51,28 @@ is the V0 activation; `rlimit` applies to V0 only. Extension (`/wallet/contract/
 (`/wallet/contract/execute`, `/blockchain/contract/execute`) take a V1 contract's address like
 any other contract. In code: `Messaging.Services.Wallet.activateContractV1`.
 
+From a request to an active contract: the contract engine in zp-contracts-v1
+(`tools/engine/zp-engine`, docs/ENGINE.md) makes or verifies a contract (check, test, proof),
+then `zp-engine publish` sends it to this API from the author's own node, and `zp-engine call`
+calls it. The signing stays in the author's node wallet.
+
+## Trying it on a local node
+
+A Debug node runs the local chain (`--local 0`, genesis paid to the test wallet, V1 from block 1).
+`ZP_NODE_V1_ONLY=1` (Debug builds only) starts it without the V0 tooling (Z3, Mono, the contract
+tool); such a node cannot activate V0 contracts. `scripts/v1-local-e2e.sh` does the whole path
+on a real node: start it with its miner, import the wallet, `zp-engine make token`, `publish
+--wait`, `call buy` with 500 ZP, and check that the wallet holds 500 of the contract's token.
+It runs outside the test runner on purpose: the runner's host has FSharp.Core 10 and resolves
+assemblies for the contract, which once hid three loading bugs that only a node shows.
+
 ## Tests
 
 `src/Consensus.Tests/ContractV1Tests.fs` (needs `ZP_V1_TOOLCHAIN`; skipped otherwise): fork
 height, invalid UTF-8, activation and build, cost and result, a valid call validated in context,
-a wrong cost commitment, an under-declared cost stopped by gas, reload from disk, weight.
+a wrong cost commitment, an under-declared cost stopped by gas, reload from disk, weight; and
+loading: ZenAbi's version, FSharp.Core next to the contract, a relative contracts path, a call
+after garbage collections.
 `src/Api.Tests/ContractV1ApiTests.fs`: request parsing (version, rlimit), and end to end: activate
 through the wallet API, check the transaction, call the contract through the API.
 

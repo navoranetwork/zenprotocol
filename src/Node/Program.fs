@@ -351,14 +351,27 @@ module CheckPlatform =
                     Log.error (eventX "Old version of mono, please upgrade to at least {version}" >> setField "version" (boundedToVersion.ToString()))
                     System.Environment.FailFast("Please upgrade mono", null)
 
+    /// Debug builds only: ZP_NODE_V1_ONLY=1 starts a node without the V0 tooling (Z3, Mono, the
+    /// contract tool), for trying V1 contracts on the local chain. Such a node cannot activate V0
+    /// contracts, so a release build always requires the tooling.
+    let private v1Only () =
+#if DEBUG
+        System.Environment.GetEnvironmentVariable "ZP_NODE_V1_ONLY" = "1"
+#else
+        false
+#endif
+
     let check () =
         Log.info (eventX "Node running... press CTRL+C to exit")
-        checkZ3Availability()
-        checkOSArchitecture()
-        checkMonoVersion()
-        if not (System.IO.File.Exists (System.IO.Path.Combine(ZFStar.toolDirectory, "zen-contract-tool.exe"))) then
-            Log.error (eventX "Contract tool missing in {dir}. Exit node." >> setField "dir" ZFStar.toolDirectory)
-            System.Environment.FailFast("Contract tool missing", null)
+        if v1Only () then
+            Log.warning (eventX "ZP_NODE_V1_ONLY: V0 tooling not checked; V0 contracts cannot be activated by this node")
+        else
+            checkZ3Availability()
+            checkOSArchitecture()
+            checkMonoVersion()
+            if not (System.IO.File.Exists (System.IO.Path.Combine(ZFStar.toolDirectory, "zen-contract-tool.exe"))) then
+                Log.error (eventX "Contract tool missing in {dir}. Exit node." >> setField "dir" ZFStar.toolDirectory)
+                System.Environment.FailFast("Contract tool missing", null)
 
 
 [<EntryPoint>]

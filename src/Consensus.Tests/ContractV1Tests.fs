@@ -162,3 +162,50 @@ let ``V1 activation has a weight that grows with the source``() =
     let w (code: string) = Weight.activationWeight (HighV (Version1, Encoding.UTF8.GetBytes code))
     Assert.IsTrue(w v1Code > 0I)
     Assert.IsTrue(w (v1Code + v1Code) > w v1Code)
+
+/// Contracts are built against ZenAbi 1.0.0.0; the node's copy must carry that version (a real node
+/// resolves it by version; the test runner's resolve handler hid a 0.0.0.0 build once).
+[<Test>]
+let ``the node's ZenAbi has the version contracts reference``() =
+    Assert.AreEqual(Version(1, 0, 0, 0), typeof<ZenAbi.IContract>.Assembly.GetName().Version)
+
+/// The build puts the contract's FSharp.Core next to it (its load context takes it from there);
+/// without it the contract is refused at load, not when it is first called.
+[<Test>]
+let ``V1 contract is built with its runtime, and refused without it``() =
+    requireToolchain ()
+    activated.Force() |> ignore
+    let dir = IO.Path.Combine(contractPath, "v1")
+    Assert.IsTrue(IO.File.Exists (IO.Path.Combine(dir, "FSharp.Core.dll")), "FSharp.Core.dll next to the contract")
+    let bare = IO.Path.Combine [| IO.Path.GetTempPath(); IO.Path.GetRandomFileName() |]
+    let bareV1 = IO.Path.Combine(bare, "v1")
+    IO.Directory.CreateDirectory bareV1 |> ignore
+    for f in IO.Directory.GetFiles(dir, "Z*.dll") do IO.File.Copy(f, IO.Path.Combine(bareV1, IO.Path.GetFileName f))
+    match ContractV1.load bare v1Id with
+    | Error e -> Assert.AreEqual("V1 contract runtime (FSharp.Core.dll) not found", e)
+    | Ok _ -> Assert.Fail "loaded without its FSharp.Core"
+
+/// A node gives a relative contracts path (./data/...); loading and running must not depend on it.
+[<Test>]
+let ``V1 contract loads and runs from a relative contracts path``() =
+    requireToolchain ()
+    activated.Force() |> ignore
+    let relative = IO.Path.GetRelativePath(Environment.CurrentDirectory, contractPath)
+    Assert.IsFalse(IO.Path.IsPathRooted relative)
+    let contract = Contract.load relative 50ul v1Code v1Id |> unwrap
+    match Contract.run contract sampleInputTx context "" Zen.Types.Main.Anonymous None [] None with
+    | Ok (tx, _, _) -> Assert.AreEqual(expectedOutputTx v1Id, tx)
+    | Error e -> Assert.Fail (sprintf "%A" e)
+
+/// A collectible load context that nothing references unloads itself when collected; the
+/// contract must keep it alive, or its first lazy assembly load fails after a GC.
+[<Test>]
+let ``V1 contract still runs after garbage collections``() =
+    requireToolchain ()
+    activated.Force() |> ignore
+    let contract = Contract.load contractPath 50ul v1Code v1Id |> unwrap
+    for _ in 1..3 do
+        GC.Collect(); GC.WaitForPendingFinalizers()
+    match Contract.run contract sampleInputTx context "" Zen.Types.Main.Anonymous None [] None with
+    | Ok (tx, _, _) -> Assert.AreEqual(expectedOutputTx v1Id, tx)
+    | Error e -> Assert.Fail (sprintf "%A" e)

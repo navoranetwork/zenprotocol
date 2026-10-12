@@ -10,11 +10,13 @@ namespace ZenAbi
     public sealed class ContractLoadContext : AssemblyLoadContext
     {
         readonly string runtimeDir;
-        public ContractLoadContext(string name, string runtimeDir) : base(name, isCollectible: true) { this.runtimeDir = runtimeDir; }
+        public ContractLoadContext(string name, string runtimeDir) : base(name, isCollectible: true) { this.runtimeDir = Path.GetFullPath(runtimeDir); }   // LoadFromAssemblyPath needs absolute paths
 
         protected override Assembly Load(AssemblyName name)
         {
-            if (name.Name == "ZenAbi") return null;                 // shared with the host
+            // ZenAbi is shared: always the host's own copy, whatever version the contract was
+            // built against (the node's ZenAbi must not be looked up by version).
+            if (name.Name == "ZenAbi") return typeof(IContract).Assembly;
             var path = Path.Combine(runtimeDir, name.Name + ".dll");
             return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
         }
@@ -24,7 +26,20 @@ namespace ZenAbi
         {
             var ctx = new ContractLoadContext(Path.GetFileNameWithoutExtension(dll), runtimeDir);
             using (var s = File.OpenRead(dll))
-                return Contracts.Entry(ctx.LoadFromStream(s));
+                return new Held(ctx, Contracts.Entry(ctx.LoadFromStream(s)));
+        }
+
+        /// The contract together with its load context. A collectible context that nothing
+        /// references unloads itself when collected, after which the contract cannot load
+        /// FSharp.Core (or anything else) lazily: the contract must keep its context alive.
+        sealed class Held : IContract
+        {
+            readonly ContractLoadContext context;
+            readonly IContract contract;
+            public Held(ContractLoadContext context, IContract contract) { this.context = context; this.contract = contract; }
+            public RunResult Run(TxSkeleton tx, Context ctx, ContractId contractId, string command, Sender sender,
+                                 Data body, Input[] wallet, Data state)
+                => contract.Run(tx, ctx, contractId, command, sender, body, wallet, state);
         }
     }
 }
