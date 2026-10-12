@@ -1,0 +1,63 @@
+== 17:04:50 build the devnet image from c30c6e3d lab testnet (work in progress): 3 local nodes cross the V1 fork, activate, call, reorg
+== 17:05:56 start (relay: -e NODES=2 -e MINER_CGP_PAYOUT=off)
+block 177
+== 17:06:02 activate the CGP and voting contracts
+voting: {"address":"ctzn1qqqqqqq8gjuu8rz5q9f7jz72p3qh0arjctcstyzgp8ydux7hjt7kz7gkg4v5lec88","contractId":"00000000e89738718a802a7d217941882efe8e585e20b20901391bc37af25fac2f22c8ab","txHash":"0e761001a1a360ce2e
+CGP: {"address":"ctzn1qqqqqqq82cmzchmv39le3phuld9sw3m2u9z4vswu2nztyyf96k8sxcaumjvdw5gac","contractId":"00000000eac6c58bed912ff310df9f6960e8ed5c28aac83b8a98964224bab1e06c779b93","txHash":"c81428bf5a106a81fa
+== waiting for both to become active (each needs a block)
+both active after 10 s
+== 17:09:05 fund the test voters (snapshot 590)
+Unable to find image 'node:22' locally
+22: Pulling from library/node
+11fd0fe23a0e: Pulling fs layer
+b27643410a32: Pulling fs layer
+263f72aebc64: Pulling fs layer
+610dc773fbd7: Pulling fs layer
+c6c71fff0869: Pulling fs layer
+a4edf9c328e8: Pulling fs layer
+8cb71386cfcf: Pulling fs layer
+4e8e38f4cbab: Pulling fs layer
+11fd0fe23a0e: Download complete
+4e8e38f4cbab: Download complete
+263f72aebc64: Download complete
+b27643410a32: Download complete
+c6c71fff0869: Download complete
+a4edf9c328e8: Download complete
+c5a3facfdef5: Download complete
+8cb71386cfcf: Download complete
+25d725a046d7: Download complete
+610dc773fbd7: Download complete
+8cb71386cfcf: Pull complete
+a4edf9c328e8: Pull complete
+c6c71fff0869: Pull complete
+610dc773fbd7: Pull complete
+4e8e38f4cbab: Pull complete
+11fd0fe23a0e: Pull complete
+263f72aebc64: Pull complete
+b27643410a32: Pull complete
+Digest: sha256:0e5f906573693feaa1e21057ebdcfdb5bd5021f050b2dc7c9deceb629c7da2a8
+Status: Downloaded newer image for node:22
+npm notice
+npm notice New major version of npm available! 10.9.9 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+17:09:17 C: 1,236.9 ZP -> tzn1qe5qwl7pys5tu3dh4yte9ute39njgnplp4rhhnuwhm55hfrqjd4mqg6ylh4 b6fb759f9992de7766e3ec086a206738acc50bf8b82100c2caacd0c0d0bb4d28
+17:09:17 C: 1 ZP -> tzn1qe5qwl7pys5tu3dh4yte9ute39njgnplp4rhhnuwhm55hfrqjd4mqg6ylh4 58d47b9396ddeccb6d1d2e6a9a27018f36269b5347e443e58296cb0c4f8693a0
+17:09:17 D: 206.15 ZP -> tzn1q2ks4lrwv753755ls7xwdynmntn4d9qzs76mwmtv7wx23px002trsfxsaxe e565090de6766a2757ba1f2da9117ab309054b9b59e45a7e1e3321ce01ca834c
+17:09:17 D: 1 ZP -> tzn1q2ks4lrwv753755ls7xwdynmntn4d9qzs76mwmtv7wx23px002trsfxsaxe 56b3e11c597b16f0b0f680b21cdb2ee0cfc62f65318266c4b8d3e2c61c217f68
+17:09:17 funding done; it must be in a block by 590. Now: node tools/cgp-sim.mjs run --send
+== 17:09:18 run the vote (nominations, payout votes) through interval 6
+17:15:31 A allocation 5%: published f498f5d3e3419bd765c9bea9ded0854a6b2d62300e0bd84c7d384aeaa549a7b5
+17:15:31 A payout vote X: published 1082665b94337ff07f970b4b0aa98eeb7da6b56b5035d2a5592e1addcc0ae4a2
+17:15:31 B allocation 10%: published 13ab6c62c9fd16b24b492ea52b348ea61d79136b3a49dce40b77d5e8b74abedf
+17:15:31 B payout vote Y: published 8e8c34ac7ba49eb0437f1f720a035efea4ed4af75c84624cf3e548d43a9c0be9
+17:15:31 C allocation 15%: published 84021cbaa062098d01ed3665b863170efec134893a0f71fc81fe2e7c40f39ee7
+17:15:31 C payout vote Y: published 4546b23829e45301176344892ea7d7bf957d4449949b2a2bd9ff514488307cdd
+17:15:31 D allocation 0%: published 245c9b73670edae37d6675a2a92f9a05df72e375e5c762f11a2dda673250bf42
+17:15:31 D payout vote X: published 1d313f5ae17f8e3065d44dbd8349e060a3af3f93527d4cb82a26b279636578a7
+== 17:16:19 tip 620
+[{"interval":1,"allocation":0,"payout":{}},{"interval":2,"allocation":0,"payout":{}},{"interval":3,"allocation":0,"payout":{}},{"interval":4,"allocation":0,"payout":{}},{"interval":5,"allocation":10,"payout":{}},{"interval":6,"allocation":10,"payout":{}}]{"interval":7,"allocation":10,"payout":{"recipient":"tzn1qav9w7rgjwpw03hm3eayk0du35dkvrvza0km9ytw3m7hdvdnxad3qsu08uq","spendlist":[{"asset":"00","amount":"200000000"}]}}
+
+/data/logs/node1.log:[17:15:55 WRN] Relaying the CGP payout transaction e9ead1a84e9be306c09a132793db7c1f4ba7b3cee6dbaa30ef7716ba79cacbbf for block 610
+RESULT: PASS (relay): the chain passed the payout block 610 and is at 620
