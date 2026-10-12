@@ -37,7 +37,8 @@ publish() {  # the results branch, in its worktree (made by the replay run)
 
 log "node tests on $(git log --oneline -1)"
 publish "started"
-for mode in relay miner; do
+modes="relay miner"; [ -n "${ONLY_STALL:-}" ] && modes=""   # ONLY_STALL=1: only stall-repro
+for mode in $modes; do
   log "cgp-devnet-test $mode: start"
   bash scripts/cgp-devnet-test.sh "$mode" > "$OUT/cgp-$mode.log" 2>&1
   docker rm -f zen-devnet-test > /dev/null 2>&1
