@@ -1,0 +1,1 @@
+[2026-10-12 20:42] lab testnet on 32f77b2b lab: run the three-node V1 testnet on zp-lab-1 (installs the pinned SDK and F*, the toolchain, builds the node)
