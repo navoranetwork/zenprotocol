@@ -87,11 +87,20 @@ if [ -z "${SKIP_TESTNET:-}" ]; then
   log "lab-testnet-v1.sh: exit $rc; $(grep -E 'PASSED|FAIL' "$OUT/net/report.txt" | tail -1)"
   log "$(grep 'contract DLL SHA-256' "$OUT/net/report.txt" | sed 's/^.*4. //')"
 fi
-# the built contract DLL, to compare byte by byte with another machine's build
-dll=$(find src/Node/bin/Debug/data/local/0 -name 'Z*.dll' | head -1)
-[ -n "$dll" ] && { sha256sum "$dll" > "$OUT/contract-dll-sha256.txt"; base64 -w 0 "$dll" > "$OUT/contract-dll-base64.txt"; }
+# the token template built by build-contract.sh, to compare byte by byte with another machine's
+# build (the DLL in base64), and the intermediate F# it was compiled from
+W=$(mktemp -d)
+"$TC/tools/engine/zp-engine" make token --out "$W/token" > /dev/null 2>&1
+KEEP_WORK="$W/keep" "$TC/scripts/build-contract.sh" --lax "$W/token/contract.fst" "$W/out" > "$OUT/token-build.txt" 2>&1
+dll=$(ls "$W"/out/Z*.dll 2>/dev/null | head -1)
+if [ -n "$dll" ]; then
+  sha256sum "$dll" | sed "s|$W/out/||" > "$OUT/contract-dll-sha256.txt"
+  base64 -w 0 "$dll" > "$OUT/contract-dll-base64.txt"
+  log "token template DLL (build-contract.sh): $(cut -c1-64 "$OUT/contract-dll-sha256.txt")"
+fi
 dotnet --info > "$OUT/dotnet-info.txt" 2>&1
 publish "testnet done"
+[ -n "${DLL_ONLY:-}" ] && { log "done (DLL_ONLY)"; publish "done"; exit 0; }
 
 # 5. BitZen T5b (a Bitcoin payment proved in a V1 contract), when the token can read the repo
 B=/opt/bitzen
