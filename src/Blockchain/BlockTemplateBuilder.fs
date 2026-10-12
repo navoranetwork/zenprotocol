@@ -156,7 +156,10 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
         let newWeight = weight+wt
         if newWeight > maxWeight && (not <| Connection.isPayoutTransaction chain ex) then (state, added, notAdded, false, weight) else
         validateInContext chain getUTXO contractPath blockNumber timestamp
-            state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) ContractStates.asDatabase ex
+            // state.contractStates, not ContractStates.asDatabase: a call must see the contract state left by the calls
+            // already in this template, as block validation does; otherwise two calls each valid alone both go in and
+            // the block fails validation (the miner then retries the same invalid block)
+            state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) state.contractStates ex
         |> function
             | Error (Orphan | ContractNotActive) ->
                 (state, added, (ex,wt)::notAdded, altered, weight)
