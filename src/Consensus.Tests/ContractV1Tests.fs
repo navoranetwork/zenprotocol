@@ -318,3 +318,25 @@ let ``a refused V1 build is not repeated``() =
     let sw = Diagnostics.Stopwatch.StartNew()
     Assert.IsTrue(match Contract.compileV1 contractPath bad with Error _ -> true | Ok _ -> false)
     Assert.Less(sw.ElapsedMilliseconds, 100L)
+
+/// A build that fails for a reason of the node's own (here: no toolchain) never refuses the
+/// contract: the node stops (onEnvironmentFailure; replaced here) and the build raises, so no
+/// block is rejected for it, and the contract is not remembered as refused.
+[<Test>]
+let ``a build environment failure stops instead of refusing``() =
+    let saved = Environment.GetEnvironmentVariable "ZP_V1_TOOLCHAIN"
+    let stops = ref []
+    let savedHandler = ContractV1.onEnvironmentFailure
+    ContractV1.onEnvironmentFailure <- fun reason -> stops.Value <- reason :: stops.Value
+    try
+        Environment.SetEnvironmentVariable("ZP_V1_TOOLCHAIN", "/nonexistent-toolchain")
+        let code = v1Code + "\n// environment"
+        let id = Contract.makeContractId Version1 code
+        Assert.Throws<ContractV1.BuildEnvironmentError>(fun () -> Contract.compileV1 contractPath code |> ignore) |> ignore
+        Assert.AreEqual(1, stops.Value.Length, "the node is told to stop")
+        Assert.IsFalse(ContractV1.wasRefused id, "not remembered as refused")
+        // and through block validation: an exception, not BadContract
+        Assert.Throws<ContractV1.BuildEnvironmentError>(fun () -> activate Chain.localParameters 1ul code |> ignore) |> ignore
+    finally
+        Environment.SetEnvironmentVariable("ZP_V1_TOOLCHAIN", saved)
+        ContractV1.onEnvironmentFailure <- savedHandler

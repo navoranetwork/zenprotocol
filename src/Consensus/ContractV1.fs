@@ -209,23 +209,35 @@ let toolchain () =
 
 let private moduleName hash = "Z" + (Hash.bytes hash |> Convert.ToHexString).ToLowerInvariant()
 
-/// Contracts whose build failed in this process, by module name: a source is built at most once
-/// per node run, however often it comes back (in templates, as a new transaction, in a block).
+/// The outcome of a build that did not produce the contract.
+type BuildFailure =
+    /// The contract is refused: every node with the pinned toolchain refuses it (build-contract.sh
+    /// exit 10). The activation is invalid.
+    | Refused of string
+    /// The build failed here, for a reason that says nothing about the contract (exit 20, a crash,
+    /// a time limit, a missing toolchain). A node must not reject a block for it.
+    | EnvironmentFailure of string
+
+exception BuildEnvironmentError of string
+
+/// What a node does when it cannot build a contract for a reason of its own: stop, rather than
+/// reject a block the other nodes accept (it would leave the chain). Tests replace it.
+let mutable onEnvironmentFailure : string -> unit = fun reason ->
+    eprintfn "FATAL: cannot build a V1 contract here (%s). The node stops instead of rejecting a block that other nodes may accept. Fix the toolchain (see zp-contracts-v1 toolchain.lock) and restart." reason
+    exit 3
+
+/// The most time one build may take. Past it the build is killed and counts as an environment
+/// failure: type-checking time is bounded by the elaborator's rules (no type-level computation)
+/// and the source size, so a valid contract is far below this on any working node.
+let buildTimeLimit = TimeSpan.FromMinutes 10.
+
+/// Contracts refused in this process, by module name: a refused source is built at most once per
+/// node run, however often it comes back (in templates, as a new transaction, in a block).
 let private refused = System.Collections.Concurrent.ConcurrentDictionary<string, string>()
 
 let wasRefused (ContractId (_, hash)) = refused.ContainsKey (moduleName hash)
 
-/// Build a V1 contract (lax: type-checked and cost-elaborated, no Z3) into the V1 folder.
-let rec compile (contractsPath: string) (code: string) (contractId: ContractId) : Result<unit, string> =
-    let (ContractId (_, hash)) = contractId
-    match refused.TryGetValue (moduleName hash) with
-    | true, error -> Error error
-    | _ ->
-        match build contractsPath code hash with
-        | Error error -> refused.[moduleName hash] <- error; Error error
-        | ok -> ok
-
-and private build (contractsPath: string) (code: string) hash : Result<unit, string> =
+let rec private build (contractsPath: string) (code: string) hash : Result<unit, BuildFailure> =
     let dir = toolchain ()
     let src = Path.GetTempFileName()
     try
@@ -239,17 +251,40 @@ and private build (contractsPath: string) (code: string) hash : Result<unit, str
                 psi.Environment.["FSTAR_HOME"] <- Path.Combine(dir, "fstar")
             use p = Process.Start psi
             let err = p.StandardError.ReadToEndAsync()
-            let out = p.StandardOutput.ReadToEnd()
+            let out = p.StandardOutput.ReadToEndAsync()
+            if not (p.WaitForExit buildTimeLimit) then
+                (try p.Kill true with _ -> ())
+                Error (EnvironmentFailure (sprintf "build took more than %O" buildTimeLimit))
+            else
             p.WaitForExit()
-            let lines = out.Trim().Split('\n')
-            if p.ExitCode <> 0 then
-                Error (sprintf "V1 build failed: %s %s" (out.Trim()) err.Result)
-            elif lines.[lines.Length - 1].Trim() <> (moduleName hash).Substring 1 then
-                Error "V1 build: contract hash mismatch"
-            else Ok ()
-        with ex -> Exception.toError "V1 build" ex
+            let text = (out.Result.Trim() + " " + err.Result.Trim()).Trim()
+            let lines = out.Result.Trim().Split('\n')
+            match p.ExitCode with
+            | 0 when lines.[lines.Length - 1].Trim() = (moduleName hash).Substring 1 -> Ok ()
+            | 0 -> Error (EnvironmentFailure "the build did not report the contract's hash")
+            | 10 -> Error (Refused (sprintf "V1 contract refused: %s" text))
+            | code -> Error (EnvironmentFailure (sprintf "build exit %d: %s" code text))
+        with ex -> Error (EnvironmentFailure (sprintf "V1 build: %s" ex.Message))
     finally
         try File.Delete src with _ -> ()
+
+/// Build a V1 contract (lax: type-checked and cost-elaborated, no Z3) into the V1 folder.
+/// Ok, or Error with why the contract is refused. A failure of the build environment is retried
+/// once; if it fails again the node stops (onEnvironmentFailure), and if that returns, the
+/// BuildEnvironmentError exception is raised: never a refusal.
+let compile (contractsPath: string) (code: string) (contractId: ContractId) : Result<unit, string> =
+    let (ContractId (_, hash)) = contractId
+    match refused.TryGetValue (moduleName hash) with
+    | true, error -> Error error
+    | _ ->
+        let attempt () = build contractsPath code hash
+        let result = match attempt () with Error (EnvironmentFailure _) -> attempt () | r -> r
+        match result with
+        | Ok () -> Ok ()
+        | Error (Refused error) -> refused.[moduleName hash] <- error; Error error
+        | Error (EnvironmentFailure reason) ->
+            onEnvironmentFailure reason
+            raise (BuildEnvironmentError reason)
 
 /// The libsecp256k1 the node ships for V0 (package zen_secp256k1_*), next to the node. V1
 /// contracts verify signatures with exactly this build, as V0 contracts do.
