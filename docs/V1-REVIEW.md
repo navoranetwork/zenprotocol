@@ -89,3 +89,13 @@ Fixed at compile time, in three stages (each with measurements that show the gap
 What C1 leaves open: the numbers are from one 2-vCPU machine; the testnet should repeat the
 measurement suite (`tests/measure`) on the nodes' real hardware before the limits are final.
 
+
+## V0 replay with the V1 node (2026-10-12): passed
+
+A node built from v1-contracts (d567f7e) synced mainnet from genesis on the lab server
+(zp-lab-1: 8 cores, 15 GB) in about 4 hours, validating and re-compiling every V0 contract,
+to block 1,055,090. All 1,053 checkpoint block hashes (one per 1,000 blocks) match the stored
+reference of the official 1.0.13 node, and at block 1,055,093 the CGP, total supply and winner
+match the live community node. No errors. Report: branch `replay-results`,
+`replay/v1-d567f7e1-20261012-1133/`. Changes since d567f7e are in the contract toolchain,
+which V0 contracts do not use.
