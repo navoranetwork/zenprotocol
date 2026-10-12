@@ -1,3 +1,5 @@
 [2026-10-12 17:04] node tests on c30c6e3d lab testnet (work in progress): 3 local nodes cross the V1 fork, activate, call, reorg
 [2026-10-12 17:04] cgp-devnet-test relay: start
 [2026-10-12 17:16] cgp-devnet-test relay: RESULT: PASS (relay): the chain passed the payout block 610 and is at 620
+[2026-10-12 17:16] cgp-devnet-test miner: start
+[2026-10-12 17:26] cgp-devnet-test miner: RESULT: PASS (miner): the chain passed the payout block 610 and is at 620

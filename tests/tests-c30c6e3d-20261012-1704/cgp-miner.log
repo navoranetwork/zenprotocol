@@ -1,0 +1,34 @@
+== 17:16:21 build the devnet image from c30c6e3d lab testnet (work in progress): 3 local nodes cross the V1 fork, activate, call, reorg
+== 17:16:22 start (miner: -e NODES=1)
+block 197
+== 17:16:27 activate the CGP and voting contracts
+voting: {"address":"ctzn1qqqqqqq8gjuu8rz5q9f7jz72p3qh0arjctcstyzgp8ydux7hjt7kz7gkg4v5lec88","contractId":"00000000e89738718a802a7d217941882efe8e585e20b20901391bc37af25fac2f22c8ab","txHash":"0e761001a1a360ce2e
+CGP: {"address":"ctzn1qqqqqqq82cmzchmv39le3phuld9sw3m2u9z4vswu2nztyyf96k8sxcaumjvdw5gac","contractId":"00000000eac6c58bed912ff310df9f6960e8ed5c28aac83b8a98964224bab1e06c779b93","txHash":"c81428bf5a106a81fa
+== waiting for both to become active (each needs a block)
+both active after 10 s
+== 17:19:31 fund the test voters (snapshot 590)
+npm notice
+npm notice New major version of npm available! 10.9.9 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+17:19:33 C: 1,236.9 ZP -> tzn1qe5qwl7pys5tu3dh4yte9ute39njgnplp4rhhnuwhm55hfrqjd4mqg6ylh4 05d515d9a6fd2767f5fbd0e5f73d89bcb4f0a34ef3f067fc85acff23719ad6fd
+17:19:33 C: 1 ZP -> tzn1qe5qwl7pys5tu3dh4yte9ute39njgnplp4rhhnuwhm55hfrqjd4mqg6ylh4 f7a299a2dd53e795549423581be65450e2b55848bdd516e41a293e3051c065e8
+17:19:33 D: 206.15 ZP -> tzn1q2ks4lrwv753755ls7xwdynmntn4d9qzs76mwmtv7wx23px002trsfxsaxe 378a9943c9518823c7fa07f3069ad67f12d1c4e26b2c6beed8adcd65306e9281
+17:19:33 D: 1 ZP -> tzn1q2ks4lrwv753755ls7xwdynmntn4d9qzs76mwmtv7wx23px002trsfxsaxe cbbb655166d62420c837fb716a5cf5f77556061188e24c632afc9273c4d2c3ea
+17:19:33 funding done; it must be in a block by 590. Now: node tools/cgp-sim.mjs run --send
+== 17:19:33 run the vote (nominations, payout votes) through interval 6
+17:26:11 A allocation 5%: published 073e9f9f43ce2539367cc4547c4705848639c89593776044637b83a8225c6c55
+17:26:11 A payout vote X: published 05a80176b489ba2a32155920d252fad29af3b92e807ad6eb1104eac3bd6a35c2
+17:26:11 B allocation 10%: published 1f5e61d08a5782d37e2cd8051de8e33cdd1d42b321731da343d812f837209f8a
+17:26:11 B payout vote Y: published 9fe1d352da7bf3fa76c6d239386b0b127b36b78854ecd847dd3b3c66072f5a95
+17:26:11 C allocation 15%: published e300fd3cb69fbef6e24731607cd13ae3c8a70dd57d701746995f8b2419060dbd
+17:26:11 C payout vote Y: published b6af298e5b63fb1d29ec6ee4360382e3bef14f96e744a412fd18846f438e4c9f
+17:26:11 D allocation 0%: published fc21441e4be59fe703b79f870079018821236842306dce0e6703c4b3ef80c02b
+17:26:11 D payout vote X: published 3c4e1619eb02df12fb56956e194f9ddfb350087c737118e1b7c5166679adf28f
+== 17:26:47 tip 620
+[{"interval":1,"allocation":0,"payout":{}},{"interval":2,"allocation":0,"payout":{}},{"interval":3,"allocation":0,"payout":{}},{"interval":4,"allocation":0,"payout":{}},{"interval":5,"allocation":10,"payout":{}},{"interval":6,"allocation":10,"payout":{}}]{"interval":7,"allocation":10,"payout":{"recipient":"tzn1qav9w7rgjwpw03hm3eayk0du35dkvrvza0km9ytw3m7hdvdnxad3qsu08uq","spendlist":[{"asset":"00","amount":"200000000"}]}}
+
+/data/logs/node0.log:[17:26:31 WRN] Miner created the CGP payout transaction c00c64e518f5f98074345448effd1b36612f6ec91de96e748c0057dcb5328dd1
+/data/logs/node0.log:[17:26:31 WRN] Relaying the CGP payout transaction 5dc30011b8998f19468794565db4f025b78837013af99572b08f32c6d31f410c for block 610
+RESULT: PASS (miner): the chain passed the payout block 610 and is at 620
