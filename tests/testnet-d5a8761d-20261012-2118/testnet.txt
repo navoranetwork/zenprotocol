@@ -1,0 +1,19 @@
+[21:19:27] lab testnet: V1 fork at block 60; node d5a8761d, toolchain acf9df4
+[21:19:27] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[21:19:45] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[21:20:00] 1. before the fork (height 1): activation not accepted (not supported)
+[21:20:09] 2. activation sent from A at height 318
+[21:20:26]    active on A and B; both built the same DLL, SHA-256 d5e48cb9e56da4fc39e70f41c8d14dc8187f515702d2c31ac30dc221a46ded20
+   build time: 8298ms
+   build time: 0ms
+   build time: 0ms
+   build time: 8265ms
+[21:20:27]    call buy sent from A
+[21:20:27]    buy mined: A's wallet holds 500 tokens; A and B agree at height 359
+[21:20:27] 3. reorg: A at 359, C (alone) at 353; A stops mining
+[21:20:35]    C at 367 joins A
+[21:20:39]    A and B switched to C's chain (height 369); the activation and the call are back in A's mempool
+[21:20:51]    the activation came back from the mempool: active on all three at height 391, C built the same DLL
+[21:20:52]    the call was mined again on C's chain: A's wallet holds 500 tokens, A's mempool is empty
+[21:20:52] 4. contract DLL SHA-256 d5e48cb9e56da4fc39e70f41c8d14dc8187f515702d2c31ac30dc221a46ded20 (compare with another machine: build-contract.sh of the same source)
+[21:20:52] PASSED

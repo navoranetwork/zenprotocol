@@ -1,0 +1,300 @@
+[21:20:46 INF] Request block #385 00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568 from peers
+[21:20:46 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:46 INF] Blockchain: Handling command ValidateBlock started
+[21:20:46 INF] Validating new block #385 with 1 txs 00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568
+[21:20:46 INF] BlockHandler: New block #385 of 26-10-12 21:20:46 with 1 txs 0x505380245 00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568
+[21:20:46 INF] Tally adding block #385 of block 00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568 for interval #4
+[21:20:46 INF] BlockHandler: BlockAdded #385 hash #00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568
+[21:20:46 INF] BlockHandler: Connecting to longest chain
+[21:20:46 INF] BlockHandler: New tip #385 00000dd1a588252c13438266f5794f28d340637b76ad3da4d84e331d8ce4b568
+[21:20:46 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:46 INF] Blockchain: Handling command ValidateBlock started
+[21:20:46 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #386
+[21:20:48 INF] Request block #386 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3 from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #386
+[21:20:48 INF] Request block #386 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3 from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Validating new block #386 with 1 txs 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3
+[21:20:48 INF] BlockHandler: New block #386 of 26-10-12 21:20:48 with 1 txs 0x505347595 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3
+[21:20:48 INF] Tally adding block #386 of block 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3 for interval #4
+[21:20:48 INF] BlockHandler: BlockAdded #386 hash #00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3
+[21:20:48 INF] BlockHandler: Connecting to longest chain
+[21:20:48 INF] BlockHandler: New tip #386 00001db1dd828907d0c83e9d82593033f88423620634279f2a53dbe226e743e3
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #387
+[21:20:48 INF] Request block #387 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #387
+[21:20:48 INF] Request block #387 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Validating new block #387 with 1 txs 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b
+[21:20:48 INF] BlockHandler: New block #387 of 26-10-12 21:20:48 with 1 txs 0x505343679 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b
+[21:20:48 INF] Tally adding block #387 of block 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b for interval #4
+[21:20:48 INF] BlockHandler: BlockAdded #387 hash #00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b
+[21:20:48 INF] BlockHandler: Connecting to longest chain
+[21:20:48 INF] BlockHandler: New tip #387 00001357199525cc6cbe6d7e1dbf963b8d3b8163a4e2b713b6ebd3032c8a814b
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #388
+[21:20:48 INF] Request block #388 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #388
+[21:20:48 INF] Request block #388 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Validating new block #388 with 1 txs 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd
+[21:20:48 INF] BlockHandler: New block #388 of 26-10-12 21:20:48 with 1 txs 0x505275260 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd
+[21:20:48 INF] Tally adding block #388 of block 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd for interval #4
+[21:20:48 INF] BlockHandler: BlockAdded #388 hash #000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd
+[21:20:48 INF] BlockHandler: Connecting to longest chain
+[21:20:48 INF] BlockHandler: New tip #388 000005e3023d1608a4b81630243417bb9bd48e3799d2220ff6adac3d8d0333dd
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #374
+[21:20:48 INF] Request block #374 000007935ca56a5acbb532c5678b8c2c53dc69d7bd8c0e1f673b62734fda2e36 from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #374
+[21:20:48 INF] Request block #374 000007935ca56a5acbb532c5678b8c2c53dc69d7bd8c0e1f673b62734fda2e36 from peers
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command RequestBlock started
+[21:20:48 INF] Blockchain: Handling command RequestBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Validating new block #374 with 1 txs 000007935ca56a5acbb532c5678b8c2c53dc69d7bd8c0e1f673b62734fda2e36
+[21:20:48 INF] Block added to a fork chain #374 000007935ca56a5acbb532c5678b8c2c53dc69d7bd8c0e1f673b62734fda2e36
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateBlock started
+[21:20:48 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #375
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #375
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #376
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #376
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #377
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #377
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #378
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #378
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #379
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #379
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #380
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #380
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #381
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #381
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #382
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #382
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #383
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #383
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #384
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #384
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #385
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:48 INF] Handling new block header #385
+[21:20:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #386
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #386
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #387
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #387
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #388
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #388
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #389
+[21:20:49 INF] Request block #389 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad from peers
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #389
+[21:20:49 INF] Request block #389 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad from peers
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateBlock started
+[21:20:49 INF] Validating new block #389 with 1 txs 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad
+[21:20:49 INF] BlockHandler: New block #389 of 26-10-12 21:20:49 with 1 txs 0x505211465 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad
+[21:20:49 INF] Tally adding block #389 of block 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad for interval #4
+[21:20:49 INF] BlockHandler: BlockAdded #389 hash #0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad
+[21:20:49 INF] BlockHandler: Connecting to longest chain
+[21:20:49 INF] BlockHandler: New tip #389 0000191a687b364a41dce07c03f060014b444d09b69a9719424e9fa444f5a1ad
+[21:20:49 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:49 INF] Blockchain: Handling command ValidateBlock started
+[21:20:49 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #389
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:49 INF] Handling new block header #389
+[21:20:49 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:50 INF] Handling new block header #390
+[21:20:50 INF] Request block #390 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef from peers
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:50 INF] Handling new block header #390
+[21:20:50 INF] Request block #390 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef from peers
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:50 INF] Blockchain: Handling command ValidateBlock started
+[21:20:50 INF] Validating new block #390 with 1 txs 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef
+[21:20:50 INF] BlockHandler: New block #390 of 26-10-12 21:20:50 with 1 txs 0x505169252 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef
+[21:20:50 INF] Tally adding block #390 of block 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef for interval #4
+[21:20:50 INF] BlockHandler: BlockAdded #390 hash #000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef
+[21:20:50 INF] BlockHandler: Connecting to longest chain
+[21:20:50 INF] BlockHandler: New tip #390 000008250447a71fe9e673553543a504967416468d9aa74d6a4a3be6ee02feef
+[21:20:50 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:50 INF] Blockchain: Handling command ValidateBlock started
+[21:20:50 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:50 INF] Handling new block header #390
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:50 INF] Handling new block header #390
+[21:20:50 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:51 INF] Handling new block header #391
+[21:20:51 INF] Request block #391 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40 from peers
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:51 INF] Handling new block header #391
+[21:20:51 INF] Request block #391 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40 from peers
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:51 INF] Blockchain: Handling command ValidateBlock started
+[21:20:51 INF] Validating new block #391 with 1 txs 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40
+[21:20:51 INF] BlockHandler: New block #391 of 26-10-12 21:20:51 with 1 txs 0x505147116 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40
+[21:20:51 INF] Tally adding block #391 of block 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40 for interval #4
+[21:20:51 INF] BlockHandler: BlockAdded #391 hash #00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40
+[21:20:51 INF] BlockHandler: Connecting to longest chain
+[21:20:51 INF] BlockHandler: New tip #391 00000a735d325c3bac581e85372730e6a3f1f44c0ae59bebda48d9cee89eec40
+[21:20:51 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:51 INF] Blockchain: Handling command ValidateBlock started
+[21:20:51 INF] Blockchain: Handling command ValidateBlock ended
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:51 INF] Handling new block header #391
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[21:20:51 INF] Handling new block header #391
+[21:20:51 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[21:20:51 INF] Blockchain: Handling request GetActiveContracts started
+[21:20:51 INF] Blockchain: Handling request GetActiveContracts ended
+[21:20:51 INF] Blockchain: Handling request GetBlockChainInfo started
+[21:20:51 INF] Blockchain: Handling request GetBlockChainInfo ended
