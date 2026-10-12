@@ -99,3 +99,19 @@ reference of the official 1.0.13 node, and at block 1,055,093 the CGP, total sup
 match the live community node. No errors. Report: branch `replay-results`,
 `replay/v1-d567f7e1-20261012-1133/`. Changes since d567f7e are in the contract toolchain,
 which V0 contracts do not use.
+
+## Lab testnet, three nodes (2026-10-12): passed here
+
+`scripts/lab-testnet-v1.sh` on a 2-core cloud machine: three Debug nodes on the local chain,
+V1 fork at block 60. A V1 activation at block 1 does not enter the mempool; after the fork it
+makes the contract active on A and B, each building it itself, with byte-identical DLLs
+(SHA-256 a36ac9b4...713c for the token template); a call is mined. Then C, which mined its own
+chain from genesis, overtakes and joins: A and B switch to C's chain (no activation), the
+activation and the call return to A's mempool, are mined again, and all three nodes end on one
+tip with the contract active and the call's result in A's wallet.
+
+Found on the way and fixed: a node built the same activation three times (two block templates
+and the block, 14 s each, the blockchain actor blocked meanwhile); now built and loaded once.
+Seen, not changed (V0 behaviour): a transaction a reorg puts back in the mempool is not relayed
+to peers again; only a node that has it can mine it.
+Next: the same script on zp-lab-1 (another machine and CPU: the DLL hash must match).

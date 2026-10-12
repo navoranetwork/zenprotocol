@@ -1,5 +1,4 @@
 #!/bin/bash
-# STATUS: work in progress, not yet passing end to end (step 2 call uses zp-engine publish next).
 # V1 lab testnet: three nodes on the local chain cross the V1 fork, activate and call a V1
 # contract, and go through a reorg that removes the activation. Debug build (local chain),
 # ZP_NODE_V1_ONLY=1 (no V0 tooling).
@@ -14,7 +13,8 @@
 #      itself) with byte-identical DLLs; a call to it is mined and both agree on the tip;
 #   3. reorg: A stops mining, C (which mined its own chain from genesis) gets ahead, then joins:
 #      A and B switch to C's chain, which has no activation; the activation and the call come
-#      back from the mempool, C mines them, and all three end on one tip with the contract active.
+#      back into A's mempool, A (mining again) includes them, and all three end on one tip with the
+#      contract active. (A transaction put back by a reorg is not relayed again: V0 behaviour.)
 #   4. prints the contract DLL's SHA-256, to compare with a build on another machine.
 #
 # usage: ZP_V1_TOOLCHAIN=<zp-contracts-v1, Zulib verified> FSTAR_HOME=<F*> scripts/lab-testnet-v1.sh
@@ -119,12 +119,17 @@ wait_for 1800 "C passes $target" bash -c "[ \$(curl -s $(api C)/blockchain/info 
 stop C; SEED[C]=10000; start C --miner 1
 say "   C at $(height C) joins A"
 wait_for 900 "all three on one tip" bash -c "a=\$(curl -s $(api A)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); b=\$(curl -s $(api B)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); c=\$(curl -s $(api C)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); [ -n \"\$a\" ] && [ \"\$a\" = \"\$b\" ] && [ \"\$b\" = \"\$c\" ]"
-say "   A and B switched to C's chain (height $(height A))"
+say "   A and B switched to C's chain (height $(height A)); the activation and the call are back in A's mempool"
+# a transaction a reorg puts back in a node's mempool is not sent to its peers again (V0 behaviour), so
+# C never hears of them; A mines again and includes them itself
+stop A; start A --miner 1
 wait_for 1200 "contract active again on all three" bash -c "for p in 20000 20001 20002; do [ \"\$(curl -s http://127.0.0.1:\$p/contract/active | python3 -c 'import json,sys; print(any(c[\"contractId\"]==\"$CID\" for c in json.load(sys.stdin)))')\" = True ] || exit 1; done"
 wait_for 600 "all three on one tip after the activation" bash -c "a=\$(curl -s $(api A)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); c=\$(curl -s $(api C)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); b=\$(curl -s $(api B)/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"tip\"])'); [ \"\$a\" = \"\$b\" ] && [ \"\$b\" = \"\$c\" ]"
 DLLC=$(find "$BIN/data/local/2" -name "Z${CID:8}.dll")
 [ -n "$DLLC" ] && [ "$(sha256sum "$DLLC" | awk '{print $1}')" = "$SUMS" ] || fail "C's DLL differs or is missing"
 say "   the activation came back from the mempool: active on all three at height $(height A), C built the same DLL"
+wait_for 600 "the call mined again: A's wallet holds 500 tokens on the new chain" bash -c "[ \"\$(curl -s $(api A)/wallet/balance | python3 -c 'import json,sys; print(sum(int(b[\"balance\"]) for b in json.load(sys.stdin) if b[\"asset\"]==\"$CID\"))')\" = 500 ] && [ -z \"\$(curl -s $(api A)/blockchain/mempool | tr -d '[] \n')\" ]"
+say "   the call was mined again on C's chain: A's wallet holds 500 tokens, A's mempool is empty"
 grep -h "ERR\|Exception" "$OUT"/*.log | grep -vi "peer\|connect\|socket" | head -20 > "$OUT/errors.txt" || true
 say "4. contract DLL SHA-256 $SUMS (compare with another machine: build-contract.sh of the same source)"
 say "PASSED"
