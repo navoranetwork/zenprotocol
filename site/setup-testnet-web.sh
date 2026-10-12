@@ -70,6 +70,8 @@ server {
     location = /faucet/status  { limit_except GET { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$FAUCET/faucet/status; add_header Cache-Control "no-store"; }
     location = /faucet/request { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k;
                                  proxy_set_header X-Real-IP \$remote_addr; proxy_pass http://127.0.0.1:$FAUCET/faucet/request; add_header Cache-Control "no-store"; }
+    # live events for the bridge page (server-sent events: one long request per open page)
+    location = /bridge/events { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/events; proxy_http_version 1.1; proxy_set_header Connection ""; proxy_buffering off; proxy_cache off; proxy_read_timeout 3600s; add_header Cache-Control "no-cache"; }
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
     # bridge page actions: look up an EVM address, link it to a ZP address (signed), claim a withdrawal
     location = /bridge/lookup   { limit_except GET  { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$BRIDGE/lookup\$is_args\$args; add_header Cache-Control "no-store"; }

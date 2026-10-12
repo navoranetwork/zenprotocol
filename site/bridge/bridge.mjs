@@ -104,6 +104,14 @@ async function evmSend(to, amount) {
   const tx = await usdc.transfer(to, BigInt(amount)); await tx.wait(CONF > 1 ? 1 : 1); return tx.hash;
 }
 
+// ---- live events (GET /events, server-sent events): the page refreshes when something changes -----------------
+const clients = new Set();
+function notify(kind, extra = {}) {
+  const msg = `event: change\ndata: ${JSON.stringify({ kind, at: Date.now(), ...extra })}\n\n`;
+  for (const r of clients) { try { r.write(msg); } catch { clients.delete(r); } }
+}
+setInterval(() => { for (const r of clients) { try { r.write(': ping\n\n'); } catch { clients.delete(r); } } }, 25000).unref();
+
 // ---- loops ------------------------------------------------------------------------------------
 let pendingDeposits = load('pending.json', []);   // deposits seen from addresses that had no link yet
 async function depositsRound() {
@@ -112,13 +120,14 @@ async function depositsRound() {
   for (const d of all) {
     const key = d.tx + ':' + d.log;
     if (keys.has(key) || done[key]) continue; keys.add(key);
-    if (FUNDERS.has(d.from)) { log('reserve top-up', d.amount, 'from', d.from, d.tx); continue; }   // funds the reserves, issues nothing
+    if (FUNDERS.has(d.from)) { log('reserve top-up', d.amount, 'from', d.from, d.tx); notify('reserves'); continue; }   // funds the reserves, issues nothing
     const link = links[d.from];
-    if (!link) { keep.push(d); continue; }       // wait until the sender links a ZP address
+    if (!link) { keep.push(d); if (!pendingDeposits.some(p => p.tx === d.tx && p.log === d.log)) notify('waiting', { evm: d.from }); continue; }       // wait until the sender links a ZP address
     try {
       const tx = await issue(link.zp, d.amount);
       done[key] = { zpTx: tx, amount: d.amount, zp: link.zp, from: d.from }; save('done.json', done);
       log('deposit', d.amount, 'from', d.from, '-> issued to', link.zp, tx);
+      notify('deposit', { evm: d.from });
     } catch (e) { log('deposit failed', key, e.message); keep.push(d); }
   }
   pendingDeposits = keep; save('pending.json', keep);
@@ -140,6 +149,7 @@ async function withdraw(zpTx, evmTo) {
   const out = await evmSend(evmTo, paid);
   done[key] = { evmTx: out, burn, amount: String(paid), to: evmTo }; save('done.json', done);
   log('withdrawal', String(paid), '->', evmTo, out);
+  notify('withdrawal', { evm: evmTo.toLowerCase() });
   return done[key];
 }
 
@@ -148,11 +158,18 @@ async function withdraw(zpTx, evmTo) {
 // POST /withdraw  {zpTx, evm}
 // GET  /status    reserves (USDC held), zUSDC outstanding, counts, the bridge's addresses on both chains
 // GET  /lookup?evm=0x…   one EVM address: its linked ZP address, its deposits (issued and waiting) and its withdrawals
+// GET  /events    server-sent events: `change` {kind: deposit | waiting | withdrawal | link | reserves, evm?} when it happens
 const json = (res, code, v) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(v)); };
 const readBody = req => new Promise((ok, no) => { let b = ''; req.on('data', c => { b += c; if (b.length > 8192) no(new Error('too large')); }); req.on('end', () => ok(b)); });
 http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, 'http://x');
+    if (req.method === 'GET' && u.pathname === '/events') {
+      if (clients.size >= 500) return json(res, 503, { error: 'too many listeners' });
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
+      res.write('retry: 5000\n\n'); clients.add(res); req.on('close', () => clients.delete(res));
+      return;
+    }
     if (req.method === 'GET' && u.pathname === '/status') {
       const outstanding = Object.values(done).filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - Object.values(done).filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
       const reserves = await evmReserves();   // first: it also learns chainId
@@ -176,6 +193,7 @@ http.createServer(async (req, res) => {
       if (message !== `Link ${evm} to ${z}`) throw new Error('message must be "Link <evm> to <zp>"');
       if (!EVM.startsWith('mock:')) { const rec = (await import('ethers')).verifyMessage(message, signature); if (rec.toLowerCase() !== evm.toLowerCase()) throw new Error('signature does not match'); }
       links[evm.toLowerCase()] = { zp: z, since: Date.now() }; save('links.json', links);
+      notify('link', { evm: evm.toLowerCase() });
       return json(res, 200, { ok: true });
     }
     if (req.method === 'POST' && u.pathname === '/withdraw') {
