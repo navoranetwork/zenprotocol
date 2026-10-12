@@ -155,7 +155,9 @@ while (true) {
   const view = { error: null };
   if (!CONTRACT) view.error = 'No contract configured (BITZEN_CONTRACT).';
   else {
-    try { for (let i = 0; i < MAX_CALLS_PER_LOOP && await step(view); i++); }
+    // each call waits for its block, which can take many minutes: write the status after every call, not only at the end
+    await contractInfo(view); writeStatus(view);
+    try { for (let i = 0; i < MAX_CALLS_PER_LOOP && await step(view); i++) { await contractInfo(view); writeStatus(view); } }
     catch (e) { view.error = e.message; log('error:', e.message); }
     await contractInfo(view);
   }
