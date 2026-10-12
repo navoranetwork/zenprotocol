@@ -61,7 +61,7 @@
 
 <div class="pair">
   <div class="side"><div class="k">USDC held by the bridge</div><div class="v" id="res">–</div><small id="resnet">on the EVM test network</small></div>
-  <div class="eq" aria-hidden="true">≥</div>
+  <div class="eq" id="eq" aria-hidden="true"></div>
   <div class="side"><div class="k">zUSDC in circulation</div><div class="v" id="out">–</div><small>on the ZP testnet</small></div>
 </div>
 <div class="counts" id="counts"></div>
@@ -153,6 +153,7 @@
     const out = BigInt(S.zusdcOutstanding || 0), res = S.reserves == null ? null : BigInt(S.reserves);
     $('out').textContent = usdc(out); $('res').textContent = res == null ? 'unknown' : usdc(res); $('resnet').textContent = 'on ' + net;
     $('conf').textContent = S.confirmations ?? 12;
+    $('eq').textContent = res == null ? '' : res >= out ? '≥' : '<';
     let h;
     if (mock) h = ['warn', 'Running on a simulated EVM chain', 'Deposits from a browser wallet are not picked up in this mode.'];
     else if (res == null) h = ['warn', 'Bridge running, reserves not readable right now', 'zUSDC in circulation is shown; the USDC balance could not be read from the chain.'];
