@@ -40,7 +40,7 @@ publish "started"
 docker rm -f zp-replay >/dev/null 2>&1; docker volume rm -f zp-replay >/dev/null 2>&1
 docker run -d --name zp-replay -v zp-replay:/data -p "$API":11567 zen-node:v1 >/dev/null
 
-tip() { curl -fs "http://$API/blockchain/info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["blocks"])' 2>/dev/null; }
+tip() { curl -fs -m 20 "http://$API/blockchain/info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["blocks"])' 2>/dev/null; }
 start=$(date +%s); last=0; t=0; stalled=0
 while :; do
   sleep 300
@@ -65,10 +65,10 @@ echo "reference check exit code: $rc" >> "$OUT/report.txt"
 docker logs zp-replay 2>&1 | grep -E "ERR|Exception|nvalid" | grep -vi peer | tail -100 > "$OUT/errors.log"
 # the live community node, once both are at the same tip
 for i in $(seq 1 30); do
-  a=$(tip); b=$(curl -fs https://navora.network/node/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)["blocks"])' 2>/dev/null)
+  a=$(tip); b=$(curl -fs -m 20 https://navora.network/node/blockchain/info | python3 -c 'import json,sys; print(json.load(sys.stdin)["blocks"])' 2>/dev/null)
   if [ -n "$a" ] && [ "$a" = "$b" ]; then
     for ep in cgp totalzp winner; do
-      x=$(curl -fs "http://$API/blockchain/$ep"); y=$(curl -fs "https://navora.network/node/blockchain/$ep")
+      x=$(curl -fs -m 20 "http://$API/blockchain/$ep"); y=$(curl -fs -m 20 "https://navora.network/node/blockchain/$ep")
       [ "$x" = "$y" ] && echo "live $ep at $a: match" >> "$OUT/report.txt" || { echo "live $ep at $a: MISMATCH" >> "$OUT/report.txt"; rc=1; }
     done
     break
