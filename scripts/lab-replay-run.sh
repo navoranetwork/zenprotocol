@@ -18,6 +18,7 @@ export GIT_AUTHOR_NAME=zp-lab GIT_AUTHOR_EMAIL=zp-lab@navora.network GIT_COMMITT
 publish() {
   local wt="$PWD/replay-results"
   if [ ! -d "$wt/.git" ] && [ ! -f "$wt/.git" ]; then
+    rm -rf "$wt"; git worktree prune   # leftovers of an earlier run that failed half way
     git fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results:replay-results 2>/dev/null \
       || git branch -q replay-results "$(git commit-tree "$(git mktree < /dev/null)" -m 'replay results')"
     git worktree add -q "$wt" replay-results
