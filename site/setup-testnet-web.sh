@@ -71,6 +71,10 @@ server {
     location = /faucet/request { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k;
                                  proxy_set_header X-Real-IP \$remote_addr; proxy_pass http://127.0.0.1:$FAUCET/faucet/request; add_header Cache-Control "no-store"; }
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
+    # bridge page actions: look up an EVM address, link it to a ZP address (signed), claim a withdrawal
+    location = /bridge/lookup   { limit_except GET  { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$BRIDGE/lookup\$is_args\$args; add_header Cache-Control "no-store"; }
+    location = /bridge/link     { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 4k; proxy_pass http://127.0.0.1:$BRIDGE/link; add_header Cache-Control "no-store"; }
+    location = /bridge/withdraw { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 4k; proxy_pass http://127.0.0.1:$BRIDGE/withdraw; proxy_read_timeout 120s; add_header Cache-Control "no-store"; }
 
     # files the indexer writes (assets, ...)
     location ~ ^/(stats|assets|cgp-history|community-votes|history|bitzen)\.json\$ { root $WEB; add_header Cache-Control "no-cache"; }

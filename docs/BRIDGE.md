@@ -37,7 +37,8 @@ The EVM test key needs a little test ETH for withdrawals. The default USDC addre
 - Done and tested on the live testnet server with Base Sepolia (2026-10-08): link by signature, a real USDC deposit issued as zUSDC, and a withdrawal that burned zUSDC and paid USDC back. See VERIFICATION.md.
 - Not done: pause switch, limits, proof of reserves page, multi-key custody.
 - Custody: one key holds the reserves and the issuing key. The plan is to move both to a community vote (multi-signature) before any real use. Real money, regulation and an independent audit come before that.
-- Needed next: a deposit/withdraw page on the site, proof-of-reserves page (EVM balance versus zUSDC outstanding), pause switch, limits per user.
+- Site page `/bridge.html`: live reserves (the bridge's USDC balance read from the EVM chain) against zUSDC outstanding, connect a browser wallet (switches it to Base Sepolia), link by signature, deposit USDC, claim a withdrawal, and the history of one EVM address (`GET /lookup?evm=`). nginx exposes `/bridge/status`, `/bridge/lookup` (GET) and `/bridge/link`, `/bridge/withdraw` (POST, rate-limited); re-run `site/setup-testnet-web.sh` to publish the new routes.
+- Needed next: sending zUSDC from the ZP Wallet (today the withdrawal transfer is made from a node wallet), pause switch, limits per user.
 
 ## Trying it on Base Sepolia (test network, test keys only)
 1. Make two keys: `node site/bridge/evm-tools.mjs newkey` twice (the bridge's key and a depositor's key).
