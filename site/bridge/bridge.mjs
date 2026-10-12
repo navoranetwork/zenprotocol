@@ -60,6 +60,23 @@ async function evmInit() {
   if (process.env.BRIDGE_EVM_KEY) wallet = new ethers.Wallet(process.env.BRIDGE_EVM_KEY, provider);
 }
 const bridgeEvm = () => wallet ? wallet.address.toLowerCase() : env('BRIDGE_EVM_ADDRESS', '').toLowerCase();
+// USDC the bridge holds on the EVM chain (its reserves), cached for 30 s so /status stays cheap; null when unknown or mocked
+let reservesCache = { at: 0, value: null }, chainId = null;
+async function evmReserves() {
+  if (EVM.startsWith('mock:') || !bridgeEvm()) return null;
+  if (Date.now() - reservesCache.at < 30000) return reservesCache.value;
+  try {
+    if (chainId === null) chainId = Number((await provider.getNetwork()).chainId);
+    const usdc = new ethers.Contract(USDC, ['function balanceOf(address) view returns (uint256)'], provider);
+    reservesCache = { at: Date.now(), value: String(await usdc.balanceOf(bridgeEvm())) };
+  } catch (e) { log('reserves read failed:', e.message); reservesCache = { at: Date.now(), value: null }; }
+  return reservesCache.value;
+}
+let bridgeZpCache = '';
+async function bridgeZp() {
+  if (!bridgeZpCache) { try { const a = String(await zp('/wallet/address')).replace(/"/g, '').trim(); if (/^t?zn1[0-9a-z]+$/.test(a)) bridgeZpCache = a; } catch { } }
+  return bridgeZpCache;
+}
 // USDC transfers to the bridge: [{tx, log, from, amount, block}] with block <= tip - confirmations
 async function evmDeposits() {
   if (EVM.startsWith('mock:')) {
@@ -126,7 +143,8 @@ async function withdraw(zpTx, evmTo) {
 // ---- API ----------------------------------------------------------------------------------------
 // POST /link      {evm, zp, message, signature}  message = "Link <evm> to <zp>" signed with the EVM key (EIP-191)
 // POST /withdraw  {zpTx, evm}
-// GET  /status    reserves (USDC held), zUSDC outstanding, counts
+// GET  /status    reserves (USDC held), zUSDC outstanding, counts, the bridge's addresses on both chains
+// GET  /lookup?evm=0x…   one EVM address: its linked ZP address, its deposits (issued and waiting) and its withdrawals
 const json = (res, code, v) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(v)); };
 const readBody = req => new Promise((ok, no) => { let b = ''; req.on('data', c => { b += c; if (b.length > 8192) no(new Error('too large')); }); req.on('end', () => ok(b)); });
 http.createServer(async (req, res) => {
@@ -134,9 +152,19 @@ http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     if (req.method === 'GET' && u.pathname === '/status') {
       const outstanding = Object.values(done).filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - Object.values(done).filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
-      return json(res, 200, { chain: 'testnet', evm: EVM.startsWith('mock:') ? 'mock' : EVM, bridgeEvm: bridgeEvm(), usdc: USDC, contract: CONTRACT, asset: ASSET,
+      return json(res, 200, { chain: 'testnet', evm: EVM.startsWith('mock:') ? 'mock' : EVM, chainId, bridgeEvm: bridgeEvm(), bridgeZp: await bridgeZp(), usdc: USDC, contract: CONTRACT, asset: ASSET,
+        confirmations: CONF, reserves: await evmReserves(),
         links: Object.keys(links).length, deposits: Object.values(done).filter(d => d.zpTx).length, withdrawals: Object.values(done).filter(d => d.burn).length,
         zusdcOutstanding: String(outstanding), pendingDeposits: pendingDeposits.length });
+    }
+    if (req.method === 'GET' && u.pathname === '/lookup') {
+      const evm = String(u.searchParams.get('evm') || '').toLowerCase();
+      if (!/^0x[0-9a-f]{40}$/.test(evm)) throw new Error('bad address');
+      const mine = Object.entries(done);
+      return json(res, 200, { evm, zp: links[evm]?.zp || null,
+        deposits: mine.filter(([, d]) => d.zpTx && d.from === evm).map(([k, d]) => ({ evmTx: k.split(':')[0], amount: d.amount, zpTx: d.zpTx })),
+        waiting: pendingDeposits.filter(d => d.from === evm).map(d => ({ evmTx: d.tx, amount: d.amount })),
+        withdrawals: mine.filter(([, d]) => d.burn && String(d.to).toLowerCase() === evm).map(([k, d]) => ({ zpTx: k.slice(2), amount: d.amount, evmTx: d.evmTx })) });
     }
     if (req.method === 'POST' && u.pathname === '/link') {
       const { evm, zp: z, message, signature } = JSON.parse(await readBody(req));
