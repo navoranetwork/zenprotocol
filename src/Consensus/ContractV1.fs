@@ -236,6 +236,16 @@ let compile (contractsPath: string) (code: string) (ContractId (_, hash)) : Resu
     finally
         try File.Delete src with _ -> ()
 
+/// The libsecp256k1 the node ships for V0 (package zen_secp256k1_*), next to the node. V1
+/// contracts verify signatures with exactly this build, as V0 contracts do.
+let secp256k1Path () =
+    let name =
+        if OperatingSystem.IsWindows() then "secp256k1.dll"
+        elif OperatingSystem.IsMacOS() then "libsecp256k1.dylib"
+        else "libsecp256k1.so"
+    // next to this assembly (the node's folder), where the zen_secp256k1 package puts it
+    Path.Combine(Path.GetDirectoryName(Reflection.Assembly.GetExecutingAssembly().Location), name)
+
 /// Load a built V1 contract; its main and cost functions in the node's contract form.
 let load (contractsPath: string) (contractId: ContractId) =
     let (ContractId (_, hash)) = contractId
@@ -245,8 +255,10 @@ let load (contractsPath: string) (contractId: ContractId) =
     // its load context takes FSharp.Core from the same folder; without it the node's own (4.3.4)
     // cannot stand in, and the contract would only fail when called
     elif not (File.Exists (Path.Combine(dir, "FSharp.Core.dll"))) then Error "V1 contract runtime (FSharp.Core.dll) not found"
+    elif not (File.Exists (secp256k1Path ())) then Error (sprintf "libsecp256k1 not found next to the node (%s)" (secp256k1Path ()))
     else
         try
+            ZenAbi.ContractLoadContext.Secp256k1Path <- secp256k1Path ()
             let runner = Runner(ZenAbi.ContractLoadContext.Load(dll, dir), contractId)
             Ok runner
         with ex -> Exception.toError "V1 load" ex

@@ -234,3 +234,45 @@ let ``a block may hold two V1 activations, not three``() =
     let three : Result<unit, string> = BlockConnection.V1Activations.checkTransactions [ a; b; c ]
     Assert.AreEqual((Ok () : Result<unit, string>), two)
     Assert.AreEqual((Error "block has 3 V1 contract activations, above 2" : Result<unit, string>), three)
+
+/// A V1 contract that accepts a call only if a fixed signature (made with libsecp256k1) verifies.
+let sigCode = """open Zen.Types
+open Zen.Base
+open Zen.Cost
+
+module RT = Zen.ResultT
+module C = Zen.Cost
+module Cr = Zen.Crypto
+
+let main tx _ _ _ _ _ _ _ =
+  let! pko = Cr.parsePublicKey "026f4b37dd5a125b678c67b8c89e519037a3be63214ccb34764ce03f03a8ac6793" in
+  let! s1 = Cr.parseHash "61e06f0c6e4e1d0905685de8aed469d8253548fc1e4d997db6cdf96ebaf31cc7" in
+  let! s2 = Cr.parseHash "4617004ab656b67b7dc860d4c7a3246d44c226e25a89dbd89adbe7fea9426826" in
+  let! m = Cr.parseHash "2a6d67ea9cb92d4f175163b4a056d7188807af7d818e14838a847f4141c81315" in
+  match pko, s1, s2, m with
+  | Some pk, Some a, Some b, Some msg ->
+    let! ab = (Zen.List.append a b <: (list FStar.UInt8.t) `cost` 66) in
+    let sg : signature = ab in
+    let! ok = Cr.verify pk sg msg in
+    if ok then RT.ok @ { tx = tx; message = None; state = NoChange } else RT.autoFailw "bad signature"
+  | _ -> RT.autoFailw "bad input"
+
+let cf _ _ _ _ _ _ _ = 2000 |> cast nat |> C.ret
+"""
+
+/// V1 signature checks use the libsecp256k1 the node ships for V0 (next to the node), not
+/// whatever the platform would find first.
+[<Test>]
+let ``V1 signature checks use the node's own libsecp256k1``() =
+    requireToolchain ()
+    let id = Contract.makeContractId Version1 sigCode
+    Contract.compileV1 contractPath sigCode |> unwrap
+    let contract = Contract.load contractPath 50ul sigCode id |> unwrap
+    match Contract.run contract sampleInputTx context "" Zen.Types.Main.Anonymous None [] None with
+    | Ok _ -> ()
+    | Error e -> Assert.Fail (sprintf "the valid signature was refused: %A" e)
+    let pinned = ContractV1.secp256k1Path ()
+    Assert.AreEqual(pinned, ZenAbi.ContractLoadContext.Secp256k1Path)
+    if OperatingSystem.IsLinux() then
+        let maps = IO.File.ReadAllText "/proc/self/maps"
+        Assert.IsTrue(maps.Contains pinned, sprintf "%s is not loaded" pinned)

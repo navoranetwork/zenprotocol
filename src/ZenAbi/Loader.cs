@@ -21,6 +21,18 @@ namespace ZenAbi
             return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
         }
 
+        /// The libsecp256k1 that contracts' signature checks use. A node sets it to the library it
+        /// ships for V0 (the same build verifies V0 and V1 signatures); unset, the platform's
+        /// default lookup applies (development hosts only).
+        public static string Secp256k1Path { get; set; }
+
+        protected override System.IntPtr LoadUnmanagedDll(string name)
+        {
+            if (Secp256k1Path != null && (name == "secp256k1" || name == "libsecp256k1"))
+                return LoadUnmanagedDllFromPath(Secp256k1Path);
+            return System.IntPtr.Zero;
+        }
+
         /// Load a contract DLL with its runtime (FSharp.Core 10) from runtimeDir.
         public static IContract Load(string dll, string runtimeDir)
         {
