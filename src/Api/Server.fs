@@ -1116,6 +1116,23 @@ module Contract =
                 | Error error ->
                     config.replyError error
 
+    // GET /contract/state?address=<contract address>: the contract's state in the last block, as JSON (null: none)
+    let state
+        (config: Config)
+        (query:Query)
+        : unit =
+            match Map.tryFind "address" query with
+            | None -> config.replyError "address is missing"
+            | Some address ->
+                match Address.decodeContract config.chain address with
+                | Error error -> config.replyError error
+                | Ok contractId ->
+                    Blockchain.getContractState config.client contractId
+                    |> Option.map (dataEncoder config.chain)
+                    |> Option.defaultValue JsonValue.Null
+                    |> JsonContent
+                    |> config.reply StatusCode.OK
+
     let active
         (config: Config)
         (chain: Chain)
@@ -1213,6 +1230,8 @@ let handleRequest (chain:Chain) client (request,reply) (templateCache : BlockTem
         Contract.active config chain
     | Get ("/contract/contractId", query) ->
         Contract.contractId config query
+    | Get ("/contract/state", query) ->
+        Contract.state config query
     | Post ("/wallet/publickey", Some body) ->
         Wallet.publicKey config body
     | Post ("/wallet/sign", Some body) ->

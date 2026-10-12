@@ -292,6 +292,9 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
                 code = contract.code
             }:ActiveContract)
         |> requestId.reply<ActiveContract option>
+    | GetContractState contractId ->
+        ContractStateRepository.get session contractId
+        |> requestId.reply<Zen.Types.Data.data option>
     | GetAllHeaders ->
         let rec getHeaders tip headers =
             let header = BlockRepository.getHeader session tip

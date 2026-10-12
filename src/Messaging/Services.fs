@@ -51,6 +51,7 @@ module Blockchain =
         | GetBlocks of blockNumber: int * take: int
         | GetActiveContracts
         | GetActiveContract of ContractId
+        | GetContractState of ContractId
         | GetBlockChainInfo
         | GetAllHeaders
         | GetHeaders of blockNumber: int * take: int
@@ -161,6 +162,11 @@ module Blockchain =
     let getActiveContract client contractId =
         GetActiveContract contractId
         |> sendRequest<ActiveContract option> client
+
+    // the contract's state in the last block (not counting the mempool)
+    let getContractState client contractId =
+        GetContractState contractId
+        |> sendRequest<data option> client
 
     let getBlockChainInfo client =
         GetBlockChainInfo
