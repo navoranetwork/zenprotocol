@@ -29,7 +29,7 @@ let private logEventWithHashAndError template hash error =
 let private validateOrphanTransaction chainParams session contractPath blockNumber timestamp shouldPublish state ex =
     effectsWriter
         {
-            match TransactionValidation.validateInContext chainParams (getUTXO session) contractPath (blockNumber + 1ul) timestamp
+            match TransactionValidation.validateInContextMempool chainParams (getUTXO session) contractPath (blockNumber + 1ul) timestamp
                     state.activeContractSet state.contractCache state.utxoSet (getContractState session) state.contractStates ex with
             | Ok (_, acs, contractCache, contractStates) ->
                 let utxoSet = UtxoSet.handleTransaction (getUTXO session) ex.txHash ex.tx state.utxoSet
@@ -80,7 +80,7 @@ let rec validateOrphanTransactions chainParams session contractPath blockNumber 
 let validateInputs chainParams session contractPath blockNumber timestamp ex state shouldPublishEvents =
     effectsWriter
         {
-            match TransactionValidation.validateInContext chainParams (getUTXO session) contractPath (blockNumber + 1ul) timestamp
+            match TransactionValidation.validateInContextMempool chainParams (getUTXO session) contractPath (blockNumber + 1ul) timestamp
                     state.activeContractSet state.contractCache state.utxoSet (getContractState session) state.contractStates ex with
             | Error Orphan ->
                 let orphanPool = OrphanPool.add ex state.orphanPool

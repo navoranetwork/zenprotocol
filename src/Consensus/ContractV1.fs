@@ -209,8 +209,23 @@ let toolchain () =
 
 let private moduleName hash = "Z" + (Hash.bytes hash |> Convert.ToHexString).ToLowerInvariant()
 
+/// Contracts whose build failed in this process, by module name: a source is built at most once
+/// per node run, however often it comes back (in templates, as a new transaction, in a block).
+let private refused = System.Collections.Concurrent.ConcurrentDictionary<string, string>()
+
+let wasRefused (ContractId (_, hash)) = refused.ContainsKey (moduleName hash)
+
 /// Build a V1 contract (lax: type-checked and cost-elaborated, no Z3) into the V1 folder.
-let compile (contractsPath: string) (code: string) (ContractId (_, hash)) : Result<unit, string> =
+let rec compile (contractsPath: string) (code: string) (contractId: ContractId) : Result<unit, string> =
+    let (ContractId (_, hash)) = contractId
+    match refused.TryGetValue (moduleName hash) with
+    | true, error -> Error error
+    | _ ->
+        match build contractsPath code hash with
+        | Error error -> refused.[moduleName hash] <- error; Error error
+        | ok -> ok
+
+and private build (contractsPath: string) (code: string) hash : Result<unit, string> =
     let dir = toolchain ()
     let src = Path.GetTempFileName()
     try

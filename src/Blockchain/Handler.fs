@@ -300,7 +300,7 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
 
     | CheckTransaction ex ->
         TransactionValidation.validateBasic ex.tx
-        >>= fun _ -> TransactionValidation.validateInContext chain
+        >>= fun _ -> TransactionValidation.validateInContextMempool chain
                         (TransactionHandler.getUTXO session)
                         session.context.contractPath
                         (state.tipState.tip.header.blockNumber + 1ul)

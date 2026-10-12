@@ -94,6 +94,21 @@ let ``V1 contract activates from the wallet and executes through the API``() =
     activation.outputs |> List.filter (fun o -> o.lock = Fee) |> List.sumBy (fun o -> o.spend.amount)
     |> should equal (Weight.activationWeight (HighV (Version1, Text.Encoding.UTF8.GetBytes code)) |> uint64)
 
+    // the mempool does not build V1 contracts: mine a block from the node's own template, in
+    // which the activation is built and the contract becomes active
+    use client = ServiceBus.Client.create busName
+    let template = Messaging.Services.Blockchain.getBlockTemplate client Hash.zero
+    Assert.IsTrue(template.transactions |> List.exists (fun ex -> Hash.toString ex.txHash = response.TxHash), "the activation is in the template")
+    let target = Difficulty.uncompress template.header.difficulty
+    let rec mine n =
+        let header = { template.header with nonce = (0UL, n) }
+        if Block.hash header <= target then { template with header = header } else mine (n + 1UL)
+    mine 0UL |> publishBlockJson |> post "blockchain/publishblock" |> ignore
+    let rec waitActive n =
+        let active = get "contract/active"
+        if active.Contains (ContractId.toString expectedId) || n = 0 then () else (Threading.Thread.Sleep 1000; waitActive (n - 1))
+    waitActive 120
+
     // the node built it: the contract runs, mints 1000 of its token and locks them to itself
     let tx =
         TxSkeleton.empty

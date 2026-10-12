@@ -37,7 +37,14 @@ let private getSacrificeBlocks (chainParams : Chain.ChainParameters) code sacrif
     else
         Ok numberOfBlocks
 
-let private activateContract (chainParams : Chain.ChainParameters) contractPath blockNumber acs contractCache (tx : Types.Transaction) =
+/// V1 contract source, at most this many bytes (draft consensus rule; checked before anything else).
+let maxV1SourceBytes = 65536
+
+/// buildV1 = false (the mempool): a V1 activation is checked (fork height, size, UTF-8, sacrifice)
+/// but its contract is not built: building takes every node 20-30 s, and in the mempool nobody
+/// has paid yet. It is built when a block (or a block template) includes it; until then it is
+/// not active in the mempool, so calls to it wait in the orphan pool.
+let private activateContract (buildV1: bool) (chainParams : Chain.ChainParameters) contractPath blockNumber acs contractCache (tx : Types.Transaction) =
     let getActivationSacrifice tx = result {
         let activationSacrifices = List.filter(fun output -> output.lock = ActivationSacrifice) tx.outputs
 
@@ -105,6 +112,8 @@ let private activateContract (chainParams : Chain.ChainParameters) contractPath 
                     }
                     return ActiveContractSet.add contract.contractId contract acs, contractCache
             | HighV (version, bytes) when version = Version1 && blockNumber >= chainParams.v1ContractsHeight ->
+                if bytes.Length > maxV1SourceBytes then
+                    yield! GeneralError (sprintf "V1 contract source above %d bytes" maxV1SourceBytes)
                 let! code = ContractV1.decodeSource bytes |> Result.mapError General
                 let contractId = Contract.makeContractId Version1 code
 
@@ -117,6 +126,8 @@ let private activateContract (chainParams : Chain.ChainParameters) contractPath 
                 | Some contract ->
                     let contract = {contract with expiry = contract.expiry + numberOfBlocks}
                     return ActiveContractSet.add contractId contract acs, contractCache
+                | None when not buildV1 && Option.isNone (ContractCache.tryFind contractId contractCache) ->
+                    return acs, contractCache
                 | None ->
                     let! contract, contractCache = result {
                         match ContractCache.tryFind contractId contractCache with
@@ -400,7 +411,7 @@ let validateCoinbase blockNumber =
     >=> checkNoContract
     >=> checkOutputsOverflow
 
-let validateInContext chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex = result {
+let private validateInContextWith buildV1 chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex = result {
     let! outputs = tryGetUtxos getUTXO set ex.tx
     let txSkel = TxSkeleton.fromTransaction ex.tx outputs
 
@@ -411,7 +422,15 @@ let validateInContext chainParams getUTXO contractPath blockNumber timestamp acs
     
     let! contractStates = InputValidation.StateMachine.validate chainParams blockNumber timestamp acs getContractState contractState ex.txHash ex.tx txSkel
 
-    let! acs, contractCache = activateContract chainParams contractPath blockNumber acs contractCache ex.tx
+    let! acs, contractCache = activateContract buildV1 chainParams contractPath blockNumber acs contractCache ex.tx
     let! acs = extendContracts chainParams acs ex.tx
     return ex, acs, contractCache, contractStates
 }
+
+/// Validation for blocks and block templates: V1 contracts are built on activation.
+let validateInContext chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex =
+    validateInContextWith true chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex
+
+/// Validation for the mempool: V1 activations are checked but not built (see activateContract).
+let validateInContextMempool chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex =
+    validateInContextWith false chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex

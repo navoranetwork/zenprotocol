@@ -35,6 +35,15 @@ cost commitment, state commitment, prefix and mask checks. On top of that, the V
 (`ZenAbi.Rules.Rejection`): a call fails when it runs out of gas (main runs with exactly the
 declared cost as budget), declares more than `MaxGasPerCall` (draft 1,000,000), or overflows an asset total.
 
+## Mempool
+
+A V1 activation entering the mempool is checked (fork height, source at most 64 KiB, UTF-8,
+sacrifice) but not built: building takes every node 20-30 s, and nothing is paid until a block
+includes it. The contract becomes active when a block (or this node's block template) includes the
+activation; calls to it wait in the orphan pool until then. A source whose build failed is not
+built again in the same run, and a block template builds at most two new contracts. Review and
+open items: docs/V1-REVIEW.md.
+
 ## Limits (drafts)
 
 V1 calls weigh 400 per gas in a block (`Weight.contractV1ExecutionFactor`; V0 calls stay 100),

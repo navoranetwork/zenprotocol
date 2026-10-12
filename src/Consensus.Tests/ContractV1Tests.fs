@@ -276,3 +276,45 @@ let ``V1 signature checks use the node's own libsecp256k1``() =
     if OperatingSystem.IsLinux() then
         let maps = IO.File.ReadAllText "/proc/self/maps"
         Assert.IsTrue(maps.Contains pinned, sprintf "%s is not loaded" pinned)
+
+let mempoolActivate (code: string) =
+    TransactionValidation.validateInContextMempool Chain.localParameters getUTXO contractPath 1ul 1_000_000UL
+        ActiveContractSet.empty ContractCache.empty rootUtxos getContractState ContractStates.asDatabase (activationTx code 10UL)
+
+/// The mempool checks a V1 activation but does not build its contract (nobody has paid yet):
+/// it is accepted at once, the contract is not active, and nothing is built.
+[<Test>]
+let ``the mempool accepts a V1 activation without building it``() =
+    let code = v1Code + "\n// mempool"
+    let id = Contract.makeContractId Version1 code
+    let sw = Diagnostics.Stopwatch.StartNew()
+    let (_, acs, cache, _) = mempoolActivate code |> unwrap
+    Assert.Less(sw.ElapsedMilliseconds, 3000L, "no build in the mempool")
+    Assert.IsTrue(Option.isNone (ActiveContractSet.tryFind id acs))
+    Assert.IsTrue(Option.isNone (ContractCache.tryFind id cache))
+    let (ContractId (_, h)) = id
+    let dll = IO.Path.Combine(contractPath, "v1", "Z" + (Hash.bytes h |> Convert.ToHexString).ToLowerInvariant() + ".dll")
+    Assert.IsFalse(IO.File.Exists dll)
+
+/// V1 source is at most 64 KiB, refused before anything else (mempool and blocks).
+[<Test>]
+let ``V1 source above 64 KiB is refused``() =
+    let big = v1Code + "\n//" + String('x', 65536)
+    match mempoolActivate big with
+    | Error (General e) -> StringAssert.Contains("above 65536 bytes", e)
+    | other -> Assert.Fail (sprintf "%A" other)
+    match activate Chain.localParameters 1ul big with
+    | Error (General e) -> StringAssert.Contains("above 65536 bytes", e)
+    | other -> Assert.Fail (sprintf "%A" other)
+
+/// A source whose build fails is built once per node run: the second refusal is immediate.
+[<Test>]
+let ``a refused V1 build is not repeated``() =
+    requireToolchain ()
+    let bad = "this is not F*"
+    let id = Contract.makeContractId Version1 bad
+    Assert.IsTrue(match Contract.compileV1 contractPath bad with Error _ -> true | Ok _ -> false)
+    Assert.IsTrue(ContractV1.wasRefused id)
+    let sw = Diagnostics.Stopwatch.StartNew()
+    Assert.IsTrue(match Contract.compileV1 contractPath bad with Error _ -> true | Ok _ -> false)
+    Assert.Less(sw.ElapsedMilliseconds, 100L)

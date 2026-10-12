@@ -152,6 +152,20 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
     let getUTXO = UtxoSetRepository.get session
     let blockNumber = blockNumber + 1ul
 
+    // V1 activations whose contract this node has not built yet: at most this many builds per
+    // template (each takes 20-30 s); the rest wait for later templates
+    let maxV1BuildsPerTemplate = BlockConnection.V1Activations.maxPerBlock
+    let v1Builds = ref 0
+    let needsV1Build (ex: TransactionExtended) (state: MemoryState) =
+        match ex.tx.contract with
+        | Some (HighV (v, bytes)) when v = Version1 ->
+            match ContractV1.decodeSource bytes with
+            | Ok code ->
+                let id = Contract.makeContractId Version1 code
+                Option.isNone (ContractCache.tryFind id state.contractCache) && not (ContractV1.wasRefused id)
+            | Error _ -> false
+        | _ -> false
+
     let tryAddTransaction (state, added, notAdded, altered, weight) (ex,wt) =
         let newWeight = weight+wt
         if newWeight > maxWeight && (not <| Connection.isPayoutTransaction chain ex) then (state, added, notAdded, false, weight) else
@@ -159,6 +173,8 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
         let v1Activations =
             added |> List.filter (fun (tx:TransactionExtended) -> match tx.tx.contract with Some (HighV (v, _)) when v = Version1 -> true | _ -> false) |> List.length
         if BlockConnection.V1Activations.isV1Activation ex && v1Activations >= BlockConnection.V1Activations.maxPerBlock then (state, added, notAdded, altered, weight) else
+        if needsV1Build ex state && v1Builds.Value >= maxV1BuildsPerTemplate then (state, added, notAdded, altered, weight) else
+        if needsV1Build ex state then v1Builds.Value <- v1Builds.Value + 1
         validateInContext chain getUTXO contractPath blockNumber timestamp
             state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) ContractStates.asDatabase ex
         |> function
