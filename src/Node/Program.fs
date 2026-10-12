@@ -254,6 +254,11 @@ module Config =
                 config.seeds.Clear ()
 
                 if idx <> 0 then config.seeds.Add (getEndpoint Localhost 10000)
+                // lab testnet: ZP_LOCAL_SEED=<port> connects to another local node, "none" to none
+                match System.Environment.GetEnvironmentVariable "ZP_LOCAL_SEED" with
+                | null | "" -> ()
+                | "none" -> config.seeds.Clear ()
+                | port -> config.seeds.Clear (); config.seeds.Add (getEndpoint Localhost (int port))
 #endif
             | Api address ->
                 config.api.enabled <- true

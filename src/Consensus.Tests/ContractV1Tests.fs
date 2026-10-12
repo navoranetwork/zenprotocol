@@ -319,6 +319,22 @@ let ``a refused V1 build is not repeated``() =
     Assert.IsTrue(match Contract.compileV1 contractPath bad with Error _ -> true | Ok _ -> false)
     Assert.Less(sw.ElapsedMilliseconds, 100L)
 
+/// A contract this node built once (a block template, a block, a reorg) is not built again,
+/// and it is loaded once: the lab testnet built the same activation three times on one node,
+/// 14 s each, before this.
+[<Test>]
+let ``a V1 contract built once is not built or loaded again``() =
+    requireToolchain ()
+    let code = v1Code + "\n// built once"
+    let id = match Contract.compileV1 contractPath code with Ok id -> id | Error e -> failwith e
+    let sw = Diagnostics.Stopwatch.StartNew()
+    Assert.IsTrue(match Contract.compileV1 contractPath code with Ok id2 -> id2 = id | Error _ -> false)
+    Assert.Less(sw.ElapsedMilliseconds, 100L, "no second build")
+    let load () = match Contract.load contractPath 100u code id with Ok c -> c | Error e -> failwith e
+    let a, b = load (), load ()
+    Assert.AreEqual(Contract.getCost a sampleInputTx context "" Zen.Types.Main.Anonymous None [] None,
+                    Contract.getCost b sampleInputTx context "" Zen.Types.Main.Anonymous None [] None)
+
 /// A build that fails for a reason of the node's own (here: no toolchain) never refuses the
 /// contract: the node stops (onEnvironmentFailure; replaced here) and the build raises, so no
 /// block is rejected for it, and the contract is not remembered as refused.

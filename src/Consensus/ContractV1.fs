@@ -276,6 +276,10 @@ let compile (contractsPath: string) (code: string) (contractId: ContractId) : Re
     let (ContractId (_, hash)) = contractId
     match refused.TryGetValue (moduleName hash) with
     | true, error -> Error error
+    // already built by this node (block templates, a reorg, a restart): the DLL's name is the
+    // SHA3 of the source and the build writes it atomically, so it is the same file a rebuild
+    // would make (builds are byte-identical); building again took 15-20 s each time
+    | _ when File.Exists (Path.Combine(Path.GetFullPath (folder contractsPath), moduleName hash + ".dll")) -> Ok ()
     | _ ->
         let attempt () = build contractsPath code hash
         let result = match attempt () with Error (EnvironmentFailure _) -> attempt () | r -> r
@@ -296,6 +300,10 @@ let secp256k1Path () =
     // next to this assembly (the node's folder), where the zen_secp256k1 package puts it
     Path.Combine(Path.GetDirectoryName(Reflection.Assembly.GetExecutingAssembly().Location), name)
 
+/// Contracts loaded so far, by DLL path: one load context per contract for the node's life,
+/// however often a template, a block or a reorg asks for it (each load made a new context).
+let private loaded = System.Collections.Concurrent.ConcurrentDictionary<string, Runner>()
+
 /// Load a built V1 contract; its main and cost functions in the node's contract form.
 let load (contractsPath: string) (contractId: ContractId) =
     let (ContractId (_, hash)) = contractId
@@ -307,8 +315,11 @@ let load (contractsPath: string) (contractId: ContractId) =
     elif not (File.Exists (Path.Combine(dir, "FSharp.Core.dll"))) then Error "V1 contract runtime (FSharp.Core.dll) not found"
     elif not (File.Exists (secp256k1Path ())) then Error (sprintf "libsecp256k1 not found next to the node (%s)" (secp256k1Path ()))
     else
+        match loaded.TryGetValue dll with
+        | true, runner -> Ok runner
+        | _ ->
         try
             ZenAbi.ContractLoadContext.Secp256k1Path <- secp256k1Path ()
-            let runner = Runner(ZenAbi.ContractLoadContext.Load(dll, dir), contractId)
+            let runner = loaded.GetOrAdd(dll, fun _ -> Runner(ZenAbi.ContractLoadContext.Load(dll, dir), contractId))
             Ok runner
         with ex -> Exception.toError "V1 load" ex

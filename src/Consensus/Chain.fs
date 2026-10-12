@@ -93,6 +93,13 @@ let testParameters =
 
 let localGenesisHash = Hash.fromString "6d678ab961c8b47046da8d19c0de5be07eb0fe1e1e82ad9a5b32145b5d4811c7" |> Option.get
 
+/// The local chain (Debug builds, `--local`) activates V1 at block 1, or at ZP_LOCAL_V1_HEIGHT
+/// when set: the lab testnet (scripts/lab-testnet-v1.sh) uses it to cross the fork.
+let private localV1Height =
+    match System.Environment.GetEnvironmentVariable "ZP_LOCAL_V1_HEIGHT" with
+    | null | "" -> 1ul
+    | h -> System.UInt32.Parse h
+
 let localParameters = {
     testParameters with
         proofOfWorkLimit=Difficulty.uncompress 0x20fffffful;
@@ -104,7 +111,7 @@ let localParameters = {
         genesisTime=1515594186383UL
         networkId=1002ul
         thresholdFactor=(1UL, 500UL)
-        v1ContractsHeight=1ul
+        v1ContractsHeight=localV1Height
 }
 
 let getChainParameters = function
