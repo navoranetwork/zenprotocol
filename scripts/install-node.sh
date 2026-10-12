@@ -39,6 +39,14 @@ $D compose version >/dev/null 2>&1 || $SUDO apt-get install -y docker-compose-pl
 
 echo "== Code"
 command -v git >/dev/null || $SUDO apt-get install -y git
+if [ -d "$DIR/.git" ]; then
+  # older installs cloned the repository from its previous GitHub home: point them at the current one
+  CUR=$(git -C "$DIR" remote get-url origin 2>/dev/null || true)
+  case "$CUR" in
+    "$REPO"|"${REPO%.git}") ;;
+    https://github.com/*/zenprotocol|https://github.com/*/zenprotocol.git) git -C "$DIR" remote set-url origin "$REPO" ;;
+  esac
+fi
 if [ -d "$DIR/.git" ]; then git -C "$DIR" fetch -q origin "$BRANCH" && git -C "$DIR" checkout -q "$BRANCH" && git -C "$DIR" pull -q --ff-only
 else git clone -q -b "$BRANCH" "$REPO" "$DIR"; fi
 cd "$DIR"
