@@ -1,1 +1,8 @@
 [2026-10-12 20:42] lab testnet on 32f77b2b lab: run the three-node V1 testnet on zp-lab-1 (installs the pinned SDK and F*, the toolchain, builds the node)
+[2026-10-12 20:42] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-12 20:42] F*: F* 2026.09.27
+[2026-10-12 20:42] toolchain: zp-contracts-v1 1b78967 Zen.Bitcoin: verified on F* 2026; driver and measurements pass
+[2026-10-12 20:49] Zulib: all 50 modules verify
+[2026-10-12 20:50] node built (Debug)
+[2026-10-12 20:51] lab-testnet-v1.sh: exit 1; [20:51:45] FAIL: node A did not start
+[2026-10-12 20:51] 

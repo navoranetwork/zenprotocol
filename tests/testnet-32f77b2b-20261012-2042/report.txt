@@ -1,0 +1,4 @@
+[20:50:10] lab testnet: V1 fork at block 60; node 32f77b2b, toolchain 1b78967
+[20:50:10] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[20:50:44] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[20:51:45] FAIL: node A did not start

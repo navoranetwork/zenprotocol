@@ -1,0 +1,20 @@
+[20:50:44 INF] Node running... press CTRL+C to exit
+[20:50:44 WRN] ZP_NODE_V1_ONLY: V0 tooling not checked; V0 contracts cannot be activated by this node
+[20:50:44 INF] DB is stored at: /opt/zp-lab/src/Node/bin/Debug/data/local/0/local
+[20:50:45 INF] Api running on http://127.0.0.1:20000
+Unhandled exception. System.DllNotFoundException: Unable to load shared library 'lmdb' or one of its dependencies. In order to help diagnose loading problems, consider using a tool like strace. If you're using glibc, consider setting the LD_DEBUG environment variable: 
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/lmdb.so: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/lmdb.so: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/liblmdb.so: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/liblmdb.so: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/lmdb: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/lmdb: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/liblmdb: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/liblmdb: cannot open shared object file: No such file or directory
+
+   at DataAccess.Lmdb.mdb_env_create(IntPtr& env)
+   at DataAccess.DatabaseContextModule.create(DbSize size, String pathToFolder) in /opt/zp-lab/src/DataAccess/DatabaseContext.fs:line 43
+   at Blockchain.DatabaseContext.create(String dataPath) in /opt/zp-lab/src/Blockchain/DatabaseContext.fs:line 107
+   at Blockchain.Main.main(String dataPath, ChainParameters chainParams, String busName, Boolean wipe) in /opt/zp-lab/src/Blockchain/main.fs:line 72
+   at Program.Init.blockchain(MainConfig config) in /opt/zp-lab/src/Node/Program.fs:line 123
+   at Program.main(String[] argv) in /opt/zp-lab/src/Node/Program.fs:line 421

@@ -1,0 +1,23 @@
+[20:50:10] lab testnet: V1 fork at block 60; node 32f77b2b, toolchain 1b78967
+[20:50:10] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[20:50:44] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+scripts/lab-testnet-v1.sh: line 44: 48257 Aborted                 (core dumped) ( cd "$BIN" && ZP_NODE_V1_ONLY=1 ZP_LOCAL_V1_HEIGHT="$FORK" ZP_LOCAL_SEED="${SEED[$n]}" ZP_V1_TOOLCHAIN="$TC" FSTAR_HOME="$FSTAR_HOME" PATH="$FSTAR_HOME/bin:$PATH" exec dotnet zen-node.dll --local "${IDX[$n]}" "$@" >> "$OUT/$n.log" 2>&1 )
+[20:51:45] FAIL: node A did not start
+--- A
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/lmdb.so: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/lmdb.so: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/liblmdb.so: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/liblmdb.so: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/lmdb: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/lmdb: cannot open shared object file: No such file or directory
+/opt/dotnet/shared/Microsoft.NETCore.App/10.0.12/liblmdb: cannot open shared object file: No such file or directory
+/opt/zp-lab/src/Node/bin/Debug/liblmdb: cannot open shared object file: No such file or directory
+
+   at DataAccess.Lmdb.mdb_env_create(IntPtr& env)
+   at DataAccess.DatabaseContextModule.create(DbSize size, String pathToFolder) in /opt/zp-lab/src/DataAccess/DatabaseContext.fs:line 43
+   at Blockchain.DatabaseContext.create(String dataPath) in /opt/zp-lab/src/Blockchain/DatabaseContext.fs:line 107
+   at Blockchain.Main.main(String dataPath, ChainParameters chainParams, String busName, Boolean wipe) in /opt/zp-lab/src/Blockchain/main.fs:line 72
+   at Program.Init.blockchain(MainConfig config) in /opt/zp-lab/src/Node/Program.fs:line 123
+   at Program.main(String[] argv) in /opt/zp-lab/src/Node/Program.fs:line 421
+--- B
+tail: cannot open '/opt/zp-lab/replay-out/testnet-32f77b2b-20261012-2042/net/B.log' for reading: No such file or directory
