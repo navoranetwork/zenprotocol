@@ -6,7 +6,7 @@ fix lands with a test.
 
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
-| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | in progress: equality (stage 1) and Zulib functions (stage 2) fixed, below; input strings next |
+| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | fixed in three stages (below); every measured workload within the normal range |
 | C2 | Free builds in the mempool: every V1 activation was built (20-30 s) on arrival, before anyone paid; failing variants spending one input could be repeated | critical | fixed (below) |
 | C3 | A build that fails for a local reason (disk, memory, offline restore, missing toolchain) rejects the block on that node, permanently: a chain split | critical | fixed (below) |
 | C4 | Contract output depending on the machine's locale | — | not applicable: the node runs with invariant globalization (`zen-node.runtimeconfig.json`); hardening of the runtime still useful, low priority |
@@ -81,6 +81,11 @@ Fixed at compile time, in three stages (each with measurements that show the gap
    is a sponge, so `finalize` is constant time (same hashes as V0); array copies walk once;
    fixed-size values longer than their type stop the call. Measured: every workload within
    the normal 100-500 ns/gas on the test machine.
-3. **Input strings**: the 1,024 limit covers strings a contract makes, not those arriving in a
-   message; `FStar.String` functions on them need the same bound or a price per character.
+3. **Strings** (done). Strings a contract receives (command, message body, state, dictionary
+   keys) have at most 1,024 characters, like those it makes; a longer one fails the call
+   before the contract runs. FStar.String's copying functions are replaced by `Zen.String`'s,
+   priced by length; the rest take one step on at most 1,024 characters (185-548 ns/gas).
+
+What C1 leaves open: the numbers are from one 2-vCPU machine; the testnet should repeat the
+measurement suite (`tests/measure`) on the nodes' real hardware before the limits are final.
 
