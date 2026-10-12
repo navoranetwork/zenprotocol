@@ -6,7 +6,7 @@ fix lands with a test.
 
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
-| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | in progress: equality fixed (stage 1, below); Zulib functions and input strings next |
+| C1 | Work not metered by gas: operations whose time grows with data size run at a fixed price (two equal 20,000-element lists compared 2,000 times: 130,023 gas, 525 ms, 4,036 ns/gas, ~15x normal; the gap grows with size) | critical | in progress: equality (stage 1) and Zulib functions (stage 2) fixed, below; input strings next |
 | C2 | Free builds in the mempool: every V1 activation was built (20-30 s) on arrival, before anyone paid; failing variants spending one input could be repeated | critical | fixed (below) |
 | C3 | A build that fails for a local reason (disk, memory, offline restore, missing toolchain) rejects the block on that node, permanently: a chain split | critical | fixed (below) |
 | C4 | Contract output depending on the machine's locale | — | not applicable: the node runs with invariant globalization (`zen-node.runtimeconfig.json`); hardening of the runtime still useful, low priority |
@@ -73,10 +73,14 @@ Fixed at compile time, in three stages (each with measurements that show the gap
    value (a lax-built "hash" of 1,000 bytes) fails the call after 64 steps. The attack
    measured above is now refused; the costliest allowed comparison runs at 456 ns/gas, about
    the normal rate.
-2. **Zulib functions** (next): 21 pure functions walk a list without charging (`length`,
-   `Array.get`, `Wallet.size`, `TxSkeleton.available`, `Asset.zeros`...), and some charged ones
-   are underpriced (`Sha3.finalize`, `TxSkeleton` at 64 for O(n) work, `Array.Indexed` copies):
-   make them charge by size, or hide them from contracts.
+2. **Zulib functions** (done, zp-contracts-v1 stage 2). Plain functions that walk a value
+   (`length`, array indexing, `Wallet.size`, the skeleton's totals, `Asset.zeros`, SHA3
+   `absorb`, raw crypto) may not be called by code a contract runs (the cost function may use
+   `length` and `Wallet.size`). Priced functions that did more than their price: a transaction
+   skeleton has at most 256 inputs and 256 outputs; `isValid` costs 64 + m*m; the SHA3 state
+   is a sponge, so `finalize` is constant time (same hashes as V0); array copies walk once;
+   fixed-size values longer than their type stop the call. Measured: every workload within
+   the normal 100-500 ns/gas on the test machine.
 3. **Input strings**: the 1,024 limit covers strings a contract makes, not those arriving in a
    message; `FStar.String` functions on them need the same bound or a price per character.
 
