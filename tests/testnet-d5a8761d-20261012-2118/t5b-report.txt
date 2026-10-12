@@ -1,0 +1,1 @@
+scripts/v1-pay-devnet.sh: line 35: node: command not found

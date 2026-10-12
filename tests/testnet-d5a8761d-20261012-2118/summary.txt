@@ -6,3 +6,5 @@
 [2026-10-12 21:19] node built (Debug)
 [2026-10-12 21:20] lab-testnet-v1.sh: exit 0; [21:20:52] PASSED
 [2026-10-12 21:20] contract DLL SHA-256 d5e48cb9e56da4fc39e70f41c8d14dc8187f515702d2c31ac30dc221a46ded20 (compare with another machine: build-contract.sh of the same source)
+[2026-10-12 21:20] T5b (BitZen 5972ad1 Swap mockup in English (screens, board titles, notes): start
+[2026-10-12 21:21] T5b: 
