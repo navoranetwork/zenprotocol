@@ -44,7 +44,7 @@ publish "started"
 
 # 1. tools
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y -q curl git python3 ca-certificates libgomp1 libgmp10 > /dev/null 2>&1 || stop "apt"
+apt-get install -y -q curl git python3 ca-certificates libgomp1 libgmp10 liblmdb-dev > /dev/null 2>&1 || stop "apt"   # lmdb: the node's database
 SDK=10.0.112
 if ! dotnet --list-sdks 2>/dev/null | grep -q "^$SDK "; then
   if [ ! -x /opt/dotnet/dotnet ] || ! /opt/dotnet/dotnet --list-sdks | grep -q "^$SDK "; then
@@ -85,4 +85,17 @@ log "node built (Debug)"
 OUT="$OUT/net" ZP_V1_TOOLCHAIN="$TC" bash scripts/lab-testnet-v1.sh > "$OUT/testnet.txt" 2>&1; rc=$?
 log "lab-testnet-v1.sh: exit $rc; $(grep -E 'PASSED|FAIL' "$OUT/net/report.txt" | tail -1)"
 log "$(grep 'contract DLL SHA-256' "$OUT/net/report.txt" | sed 's/^.*4. //')"
-publish "done (exit $rc)"
+publish "testnet done (exit $rc)"
+
+# 5. BitZen T5b (a Bitcoin payment proved in a V1 contract), when the token can read the repo
+B=/opt/bitzen
+if { [ -d "$B/.git" ] && git -C "$B" pull -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/bitzen.git" main 2>/dev/null; } \
+   || git clone -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/bitzen.git" "$B" 2>/dev/null; then
+  log "T5b (BitZen $(git -C "$B" log --oneline -1 | cut -c1-60)): start"
+  (cd "$B" && ZP_V1_TOOLCHAIN="$TC" FSTAR_HOME="$FSTAR_HOME" ZEN="$DIR" timeout 3600 bash scripts/v1-pay-devnet.sh) > "$OUT/t5b.txt" 2>&1
+  cp "$B/v1-pay-out/report.txt" "$OUT/t5b-report.txt" 2>/dev/null
+  log "T5b: $(grep -h 'RESULT' "$OUT/t5b.txt" | tail -1)"
+else
+  log "T5b: SKIPPED (this token cannot read navoranetwork/bitzen)"
+fi
+publish "done"
