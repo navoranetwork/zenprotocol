@@ -1,9 +1,9 @@
 services:
   zen-node:
-    image: ${ZEN_IMAGE:-ghcr.io/navoranetwork/zen-node:latest}   # ready-made image; `docker compose build` makes it locally instead
+    image: ${ZEN_IMAGE:-ghcr.io/navoranetwork/zen-node:net10}   # ready-made .NET 10 image; `docker compose build` makes it locally instead. Official 1.0.13 on Mono: ZEN_IMAGE=ghcr.io/navoranetwork/zen-node:latest
     build:
       context: .
-      dockerfile: Docker/Dockerfile
+      dockerfile: Docker/Dockerfile.net10
     container_name: zen-node
     restart: unless-stopped
     cpus: "${ZEN_CPUS:-1.0}"        # cap CPU so other services on the host stay responsive
@@ -13,6 +13,7 @@ services:
       EXTERNAL_IP: "${EXTERNAL_IP:-}"        # public IP, optional
       WALLET_API: "${WALLET_API:-0}"         # 1 = serve the desktop Zen Wallet on localhost
       PUBLIC_NODE: "${PUBLIC_NODE:-0}"       # 1 = public node for other wallets (server, no mining)
+      NETWORK_URL: "${NETWORK_URL:-https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/network.json}"   # seeds and snapshot sources; set here so images built earlier follow it too
     ports:
       - "9655:9655"               # P2P - open to the world
       - "127.0.0.1:11567:11567"   # API - this machine only, never expose

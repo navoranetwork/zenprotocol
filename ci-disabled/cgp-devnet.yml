@@ -1,0 +1,69 @@
+name: cgp-devnet
+# A whole CGP cycle on the fast devnet (local chain, 1 miner node): activate the CGP and voting contracts, fund four test voters,
+# run the scenario of wallet/tools/cgp-sim.mjs (allocation vote, nominations, payout votes), then check that the chain goes
+# through the payout block (block 610) and keeps mining. Used to test the miner change that builds the CGP payout transaction.
+on:
+  workflow_dispatch:
+    inputs:
+      mode: { description: 'miner = the mining node creates the payout; relay = the miner behaves like 1.0.13 and a second node relays the payout', default: 'miner' }
+  push:
+    branches: [node-upgrade-script, cgp-miner-fix]
+    paths: ['src/Blockchain/**', 'src/Consensus/**', 'wallet/tools/cgp-sim.mjs', '.github/workflows/cgp-devnet.yml']
+
+jobs:
+  cgp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Build the devnet image
+        run: set -o pipefail; docker build -f Docker/Dockerfile.devnet -t zen-devnet . 2>&1 | tail -n 40
+      - name: Start one node with a miner
+        run: |
+          if [ "${{ inputs.mode }}" = relay ]; then RUN="-e NODES=2 -e MINER_CGP_PAYOUT=off"; else RUN="-e NODES=1"; fi
+          echo "::notice title=mode::${{ inputs.mode || 'miner' }} ($RUN)"
+          docker run -d --name zen-devnet -p 127.0.0.1:20000:20000 $RUN -e MINER_THREADS=1 zen-devnet
+          for i in $(seq 120); do sleep 5; T=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p' || true); [ -n "$T" ] && [ "$T" -ge 40 ] && break; done
+          echo "block $T after start"; [ -n "$T" ] && [ "$T" -ge 40 ]
+      - name: Activate the CGP and voting contracts
+        run: bash scripts/testnet-cgp-contracts.sh http://127.0.0.1:20000 devnet 100000
+      - name: Fund the test voters (target interval 6, snapshot 590)
+        run: |
+          echo "::notice title=tip before funding::$(curl -fs http://127.0.0.1:20000/blockchain/info | head -c 80)"
+          cd wallet && npm ci --no-audit --no-fund && cd ..
+          export TESTNET_MNEMONIC="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
+          cd wallet && node --no-warnings tools/cgp-sim.mjs fund --send --target 590 --node http://127.0.0.1:20000
+      - name: Run the scenario through the payout block
+        run: |
+          export TESTNET_MNEMONIC="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
+          cd wallet && CGP_POLL_MS=1000 timeout 5400 node --no-warnings tools/cgp-sim.mjs run --send --target 590 --node http://127.0.0.1:20000 2>&1 | tee /tmp/sim.txt | tail -n 40
+          # the node puts the winner in its CGP state only around the payout block (610): read it after block 612, when the payout block is done
+          for i in $(seq 60); do T=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p'); [ -n "$T" ] && [ "$T" -ge 612 ] && break; sleep 2; done
+          C=$(curl -fs http://127.0.0.1:20000/blockchain/cgp); echo "cgp after the vote (tip $T): $C"
+          if ! echo "$C$(curl -fs http://127.0.0.1:20000/blockchain/cgp/history)" | grep -q recipient; then
+            echo "::error title=no winner::the scenario did not produce a payout winner, so the payout block is not tested: $C"
+            D=$( { echo "candidates of interval 6: $(curl -fs 'http://127.0.0.1:20000/blockchain/candidates?interval=6' | head -c 700)"; echo "cgp history: $(curl -fs http://127.0.0.1:20000/blockchain/cgp/history | head -c 900)"; echo "sim payout votes:"; TIP=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p'); echo "tip $TIP; block of each ballot = tip - confirmations + 1:"; grep -E "payout vote|nominates|allocation" /tmp/sim.txt | tail -n 12 | while read -r l; do h=$(echo "$l" | grep -oE "[0-9a-f]{64}"); c=$(curl -fs "http://127.0.0.1:20000/blockchain/transaction?hash=$h" | grep -oE '"confirmations": *[0-9]+' | grep -oE "[0-9]+$"); echo "$l | confirmations ${c:-none} -> block $([ -n "$c" ] && echo $((TIP - c + 1)))"; done; docker exec zen-devnet sh -c 'grep -i -E "payout|nominat|vote|ballot|rejected|failed|invalid" /data/logs/node0.log | grep -v GetBlockChainInfo | tail -n 25 | cut -c1-300'; } )
+            printf '%s' "$D" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::notice title=no winner details::{}"
+            exit 1
+          fi
+      - name: The chain passes the payout block and keeps mining
+        run: |
+          set +e
+          for i in $(seq 90); do T=$(curl -fs http://127.0.0.1:20000/blockchain/info | sed -n 's/.*"blocks": *\([0-9]*\).*/\1/p'); [ -n "$T" ] && [ "$T" -ge 620 ] && break; sleep 5; done
+          CGP=$(curl -fs http://127.0.0.1:20000/blockchain/cgp)
+          LOG=$(docker exec zen-devnet sh -c 'for f in /data/logs/node*.log; do grep -H -E "commitments mismatch|Miner created the CGP|Relaying the CGP|Could not create the CGP|No payout|failed validation|You should create" $f | tail -n 8; done | cut -c1-400')
+          echo "tip $T; cgp $CGP"; echo "$LOG"
+          printf 'tip %s%%0Acgp %s%%0A%s' "$T" "$CGP" "$(echo "$LOG" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')" | xargs -0 -I{} echo "::notice title=cgp payout result::{}"
+          [ -n "$T" ] && [ "$T" -ge 620 ] || exit 1
+          if [ "${{ inputs.mode }}" = relay ]; then
+            echo "$LOG" | grep -q "node0.log.*Miner created the CGP" && { echo "::error title=relay test::the miner made the payout itself, so the relay was not tested"; exit 1; }
+            echo "$LOG" | grep -q "node1.log.*Relaying the CGP" || { echo "::error title=relay test::node 1 did not relay the payout"; exit 1; }
+            echo "::notice title=relay test::PASS: the miner (as 1.0.13) mined the payout block with the transaction relayed by node 1"
+          fi
+      - name: Sim output
+        if: always()
+        run: |
+          grep -E "published|ERROR|phase (Nomination|Vote)|not |weight" /tmp/sim.txt | awk '!seen[$0]++' | grep -v "is not a candidate" | head -n 60 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::notice title=sim key lines::{}"
+          tail -n 20 /tmp/sim.txt | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::notice title=sim output::{}"

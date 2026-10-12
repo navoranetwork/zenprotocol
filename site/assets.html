@@ -85,6 +85,7 @@
   @media (max-width: 760px) { details.iv > summary { grid-template-columns: 1fr 1fr; } }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
 </style>
+<link rel="stylesheet" href="/shell/shell.css">
 </head>
 <body>
 <main>
@@ -115,6 +116,7 @@ function draw() {
       <td class="mono" title="${esc(a.contractAddress || '')}">${a.contractAddress ? esc(a.contractName || short(a.contractAddress)) : '–'}</td>
       <td class="r">${amt(a.outstanding)}</td><td class="r">${fmt(a.holders)}</td><td class="r">${fmt(a.txs)}</td><td class="r">${fmt(a.firstBlock)}</td></tr>`).join('') + '</table>';
 }
+{ const qp = new URLSearchParams(location.search).get('q'); if (qp) $('q').value = qp; }   // /assets.html?q=<name or asset id> opens the list filtered
 fetch('/assets.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   data = d;
   $('updated').textContent = (d.complete ? 'Indexed to block ' : 'Indexing the chain… block ') + fmt(d.indexedTo) + ' of ' + fmt(d.tip) + ' · ' + d.assets.length + ' assets';
@@ -122,5 +124,6 @@ fetch('/assets.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
 }).catch(() => { $('updated').textContent = 'Not available yet: the index is being built.'; });
 $('q').addEventListener('input', () => data && draw());
 </script>
+<script src="/shell/shell.js" defer></script>
 </body>
 </html>

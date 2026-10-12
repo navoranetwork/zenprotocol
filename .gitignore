@@ -344,3 +344,4 @@ src/Consensus.Features.Tests/*.cs
 src/Consensus.Features.Tests/test-contracts/*
 zen-data/
 packages-mirror/
+wallet/tools/sim-wallets.json

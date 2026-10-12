@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZP Dex</title>
+<meta name="description" content="Open orders of the ZenDex contract on the ZP blockchain: swap any two assets, no operator.">
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a64;
+    --line: #e3e1da; --accent: #1f6f5c; --ok: #1f7a3f; --warn: #a15c00; --bad: #a32020;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121311; --card: #1b1c1a; --ink: #ecebe6; --muted: #9a9890;
+            --line: #2c2d2a; --accent: #5cc3a6; --ok: #5ccb83; --warn: #e0a64a; --bad: #ef6b6b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 64px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  p.lead { margin: 0; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; margin-bottom: 18px; }
+  .banner { background: color-mix(in srgb, var(--warn) 14%, var(--card)); border: 1px solid var(--warn); color: var(--ink); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+  .stat .k { font-size: 13px; color: var(--muted); }
+  .stat .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  code, .mono { font-family: var(--mono); font-size: 13.5px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; font-family: var(--mono); font-size: 13px; }
+  a { color: var(--accent); }
+  .hash { word-break: break-all; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  button { font: inherit; background: none; border: 1px solid var(--line); color: var(--accent); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .proof { display: none; }
+  .proof.open { display: table-row; }
+  .proof td { background: var(--bg); }
+  ol { padding-left: 20px; margin: 0; } li { margin: 6px 0; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs button.on { background: var(--accent); color: var(--card); border-color: var(--accent); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 28px; }
+</style>
+<link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>ZP Dex</h1>
+    <p class="lead">Swap one asset for another straight on the chain. An order is a locked output of the ZenDex contract; anyone can take it, only its maker can cancel it. No operator, no account, no fee besides the network's.</p>
+  </header>
+
+  <div class="banner">Loading…</div>
+
+  <section>
+    <h2>Market</h2>
+    <div class="grid">
+      <div class="stat"><div class="k">Open orders</div><div class="v" id="n">–</div></div>
+      <div class="stat"><div class="k">Pairs</div><div class="v" id="pairs">–</div></div>
+      <div class="stat"><div class="k">Orders made</div><div class="v" id="made">–</div></div>
+      <div class="stat"><div class="k">Network</div><div class="v">Testnet</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Open orders</h2>
+    <div class="tabs" id="pairTabs"></div>
+    <table>
+      <thead><tr><th>Maker sells</th><th class="num">Amount</th><th>Wants</th><th class="num">Amount</th><th class="num">Price</th><th>Maker</th><th></th></tr></thead>
+      <tbody id="orders"></tbody>
+    </table>
+    <p style="margin:14px 0 0;color:var(--muted);font-size:14px">Price = wanted amount per unit sold. An order can be taken in part; the rest stays open.</p>
+  </section>
+
+  <section>
+    <h2>Make an order</h2>
+    <div class="grid">
+      <label class="stat"><span class="k">I sell</span><br><select id="sellA"><option>zUSD</option><option>ZP</option></select> <input id="sellN" value="1000" size="8"></label>
+      <label class="stat"><span class="k">I want</span><br><select id="wantA"><option>ZP</option><option>zUSD</option></select> <input id="wantN" value="500" size="8"></label>
+    </div>
+    <p style="margin:14px 0 0"><button disabled>Sign with the wallet</button> <span style="color:var(--muted);font-size:14px">Comes with the wallet connection; the order is one transaction to the contract (<code>Make</code>).</span></p>
+  </section>
+
+  <section>
+    <h2>Recent trades</h2>
+    <table>
+      <thead><tr><th>Time (UTC)</th><th>Action</th><th>Sells</th><th>Wants</th><th>Transaction</th></tr></thead>
+      <tbody id="trades"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol>
+      <li><code>Make</code>: the maker locks the asset in the contract and states what they want in return.</li>
+      <li><code>Take</code>: anyone pays the wanted asset and receives the locked one, in the same transaction. A part-fill leaves the remainder as a new order.</li>
+      <li><code>Cancel</code>: the maker signs and gets the locked asset back.</li>
+    </ol>
+    <p style="margin:14px 0 0;color:var(--muted);font-size:14px">Tested on the testnet with zUSD against ZP: make, take and cancel. <a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/docs/INSTRUMENTS.md">Details</a></p>
+  </section>
+
+  <footer>Testnet, no value. Part of the community node: <a href="/">home</a> · <a href="/explorer.html">explorer</a> · <a href="/oracle.html">oracle</a> · <a href="/stats.html">stats</a></footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const API = '/explorer/api/dex';
+const NAMES = {'00': 'ZP'};
+const nm = a => NAMES[a] || (a ? a.slice(0, 8) + '…' : '?');
+let ORD = [], TRADES = [];
+const pair = o => o[0] + ' / ' + o[2];
+let pairs = [], cur = 'all';
+function draw() {
+  $('n').textContent = ORD.length; $('made').textContent = TRADES.filter(t => t.command === 'Make').length; $('pairs').textContent = pairs.length;
+  $('pairTabs').innerHTML = ['all', ...pairs].map(p => '<button data-p="' + p + '" class="' + (p === cur ? 'on' : '') + '">' + (p === 'all' ? 'All' : p) + '</button>').join('');
+  $('orders').innerHTML = ORD.filter(o => cur === 'all' || pair(o) === cur).map(o =>
+    '<tr><td><strong>' + o[0] + '</strong></td><td class="num">' + o[1].toLocaleString() + '</td><td><strong>' + o[2] + '</strong></td><td class="num">' + o[3].toLocaleString() +
+    '</td><td class="num">' + (o[3] / o[1]).toFixed(4) + '</td><td class="mono">' + o[4] + '</td><td><button disabled>Take</button></td></tr>').join('');
+}
+$('pairTabs').onclick = e => { if (e.target.dataset.p) { cur = e.target.dataset.p; draw(); } };
+draw();
+function drawTrades() {
+  $('trades').innerHTML = TRADES.map(t => '<tr><td>' + new Date(t.time).toISOString().slice(0, 16).replace('T', ' ') + '</td><td>' + t.command + '</td><td>' +
+    Number(t.under_amount || 0).toLocaleString() + ' ' + nm(t.under_asset) + '</td><td>' + Number(t.pair_total || 0).toLocaleString() + ' ' + nm(t.pair_asset) +
+    '</td><td class="hash"><a href="/explorer.html#tx/' + t.tx + '">' + t.tx.slice(0, 12) + '…</a></td></tr>').join('') || '<tr><td colspan="5">No trades yet.</td></tr>';
+}
+async function load() {
+  try {
+    const [o, t] = await Promise.all([fetch(API + '/orders').then(r => r.json()), fetch(API + '/trades').then(r => r.json())]);
+    ORD = (o.orders || []).map(r => [nm(r.under_asset), Number(r.under_amount), nm(r.pair_asset), Number(r.pair_total), r.maker ? r.maker.slice(0, 10) + '…' : '', r.order_asset]);
+    TRADES = t.trades || [];
+    pairs = [...new Set(ORD.map(pair))];
+    document.querySelector('.banner').style.display = 'none';
+  } catch { document.querySelector('.banner').innerHTML = '<strong>Not available yet.</strong> The Dex index is not running.'; }
+  draw(); drawTrades();
+}
+load(); setInterval(load, 30000);
+</script>
+<script src="/shell/shell.js" defer></script>
+</body>
+</html>

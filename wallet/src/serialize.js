@@ -246,6 +246,9 @@ export const Output = {
   read(r) { return { lock: Lock.read(r), spend: Spend.read(r) }; },
 };
 
+// Dict keys are byte arrays; F# compares them length first, then byte by byte (block 248357 has "Signature" before "Allocation")
+const keyOrder = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
+
 // --- contract data (Zen.Types.Data) ---------------------------------------------------------
 export const Data = {
   write(w, d) {
@@ -263,7 +266,7 @@ export const Data = {
       case 'Array': w.u8(11); List.write(w, Data.write, d.v); break;
       case 'Dict': {
         w.u8(12);
-        const entries = [...d.v].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+        const entries = [...d.v].sort((a, b) => keyOrder(a[0], b[0]));
         List.write(w, (w, [k, v]) => { Str.write(w, k); Data.write(w, v); }, entries);
         break;
       }
@@ -287,7 +290,8 @@ export const Data = {
       case 11: return { t: 'Array', v: List.read(r, Data.read) };
       case 12: {
         const entries = List.read(r, r => [Str.read(r), Data.read(r)]);
-        for (let i = 1; i < entries.length; i++) if (!(entries[i - 1][0] <= entries[i][0])) fail('dict not sorted');
+        if (!r.lenient)   // lenient (indexer): reads dicts in any order
+          for (let i = 1; i < entries.length; i++) if (keyOrder(entries[i - 1][0], entries[i][0]) > 0) fail('dict not sorted');
         return { t: 'Dict', v: entries };
       }
       case 13: return { t: 'List', v: List.read(r, Data.read) };
@@ -336,7 +340,7 @@ export const Witness = {
     witnessPayload(w, x);
   },
   read(r) {
-    const id = VarInt.read(r), count = VarInt.read(r);
+    const id = VarInt.read(r), count = VarInt.read(r), start = r.p;
     let x;
     if (id === 1) {
       const sh = r.u8();
@@ -350,7 +354,15 @@ export const Witness = {
             signature: Opt.read(r, r => ({ publicKey: r.bytes(33), signature: r.bytes(64) })),
             cost: r.u64() };
     } else x = { type: 'HighV', id, bytes: r.bytes(count) };
-    if (sizeOf(witnessPayload, x) !== count) fail('witness size');
+    const size = sizeOf(witnessPayload, x);
+    if (size !== count) {
+      // Strict (wallet): refuse anything that does not re-serialize to its declared length.
+      // Lenient (the chain indexer reading blocks the network already accepted): the node's own reader
+      // follows the fields, not the declared length (block 117758 declares one byte more than its contract
+      // witness holds), so continue after the parsed fields and report the irregular witness.
+      if (!r.lenient) fail('witness size');
+      (r.irregular ||= []).push({ id, count, size });
+    }
     return x;
   },
 };
@@ -399,16 +411,19 @@ export const txHash = tx => sha3_256(serializeTx(tx, false));
 export const witnessesHash = ws => { const w = new Writer(); List.write(w, Witness.write, ws); return sha3_256(w.out()); };
 
 // --- block (for tests and explorers) --------------------------------------------------------
-export function deserializeBlock(bytes) {
+export function deserializeBlock(bytes, opts = {}) {
   const r = new Reader(bytes);
-  const header = r.bytes(100);
-  const commitments = List.read(r, Hash.read);
-  const txs = List.read(r, r => {
-    const start = r.p, tx = Transaction.read(r);
-    return { tx, raw: r.b.slice(start, r.p) };
-  });
-  if (!r.done()) fail('trailing bytes in block');
-  return { header, commitments, txs };
+  r.lenient = !!opts.lenient;
+  try {
+    const header = r.bytes(100);
+    const commitments = List.read(r, Hash.read);
+    const txs = List.read(r, r => {
+      const start = r.p, tx = Transaction.read(r);
+      return { tx, raw: r.b.slice(start, r.p) };
+    });
+    if (!r.done()) fail('trailing bytes in block');
+    return { header, commitments, txs, irregular: r.irregular || [] };
+  } catch (e) { e.pos = r.p; e.length = bytes.length; throw e; }
 }
 
 export const bytesEqual = eq;

@@ -86,6 +86,33 @@ or the image: `docker build -f Docker/Dockerfile.net10 -t zen-node:net10 .` (`.N
 
 **Gate before merging:** a full mainnet replay of the .NET 10 image from genesis must match the reference (`.github/workflows/net10-replay.yml`, started by pushing to the `net10-replay` branch; it runs on GitHub-hosted runners in parts of ~5 hours, passing the chain data on through the Actions cache), and the CGP, supply and winner state must match the release node at the same tip.
 
+## Results of the .NET 10 merge (stage 4)
+
+Merged into `master` after CI was green. Production still runs the Mono 1.0.13 release image; switching it is a separate decision.
+
+**Correctness**
+
+| Check | Result |
+|---|---|
+| Full mainnet replay from genesis, `check-against-reference.sh` (1,053 block hashes and the CGP state) | Passed |
+| Unit tests (`net10.yml`) | Pass |
+| Image syncs mainnet blocks in CI | Pass |
+| State comparison against a community node during the replay | Not visible in the logs, so not counted as verified |
+
+**Measured benefits** (`net10-compare.yml`: same GitHub-hosted runner, same image build method, 10 minutes of sync from genesis, one run each)
+
+| | Mono (1.0.13) | .NET 10 | Difference |
+|---|---|---|---|
+| Blocks synced in 10 minutes | 21,271 | 31,426 | about 48% more |
+| Peak memory of the node container | 542.2 MiB | 299.8 MiB | about 45% less |
+| Runtime image size | 929 MB | 657 MB | about 29% less |
+| Full chain replay on hosted runners | 6 h 08 min | about 105 min | about 3.5 times faster |
+| CI build and tests | about 8.6 min | about 7 min | small |
+
+**Other benefits:** supported runtime (.NET 10 LTS until November 2028; Mono 6.12 is unmaintained), a current Debian base with security updates, and PackageReference with central version pinning.
+
+**Limits of these numbers:** one run per runtime on shared hosted runners, so results vary between runs. CPU use and block-validation latency were not measured. The early blocks are small, so the speed-up on recent, larger blocks may differ. The F\* contract tool still runs on Mono (stage 5).
+
 ## Running the replay test
 
 1. Create a server with 4+ dedicated cores and 16 GB RAM (Ubuntu 24.04), e.g. Hetzner CCX23. Hourly-billed; delete it after the run. 40 GB disk is enough: the script frees the Docker build cache, logs free space every 5 minutes and stops with a clear error below 1 GB.
@@ -142,6 +169,29 @@ The script fetches the newest reference from `reference-data`, verifies its chec
 3. Load generator: a script on the wallet library (`wallet/src/tx.js`, already verified byte for byte against mainnet) that signs transfers and posts them to `/blockchain/publishtransaction` at a fixed rate, stepping up: 1, 10, 50, 100, 250 tx/s.
 4. Measure at each step: transactions accepted to the mempool per second, transactions per block, block validation time (node log), time for a block to reach the other nodes, CPU, RAM and disk per node, and whether any node falls behind the tip.
 5. Repeat with the .NET 10 build and compare. Publish the results in this file and on the stats page.
+
+**First measurement (devnet, .NET 10 Debug build, 3 nodes + miner + load generator on one 4-vCPU GitHub runner; `devnet.yml`, one run).** Signed transfers of 1 input, 2 outputs:
+
+| Offered rate | Accepted per second | Publish latency p50 / p95 | Rejected | Confirmed | Largest block | Node lag |
+|---|---|---|---|---|---|---|
+| 5/s | 5.0 | 4 / 6 ms | 0 | 150 of 150 | 33 txs | 0 blocks |
+| 20/s | 19.7 | 17 / 162 ms | 0 | 600 of 600 | 474 txs | 0 blocks |
+| 50/s | 16.7 | 4,147 / 5,998 ms | 0 | 1,500 of 1,500 | 924 txs | 0 blocks |
+
+Reading: nothing was lost or rejected and the three nodes stayed on the same block, but at 50/s the node took in only about 17 transactions a second (latency grew to seconds): on this setup the mempool intake is the limit, around 17-20 tx/s. Blocks (60 s target on the `local` chain) then carried hundreds of transactions each. Caveats: Debug build (slower than Release), all processes share 4 shared vCPUs, one run, no Mono comparison yet (the release Mono image has no `local` chain). Treat it as a lower bound and a baseline for the next runs.
+
+**Second measurement: the testnet on the Release build (.NET 10), `testnet.yml`, one run.** Same machine type (one 4-vCPU GitHub runner running 3 nodes, 2 mining threads and the load generator, so mining and the nodes compete with the generator). Transactions of 1 input, 1 payment and change, 10 s per step, the four steps run one after the other:
+
+| Offered rate | Accepted per second | Publish latency p50 / p95 | Rejected | Confirmed (by the end) | Largest block | Node lag |
+|---|---|---|---|---|---|---|
+| 50/s | 34.4 | 0.5 / 2.8 s | 0 | 500 of 500 | 443 txs | 0 blocks |
+| 100/s | 25.0 | 2.3 / 4.5 s | 0 | 673 of 1,000 in that step | 673 txs | 0 blocks |
+| 200/s | 16.6 | 3.6 / 5.8 s | 0 | 2,327 | 1,096 txs | 0 blocks |
+| 500/s | 7.2 | 7.8 / 18.0 s | 0 | 5,000 | 4,868 txs | 0 blocks |
+
+Reading: no transaction was rejected or lost, every one was confirmed in the end, the three nodes were always on the same block, and the largest block held 4,868 transactions. But the node does not take transactions in at the offered rate: it took in at most about 34 per second (first step, empty mempool), and the rate fell step by step as the backlog of unconfirmed transactions grew (blocks come every ~4 minutes, so the mempool kept 1,000 to 5,000 waiting). That points to mempool intake cost growing with the size of the mempool, which is the first thing to look at. The steps are not independent: each starts with the previous backlog still waiting, so the later rows mix rate and backlog. Release is much faster than Debug at low rates (p95 3-4 ms at 20/s against 162 ms), but this run does not show a higher ceiling than the Debug run: the contended machine and the growing mempool dominate.
+
+Caveats: one run, shared runner, everything on one machine, 4-minute blocks (the confirmation numbers depend on when blocks happened to arrive). A fairer next measurement: a separate machine for the load generator, one step per fresh chain (empty mempool at the start), and a profile of the mempool code at 1,000+ waiting transactions.
 
 Pass criterion for the network: the sustained rate at which every node stays at the tip, with block propagation well under the block interval.
 

@@ -1,0 +1,53 @@
+name: oracle
+# Builds the oracle service, runs its self test, and runs it against the testnet (Oracle contract activated, rounds committed).
+on:
+  workflow_dispatch:
+  push:
+    branches: [node-upgrade-script]
+    paths: ['src/Oracle/**', 'src/Consensus/**', 'scripts/testnet-oracle.sh', 'Docker/Dockerfile.tools', 'docker-compose.testnet-stack.yml', 'scripts/install-testnet-stack.sh', 'site/bridge/**', '.github/workflows/oracle.yml']
+
+jobs:
+  oracle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - name: Build
+        run: |
+          set +e
+          dotnet restore src/Oracle/Oracle.fsproj -v q > /tmp/b.log 2>&1 && dotnet build src/Oracle/Oracle.fsproj -c Release --no-restore -v minimal >> /tmp/b.log 2>&1
+          RC=$?
+          [ $RC -ne 0 ] && { grep -E "error" /tmp/b.log | sed -E 's#/home/runner/work/zenprotocol/zenprotocol/##g' | sort -u | head -30 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=build::{}"; exit 1; }
+          true
+      - name: Self test
+        run: |
+          set +e
+          dotnet src/Oracle/bin/Release/zen-oracle.dll selftest > /tmp/st.txt 2>&1
+          RC=$?
+          python3 -c "import sys;print('::notice title=selftest::'+'%0A'.join(l.rstrip() for l in open('/tmp/st.txt')))"
+          exit $RC
+      - name: Dry run round with the mock provider
+        run: |
+          ORACLE_DATA=/tmp/od dotnet src/Oracle/bin/Release/zen-oracle.dll once
+          ls /tmp/od/rounds
+  tools-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Server tools image builds and runs (oracle + body tool + node)
+        run: |
+          set +e
+          docker build -f Docker/Dockerfile.tools -t zen-tools . > /tmp/t.log 2>&1; RC=$?
+          [ $RC -ne 0 ] && { tail -n 25 /tmp/t.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=tools image::{}"; exit 1; }
+          docker run --rm zen-tools node --version
+          docker run --rm zen-tools dotnet /app/zen-oracle.dll selftest | tail -n 12
+          docker run --rm zen-tools dotnet /app/zen-oracle.dll body Amount:u=5 returnAddress:p=$(printf '11%.0s' $(seq 32))
+      - name: Compose files are valid
+        run: |
+          touch testnet-stack.env
+          docker compose -f docker-compose.testnet.yml -f docker-compose.testnet-stack.yml config > /dev/null
+      - name: Installer script syntax
+        run: bash -n scripts/install-testnet-stack.sh

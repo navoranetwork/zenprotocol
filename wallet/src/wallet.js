@@ -3,7 +3,10 @@
 // and builds, signs and publishes transfers. Secrets stay in memory only while unlocked.
 import { accountFromMnemonic, deriveKey, encodeAddress, decodeAddress, parsePrivateKey } from './keys.js';
 import { buildTransaction, maturityFor, MAX_AMOUNT } from './tx.js';
-import { unhex, hex, ZEN_ASSET } from './serialize.js';
+import { unhex, hex, ZEN_ASSET, Writer, Outpoint, Output, Data, VarInt, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
+import { sha3_256 } from '@noble/hashes/sha3.js';
+import { signDigest, verifyDigest } from './tx.js';
+import { CGP_PARAMS, phaseAt, voteBody } from './cgp.js';
 
 export const GAP_LIMIT = 20;
 export const BRANCHES = [0, 1, 2];            // receive, change, payment (as zen-node uses them)
@@ -41,7 +44,7 @@ export const canSpend = w => w.keys.size > 0;
 // Find addresses with history on each branch, stopping after GAP_LIMIT unused in a row.
 export async function discover(w, node) {
   if (!w.account) return addresses(w);
-  for (const branch of BRANCHES) {
+  await Promise.all(BRANCHES.map(async branch => {            // both branches at once: the node answers in parallel
     let start = 0;
     for (;;) {
       const batch = [];
@@ -53,7 +56,7 @@ export async function discover(w, node) {
       if (!any) break;
       start += GAP_LIMIT;
     }
-  }
+  }));
   return addresses(w);
 }
 
@@ -136,6 +139,31 @@ export function prepareSend(w, state, to, amount) {
   });
 }
 
+// --- extending a contract (Consensus/TransactionValidation.fs: extendContracts) -----------------------------
+// The sacrifice is paid in ZP to an ExtensionSacrifice output of the contract: blocks = amount / (1 kalapa x code length).
+// Only a contract that is still active can be extended (a lapsed one needs its code activated again).
+export const SACRIFICE_PER_BYTE_BLOCK = 1n;                      // Consensus/Chain.fs, main and test
+export const MAX_EXTEND_BLOCKS = 10_000_000;
+export const extendCost = (code, blocks) => SACRIFICE_PER_BYTE_BLOCK * BigInt(String(code).length) * BigInt(blocks);
+export function prepareExtend(w, state, contractIdHex, code, blocks) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  if (!/^[0-9a-f]{72}$/.test(contractIdHex)) throw new Error('Invalid contract id');
+  if (!Number.isSafeInteger(blocks) || blocks < 1 || blocks > MAX_EXTEND_BLOCKS) throw new Error(`Enter a number of blocks from 1 to ${MAX_EXTEND_BLOCKS.toLocaleString('en-US')}`);
+  if (!code) throw new Error('The node did not return the contract code');
+  const cost = extendCost(code, blocks);
+  const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
+  const utxos = state.utxos
+    .filter(u => u.spend.asset === '00' && keyFor(u))
+    .map(u => ({ ...u, spend: { asset: ZEN_ASSET, amount: u.spend.amount }, key: keyFor(u) }));
+  const changeHash = decodeAddress(receiveAddress(w)).hash;
+  const prepared = buildTransaction({
+    utxos, tipBlockNumber: state.tip, maturity: maturityFor(w.network),
+    payments: [{ lock: { type: 'ExtensionSacrifice', contractId: contractIdOf(contractIdHex) }, spend: { asset: ZEN_ASSET, amount: cost } }],
+    changeLock: { type: 'PK', hash: changeHash },
+  });
+  return { ...prepared, cost, blocks };
+}
+
 export async function publish(node, prepared) {
   const res = await node.publish(prepared.hex);
   if (typeof res === 'string' && /^[0-9a-f]{64}$/.test(res) && res !== prepared.hash)
@@ -143,3 +171,81 @@ export async function publish(node, prepared) {
   return prepared.hash;
 }
 
+
+// --- CGP votes (PROTOCOL.md 7.5) --------------------------------------------------------------------
+// 'Allocation' and payout votes are only counted in the voting phase, 'Nomination' only in the nomination
+// phase. The block that includes the transaction decides the phase the ballot was signed for, so the wallet
+// signs for tip + 1 and refuses when too few blocks are left.
+export const VOTE_MARGIN = 2;
+const contractIdOf = idHex => {
+  if (!/^[0-9a-f]{72}$/.test(idHex)) throw new Error('Invalid voting contract id');
+  return { version: parseInt(idHex.slice(0, 8), 16), hash: unhex(idHex.slice(8)) };
+};
+const skeletonHex = (inputs, outputs) => {            // TxSkeleton (4.11): PointedOutput inputs, then outputs
+  const w = new Writer();
+  VarInt.write(w, inputs.length);
+  for (const i of inputs) { w.u8(1); Outpoint.write(w, i.outpoint); Output.write(w, { lock: i.lock, spend: i.spend }); }
+  VarInt.write(w, outputs.length);
+  for (const o of outputs) Output.write(w, o);
+  return hex(w.out());
+};
+
+// voterWallets: unlocked wallets whose keys sign the ballot. The funding wallet `w` pays the 1 kalapa fee.
+// Returns { hash, hex, phase } without publishing.
+export async function prepareVote({ w, state, node, votingContractId, command, ballotHex, voterKeys, exclude = [], anyPhase = false }) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  const params = CGP_PARAMS[w.network];
+  const h = state.tip + 1;
+  const ph = phaseAt(params, h);
+  const want = command === 'Nomination' ? 'Nomination' : 'Vote';
+  if (!anyPhase && ph.phase !== want) throw new Error(want === 'Nomination' ? 'Nominations are open only in the nomination phase' : 'Votes are open only in the voting phase');
+  if (!anyPhase && ph.closes - h < VOTE_MARGIN) throw new Error('This phase closes in a few blocks: wait for the next one');
+  const cid = contractIdOf(votingContractId);
+  const active = await node.activeContracts();
+  if (!Array.isArray(active) || !active.some(c => c && c.contractId === votingContractId))
+    throw new Error('The voting contract is not active on this network');
+
+  const body = voteBody(params, h, command, ballotHex, voterKeys);
+  const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
+  const fee = 1n;
+  const skip = new Set(exclude);   // outputs already used by a vote that is not in a block yet
+  const fund = state.utxos.filter(u => u.spend.asset === '00' && u.lock.type === 'PK' && keyFor(u) && u.spend.amount >= fee && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
+    .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : -1))[0];
+  if (!fund) throw new Error('You need a little ZP in a spendable output to pay the 1 kalapa fee');
+  const spend = amount => ({ asset: ZEN_ASSET, amount });
+  const changeLock = { type: 'PK', hash: decodeAddress(receiveAddress(w)).hash };
+  const outputs = [];
+  if (fund.spend.amount > fee) outputs.push({ lock: changeLock, spend: spend(fund.spend.amount - fee) });
+  outputs.push({ lock: { type: 'Fee' }, spend: spend(fee) });
+  const inputs = [{ outpoint: fund.outpoint, lock: fund.lock, spend: spend(fund.spend.amount) }];
+
+  const res = await node.executeContract({
+    address: encodeAddress(unhex(votingContractId), w.network, true), command, messageBody: body.hex,   // a contract address holds the 4-byte version and the 32-byte hash
+    options: { sender: '' }, tx: skeletonHex(inputs, outputs),
+  });
+  if (typeof res !== 'string' || !/^([0-9a-f]{2})+$/.test(res)) throw new Error('The node sent an invalid answer');
+
+  // the node is not trusted: the transaction must be exactly ours plus one voting contract witness
+  const tx = deserializeTx(unhex(res));
+  const same = (a, b) => { const x = new Writer(), y = new Writer(); Output.write(x, a); Output.write(y, b); return bytesEqual(x.out(), y.out()); };
+  if (tx.version !== 0 || tx.contract) throw new Error('The node changed the transaction');
+  if (tx.inputs.length !== 1 || tx.inputs[0].type !== 'outpoint' || hex(tx.inputs[0].outpoint.txHash) !== hex(fund.outpoint.txHash)
+      || tx.inputs[0].outpoint.index !== fund.outpoint.index) throw new Error('The node changed the inputs');
+  if (tx.outputs.length !== outputs.length || !tx.outputs.every((o, i) => same(o, outputs[i]))) throw new Error('The node changed the outputs');
+  const cw = tx.witnesses;
+  if (cw.length !== 1 || cw[0].type !== 'Contract' || cw[0].command !== command || cw[0].contractId.version !== cid.version
+      || hex(cw[0].contractId.hash) !== hex(cid.hash)) throw new Error('The node returned an unexpected contract witness');
+  // the body in the witness must be ours, byte for byte
+  if (!cw[0].messageBody) throw new Error('The node changed the vote');
+  const ew = new Writer(); Data.write(ew, cw[0].messageBody);
+  if (hex(ew.out()) !== body.hex) throw new Error('The node changed the vote');
+
+  // the last PK witness signs "FollowingWitnesses": the transaction hash and the contract witness after it
+  const digest = txHash(tx);
+  const msg = sha3_256(Uint8Array.from([...digest, ...witnessesHash(cw)]));
+  const key = keyFor(fund);
+  const pkw = { type: 'PK', sigHash: 'FollowingWitnesses', publicKey: key.publicKey, signature: signDigest(key.privateKey, msg) };
+  if (!verifyDigest(pkw.signature, msg, key.publicKey)) throw new Error('Signing failed');
+  const signed = { ...tx, witnesses: [pkw, ...cw] };
+  return { hash: hex(digest), hex: hex(serializeTx(signed)), phase: ph, signers: body.signers, spent: hex(fund.outpoint.txHash) + ':' + fund.outpoint.index };
+}

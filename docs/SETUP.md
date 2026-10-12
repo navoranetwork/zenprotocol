@@ -11,7 +11,7 @@ A node validates and relays the blockchain. A miner is a node that also mines bl
 | Linux server (Ubuntu) | Public node for wallets, seed, status page, snapshots | Docker + Nginx | Not allowed |
 | Home computer (Windows/macOS/Linux) | Node + miner | Docker Desktop | Allowed |
 
-All installs use the official 1.0.13 release, the first without a version expiry date. A new node loads a recent snapshot and is in sync within minutes.
+Installs use the community node on .NET 10 (`ghcr.io/navoranetwork/zen-node:net10`), which validates exactly like the official 1.0.13 release (full mainnet replay, see `docs/MIGRATION.md`) and runs on the public node since 2026-10-11. The official 1.0.13 release on Mono stays available: `ZEN_IMAGE=ghcr.io/navoranetwork/zen-node:latest` in `.env`. A new node loads a recent snapshot and is in sync within minutes.
 
 ### Public node for wallets (dedicated server)
 
@@ -66,7 +66,9 @@ DOMAIN=new.example.org EXTRA_DOMAINS=old.example.org bash site/setup-site.sh
 ```
 
 3. In the repository, edit `network.json`: add the new name first in `seeds`, `snapshotSources` and `publicNodes` (keep the old one below it). Installed nodes read the seeds from it at every start and the snapshot loader reads the sources, so no image or script change is needed. Also add the new seed as the first line of `seeds` in `src/Node/main.yaml` (used when `network.json` cannot be reached). Update the links in `Docker/README.md` and this file.
-4. After a few months, when old installations have updated, drop the old name: run `DOMAIN=new.example.org bash site/setup-site.sh` without `EXTRA_DOMAINS` and remove the old seed and DNS record.
+4. After a few months, when old installations have updated, drop the old name: run `DOMAIN=new.example.org EXTRA_DOMAINS=" " bash site/setup-site.sh` and remove the old seed and DNS record.
+
+The network moved to `navora.network` in October 2026.
 
 The replay reference lives in the `reference-data` branch of the repository, not on the domain, so it is unaffected.
 
@@ -79,6 +81,7 @@ The replay reference lives in the `reference-data` branch of the repository, not
 | Public node for wallets | `https://navora.network/node/` (whitelisted read-only API + `publishtransaction`) |
 | Network stats | [navora.network/stats.html](https://navora.network/stats.html) |
 | Latest snapshot | [navora.network/snapshots](https://navora.network/snapshots/) |
+| Testnet | [testnet.navora.network](https://testnet.navora.network) (seed `testnet.navora.network:29555`) |
 | Source | [github.com/navoranetwork/zenprotocol](https://github.com/navoranetwork/zenprotocol/tree/node-upgrade-script) |
 
 The status page exposes only two read-only node endpoints (`/api/info`, `/api/peers`). The `/node/` path exposes a fixed whitelist of read-only chain and address endpoints plus `publishtransaction` (needed to send and vote), rate-limited. Wallet, mining and resync endpoints are never reachable.
@@ -117,7 +120,7 @@ Every download is checked against its sha256 before use. A snapshot is only a sh
 ## One-command node install: what it does and what is checked
 
 ```
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
 | Step | What happens | Stops or falls back when |
@@ -127,7 +130,7 @@ curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgr
 | 3. Code | Clones the repository to `~/zenprotocol`, or fast-forwards an existing copy | |
 | 4. Firewall | Opens 9655 in `ufw` when it is active; otherwise reminds you about a cloud firewall | |
 | 5. Settings | Writes `.env`: external IP, miner threads (0), public-node flag | |
-| 6. Image | `docker compose pull`: the ready image `ghcr.io/navoranetwork/zen-node` (official 1.0.13 binaries, Mono 6.12) | Registry not reachable: builds the image locally, taking the binaries from MyGet or, if gone, from our `upstream-mirror` release |
+| 6. Image | `docker compose pull`: the ready image `ghcr.io/navoranetwork/zen-node:net10` (community node on .NET 10) | Registry not reachable: builds the image locally, taking the binaries from MyGet or, if gone, from our `upstream-mirror` release |
 | 7. Snapshot | Loads the newest chain snapshot (about 5 GB, chain data only, never a wallet) unless chain data already exists. Sources in order: `SNAPSHOT_URL`, each entry of `snapshotSources` in `network.json` (this server, then the GitHub release), the official Feb-2023 file. Every source is checked against the sha256 in its `latest.json`, the zip is test-extracted, the chain folder is located and only then replaces `/data/main` (wallet files are skipped) | A source that is down or has a wrong checksum is skipped; with none left the old official snapshot is used and the node syncs the rest |
 | 8. Start | `docker compose up -d`; at start the node refreshes its seeds from `network.json`; waits for the API and prints `blockchain/info` | API not up after about 2 minutes: prints where to read the logs |
 
@@ -141,7 +144,7 @@ Done when `blocks` equals `headers` and `initialBlockDownload` is `false`. Run t
 | Prebuilt image in CI (`image`): start, API answers, syncs from our seed | Passes; blocks arrive from the seed |
 | Seeds refresh from `network.json` and the sources parser (local test with a changed file) | Passes |
 | Mirror contents (`mirror-upstream`): the exact packages pinned in `paket.lock`, `@zen/zen-node` 1.0.13, 21 repositories | Present in the release; `MANIFEST.json` lists size and sha256 of each |
-| Replay of the whole chain by the source build (`check-against-reference.sh`: 1,053 block hashes and the CGP state) | Passed for the Mono build; the .NET 10 replay is running |
+| Replay of the whole chain by the source build (`check-against-reference.sh`: 1,053 block hashes and the CGP state) | Passed for the Mono build and for the .NET 10 build (see "Results of the .NET 10 merge" in `docs/MIGRATION.md`) |
 | Wallet: 20 tests including hostile node responses | Pass |
 | `install-node.sh` itself on a clean server | **Not yet run end to end**: see the checklist below |
 
@@ -169,10 +172,10 @@ A running node needs none of them: the image already contains the compiled 1.0.1
 3. Install, in one command:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
-The script (`scripts/install-node.sh`) checks for 20 GB of free disk and free ports 9655 and 11567, installs Docker, clones the code to `~/zenprotocol`, pulls the ready node image (builds it when the registry is unreachable), loads the newest chain snapshot (verified against its sha256, tried from every source in `network.json`), starts a node capped at 1 CPU and 2 GB RAM and shows the sync status. Run it again to update; the chain data is kept. Options: `PUBLIC_NODE=1`, `MINER_THREADS=2` (own hardware only), `SKIP_SNAPSHOT=1`, `DIR=/other/folder`.
+The script (`scripts/install-node.sh`, published by `site/setup-site.sh` as `https://navora.network/install.sh`) needs nothing installed beforehand on Ubuntu 22.04/24.04. It waits for the first-boot automatic updates to release apt, checks for 20 GB of free disk and free ports 9655 and 11567, adds a 2 GB swap file when the server has under 4 GB RAM and no swap (`NO_SWAP=1` skips it), installs Git and Docker, clones the code to `~/zenprotocol`, pulls the ready node image (builds it when the registry is unreachable), loads the newest chain snapshot (verified against its sha256, tried from every source in `network.json`), starts a node capped at 1 CPU and 2 GB RAM and shows the sync status. Run it again to update; the chain data and the settings in `.env` are kept (an option given again overrides its saved value, e.g. `MINER_THREADS=0` stops mining). Options: `PUBLIC_NODE=1`, `MINER_THREADS=2` (own hardware only), `SKIP_SNAPSHOT=1`, `DIR=/other/folder`.
 
 **Firewall:** allow inbound TCP 9655 (in the Hetzner Cloud Firewall, if you use one). The API port (11567) stays reachable from the server only.
 
@@ -189,7 +192,7 @@ DOMAIN=your.domain bash site/setup-site.sh
 
 The script adds a separate Nginx site (existing sites are untouched), publishes the newest snapshot, installs the `zen-stats` timer (rebuilds `stats.json` for the stats page every 5 minutes from the local API; visitors never reach the node) and issues an auto-renewing HTTPS certificate. Without `DOMAIN` it uses `navora.network`.
 
-It also installs the `zen-index` timer: `site/chain-index.mjs` (Node 22 in a Docker container, decoding blocks with the wallet's tested serializer) reads the chain in batches of 2,000 blocks from the local API into `/var/lib/zen-stats/chain-index.sqlite` and keeps every block (hash, parent, time, difficulty, transactions, reward, fees, ZP moved, miner) and every transaction (input and output addresses with assets and amounts, contract and command) for a future explorer. It writes `assets.json` (all assets: tokens outstanding, holders, transactions) and `cgp-history.json` (every CGP interval: ballots with voter and weight at the snapshot block, allocation in force and decided, payouts) for the pages `assets.html` and `cgp.html`. The first index from genesis takes a few hours in 5-minute steps (`journalctl -u zen-index` shows progress); afterwards each run adds the new blocks. The block explorer page `explorer.html` (latest blocks, every block with its summary and transactions, transactions, search) reads this index through `site/explorer-api.mjs`, a read-only service on 127.0.0.1:11580 (`zen-explorer`, published by nginx as `/explorer/api/`); blocks not indexed yet are read from the node. Names of assets and contracts: `site/asset-names.json`, `site/contract-names.json`. To rebuild the index: `rm /var/lib/zen-stats/chain-index.sqlite*`. (`/blockchain/block?blockNumber=` walks back from the tip for every call, about 10 s each, so it is not used.)
+It also installs the `zen-index` timer: `site/chain-index.mjs` (Node 22 in a Docker container, decoding blocks with the wallet's tested serializer) reads the chain in batches of 2,000 blocks from the local API into `/var/lib/zen-stats/chain-index.sqlite` and keeps every block (hash, parent, time, difficulty, transactions, reward, fees, ZP moved, miner) and every transaction (input and output addresses with assets and amounts, contract and command) for a future explorer. It writes `assets.json` (all assets: tokens outstanding, holders, transactions) and `cgp-history.json` (every CGP interval: ballots with voter and weight at the snapshot block, allocation in force and decided, payouts) for the pages `assets.html` and `cgp.html`. The first index from genesis takes a few hours in 5-minute steps (`journalctl -u zen-index` shows progress); afterwards each run adds the new blocks. The block explorer page `explorer.html` (latest blocks, every block with its summary and transactions, transactions, search) reads this index through `site/explorer-api.mjs`, a read-only service on 127.0.0.1:11580 (`zen-explorer`, published by nginx as `/explorer/api/`); blocks not indexed yet are read from the node. The explorer also has an address page (`?address=`: live balance from the node's address index, and every transaction of the address with ZP received, sent and net, paged, filterable) and advanced search (`?find=blocks`: by date, number of transactions, ZP transferred and miner; `?find=txs`: by address, date, ZP amount, asset and type; sorting, page size and jump to any page). The queries are read-only, parameterised, capped (100 rows per page, 100,000 results) and the dates are UTC; they run on the index, so they only cover blocks indexed so far. The address table and the ZP amount per transaction were added after the first release of the index: the first `zen-index` run after the update fills them from the existing index (a few minutes for the whole chain; new blocks are indexed once it is done). Tests: `node --test site/test/explorer.test.mjs` (real blocks, backfill, every search). Names of assets and contracts: `site/asset-names.json`, `site/contract-names.json`. To rebuild the index: `rm /var/lib/zen-stats/chain-index.sqlite*`. (`/blockchain/block?blockNumber=` walks back from the tip for every call, about 10 s each, so it is not used.)
 
 ### Refreshing the snapshot (monthly)
 

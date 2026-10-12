@@ -130,6 +130,65 @@ let handleCommand chainParams command session timestamp (state:State) =
 
     result
 
+/// The CGP "Payout" execution for the next block, when the next block is a payout block, the vote has a winner and no
+/// payout transaction is in the mempool yet. Needs no wallet and no coins: it only executes the CGP contract.
+/// ZEN_CGP_PAYOUT=off turns both off (the miner's own payout and the relay), so a node behaves like release 1.0.13.
+/// Used by the cgp-devnet test to run a miner without the change next to a node that relays the payout.
+let private cgpPayoutOff = System.Environment.GetEnvironmentVariable "ZEN_CGP_PAYOUT" = "off"
+
+let createCgpPayout chain session timestamp (state:State) : TransactionExtended option =
+    let nextBlockNumber = state.tipState.tip.header.blockNumber + 1ul
+    if cgpPayoutOff || not (CGP.isPayoutBlock chain nextBlockNumber) then None else
+    // the winner of the vote that this payout block pays (state.cgp may still hold the previous interval's payout)
+    let payout = (CGP.update (Tally.Handler.getWinner session (CGP.getInterval chain nextBlockNumber)) state.cgp).payout
+    match payout with
+    | None -> None
+    | Some payout ->
+        let hasPayoutTx =
+            MemPool.toList state.memoryState.mempool
+            |> List.exists (CGP.Connection.isPayoutTransaction chain)
+        if hasPayoutTx then None else
+        let msgBody = CGP.Contract.createPayoutMsgBody (CGP.internalizeRecipient payout)
+        match TransactionHandler.executeContract session TxSkeleton.empty timestamp chain.cgpContractId "Payout" None msgBody state false with
+        | Ok tx ->
+            // Take the transaction through its byte form, as a transaction that arrives from a wallet or a peer does.
+            // Serialization.Data.size counts one byte too many for a List (the payout message body holds one), so
+            // Transaction.toExtended leaves a trailing zero byte in `raw` and its hashes are not the hashes of the bytes
+            // the block carries: every block with it failed with "commitments mismatch" (testnet block 610, 2026-10-09).
+            // Reading the bytes back keeps only the bytes that make up the transaction and hashes exactly those.
+            match Serialization.TransactionExtended.deserialize (Transaction.toExtended tx).raw with
+            | Some ex -> Some ex
+            | None ->
+                eventX "Could not create the CGP payout transaction: it does not read back from its bytes" |> Log.error
+                None
+        | Error e ->
+            eventX "Could not create the CGP payout transaction: {error}" >> setField "error" e |> Log.error
+            None
+
+// The tip for which the payout relay last ran, so it runs once per tip and not on every tick.
+let mutable private payoutRelayTip = 0ul
+
+/// Payout relay: every node, mining or not, creates the CGP payout transaction once the next block is the payout block
+/// and sends it to its peers like any transaction. A miner on another node (also one running release 1.0.13, which never
+/// creates it) then finds it in its mempool and its payout block is valid, so the chain does not wait for someone to
+/// send it by hand. Not a consensus change: the block rules already require this transaction.
+let private relayCgpPayout chain session timestamp (state:State) = effectsWriter {
+    let tip = state.tipState.tip.header.blockNumber
+    if tip = payoutRelayTip || InitialBlockDownload.isActive state.initialBlockDownload then
+        return state.memoryState
+    else
+        payoutRelayTip <- tip
+        match createCgpPayout chain session timestamp state with
+        | Some ex ->
+            eventX "Relaying the CGP payout transaction {hash} for block {block}"
+            >> setField "hash" (Hash.toString ex.txHash)
+            >> setField "block" (tip + 1ul)
+            |> Log.warning
+            return! TransactionHandler.validateTransaction chain session session.context.contractPath tip timestamp ex state
+        | None ->
+            return state.memoryState
+}
+
 let handleRequest chain (requestId:RequestId) request session timestamp state =
     logStartAction "request" request
 
@@ -147,6 +206,16 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
                 {state with cgp = cgp}
             else
                 state
+        // In a payout block with a real winner the miner creates the CGP "Payout" execution itself when nobody else did
+        // (otherwise the block is rejected with "No payout Tx" and the chain stalls until someone sends it by hand).
+        let state =
+            match createCgpPayout chain session timestamp state with
+            | Some ex ->
+                eventX "Miner created the CGP payout transaction {hash}"
+                >> setField "hash" (Hash.toString ex.txHash)
+                |> Log.warning
+                { state with memoryState = { state.memoryState with mempool = MemPool.add ex state.memoryState.mempool } }
+            | None -> state
         BlockTemplateBuilder.makeTransactionList chain session state timestamp
         <@> fun (memState, validatedTransactions) ->
             Block.createTemplate chain state.tipState.tip.header timestamp state.tipState.ema memState.activeContractSet state.cgp validatedTransactions pkHash
@@ -268,10 +337,13 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
         {
             chain = chain.name
             blocks = state.tipState.tip.header.blockNumber
+            // state.headers only grows from headers announced by peers, so blocks mined on this node
+            // left it behind the tip (testnet with a local miner). Never report fewer headers than blocks.
             headers =
                 InitialBlockDownload.getPeerHeader state.initialBlockDownload
                 |> Option.map (fun bh -> bh.blockNumber)
                 |> Option.defaultValue state.headers
+                |> max state.tipState.tip.header.blockNumber
             medianTime = EMA.earliest state.tipState.ema
             difficulty = difficulty
             initialBlockDownload = syncing
@@ -373,8 +445,10 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
 let handleEvent _ _ _ state =
     ret state
 
-let tick _ _ timestamp state = effectsWriter {
+let tick chain session timestamp state = effectsWriter {
     let! ibd = InitialBlockDownload.tick timestamp state.initialBlockDownload
+    let state = {state with initialBlockDownload = ibd}
+    let! memoryState = relayCgpPayout chain session timestamp state
 
-    return {state with initialBlockDownload = ibd}
+    return {state with memoryState = memoryState}
 }

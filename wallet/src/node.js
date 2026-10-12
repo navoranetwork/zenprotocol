@@ -40,10 +40,13 @@ export class NodeClient {
   discovery(addresses) { return this.request('/addressdb/discovery', { addresses, full: false }); }
   // [{contractId, address, expire, code}]
   activeContracts() { return this.request('/contract/active'); }
+  // text/plain hex of the transaction with the contract witness added by the node
+  executeContract(body) { return this.request('/blockchain/contract/execute', body); }
+  candidates() { return this.request('/blockchain/candidates'); }
   publish(txHex) { return this.request('/blockchain/publishtransaction', { tx: txHex }); }
 }
 
 export const DEFAULT_NODES = {
   main: ['https://navora.network/node'],
-  test: [],
+  test: ['https://testnet.navora.network/node'],
 };

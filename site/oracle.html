@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZP Oracle</title>
+<meta name="description" content="Price data committed on the ZP blockchain, with proofs anyone can verify.">
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a64;
+    --line: #e3e1da; --accent: #1f6f5c; --ok: #1f7a3f; --warn: #a15c00; --bad: #a32020;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121311; --card: #1b1c1a; --ink: #ecebe6; --muted: #9a9890;
+            --line: #2c2d2a; --accent: #5cc3a6; --ok: #5ccb83; --warn: #e0a64a; --bad: #ef6b6b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 64px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  p.lead { margin: 0; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; margin-bottom: 18px; }
+  .banner { background: color-mix(in srgb, var(--warn) 14%, var(--card)); border: 1px solid var(--warn); color: var(--ink); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+  .stat .k { font-size: 13px; color: var(--muted); }
+  .stat .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  code, .mono { font-family: var(--mono); font-size: 13.5px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; font-family: var(--mono); font-size: 13px; }
+  a { color: var(--accent); }
+  .hash { word-break: break-all; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  button { font: inherit; background: none; border: 1px solid var(--line); color: var(--accent); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .proof { display: none; }
+  .proof.open { display: table-row; }
+  .proof td { background: var(--bg); }
+  ol { padding-left: 20px; margin: 0; } li { margin: 6px 0; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs button.on { background: var(--accent); color: var(--card); border-color: var(--accent); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 28px; }
+</style>
+<link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>ZP Oracle</h1>
+    <p class="lead">Prices committed on the ZP blockchain. The chain proves when each value was published and that it was never changed.</p>
+  </header>
+
+  <div class="banner"><strong>Mockup.</strong> Sample data on the testnet. The live page will read the oracle service (<code>/oracle/rounds/latest</code>).</div>
+
+  <section>
+    <h2>Latest commitment</h2>
+    <div class="grid">
+      <div class="stat"><div class="k">Published</div><div class="v" id="when">–</div></div>
+      <div class="stat"><div class="k">Block</div><div class="v" id="block">–</div></div>
+      <div class="stat"><div class="k">Network</div><div class="v">Testnet</div></div>
+      <div class="stat"><div class="k">Sources</div><div class="v" id="srcs">mock</div></div>
+    </div>
+    <p style="margin:16px 0 4px" class="k">Merkle root (what the chain holds)</p>
+    <div class="hash" id="root"></div>
+    <p style="margin:12px 0 4px" class="k">Commitment transaction</p>
+    <div class="hash" id="tx"></div>
+  </section>
+
+  <section>
+    <h2>Values in this round</h2>
+    <table>
+      <thead><tr><th>Ticker</th><th class="num">Value (in USD)</th><th>Sources</th><th>Day</th><th class="num">Index</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p style="margin:14px 0 0;color:var(--muted);font-size:14px">The proof is the leaf plus the audit path. A contract (for example a bet) rebuilds the root from them and compares it with the committed root.</p>
+  </section>
+
+  <section>
+    <h2>History</h2>
+    <table>
+      <thead><tr><th>Time (UTC)</th><th>Commitment</th><th>Root</th><th class="num">EUR</th></tr></thead>
+      <tbody id="hist"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol>
+      <li>Every hour the service reads each price from its data source.</li>
+      <li>It hashes every <code>ticker;value</code> pair into a leaf and builds one Merkle tree.</li>
+      <li>It sends the root to the Oracle contract (<code>Commit</code>), signed with the oracle key. The chain now proves the root existed at that block.</li>
+      <li>Anyone asks the service for a value with its proof, and a contract or a person checks it against the root.</li>
+    </ol>
+    <p style="margin:14px 0 0;color:var(--muted);font-size:14px">The oracle is trusted for the value itself. Everything after the commitment is verifiable. <a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/docs/ORACLE.md">Read the design</a>.</p>
+  </section>
+
+  <section>
+    <h2>Use it</h2>
+    <div class="tabs"><button class="on" data-t="api">API</button><button data-t="verify">Verify yourself</button><button data-t="contract">In a contract</button></div>
+    <div id="tab"></div>
+  </section>
+
+  <footer>Testnet, no value. Part of the community node: <a href="/">home</a> · <a href="/explorer.html">explorer</a> · <a href="/stats.html">stats</a></footer>
+</main>
+<script>
+let DATA = {"timestamp": 1791390000000, "root": "30c8461b09fdde71df3ba5db747eff582108839501bb01a5570fa7070266c54a", "tx": "015f7f2a3f1fc6c8bd94515a91b77ad0f3292a5d998153343c9c656327a065e3", "block": 1042, "rows": [{"ticker": "EUR", "value": 1.083, "leaf": "0009b79f80a82d5b2a1df89793398f08ef955bb346d15dcab9537e45c1e898ee", "index": 0}, {"ticker": "GBP", "value": 1.271, "leaf": "32a60fff3e90a693db33d87f57861366bbaa36d417d56bd65d38c3be09aa9e31", "index": 1}, {"ticker": "CHF", "value": 1.111, "leaf": "26b3cad501cb773f6b7dbe6ba32a41c231dbf28a83526b48b814fc313069210e", "index": 2}, {"ticker": "AUD", "value": 0.655, "leaf": "328f3f3eca377e6eeefd6e031a618fbcac37d35c700755977f1f3979f53a04de", "index": 3}, {"ticker": "BTC", "value": 67250.12, "leaf": "9ba04e2fb7d26f94ede29f3c8a646674dbd29725af4f98b89971bd8011fd5440", "index": 4}, {"ticker": "ETH", "value": 2450.5, "leaf": "3aba1f0e0fa8db4e8bd36034653819dc37dabf6466b1f0ba2428916f6a84a703", "index": 5}]};
+let LIVE = [];
+const $ = id => document.getElementById(id);
+const fmt = v => v >= 1000 ? v.toLocaleString('en', {maximumFractionDigits: 2}) : String(v);
+function render() {
+$('when').textContent = new Date(DATA.timestamp).toISOString().slice(0, 16).replace('T', ' ');
+$('block').textContent = DATA.block == null ? '–' : DATA.block.toLocaleString();
+$('root').textContent = DATA.root;
+$('tx').textContent = DATA.tx;
+$('rows').innerHTML = DATA.rows.map(r =>
+  '<tr><td><strong>' + r.ticker + '</strong></td><td class="num">' + fmt(r.value) + '</td><td>' + (r.src || '–') + '</td><td>' + (r.day || '') + '</td><td class="num">' + r.index +
+  '</td><td><button data-i="' + r.index + '">Proof</button></td></tr>' +
+  '<tr class="proof" id="p' + r.index + '"><td colspan="6"><div class="hash">leaf ' + r.leaf + '</div>' +
+  '<pre>GET /oracle/auditpath?ticker=' + r.ticker + '&amp;root=' + DATA.root.slice(0, 12) + '…</pre></td></tr>').join('');
+$('rows').onclick = e => { const i = e.target.dataset && e.target.dataset.i; if (i !== undefined) $('p' + i).classList.toggle('open'); };
+
+  if (LIVE.length) {
+    $('hist').innerHTML = LIVE.map(r => '<tr><td>' + new Date(r.timestamp).toISOString().slice(0, 16).replace('T', ' ') + '</td><td>' + (r.tx ? '<a href="/explorer.html#tx/' + r.tx + '">tx</a>' : '–') + '</td><td class="mono">' + r.root.slice(0, 10) + '…' + r.root.slice(-6) + '</td><td class="num">' + (r.values[r.tickers.indexOf('EUR')] ?? '–') + '</td></tr>').join('');
+    return;
+  }
+  // history: this round and 5 earlier ones (sample)
+$('hist').innerHTML = [0,1,2,3,4,5].map(n => {
+  const t = new Date(DATA.timestamp - n * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
+  const root = n === 0 ? DATA.root : Array.from({length: 64}, (_, k) => '0123456789abcdef'[(k * 7 + n * 13 + (k * k) % 5) % 16]).join('');
+  return '<tr><td>' + t + '</td><td>' + (DATA.block - n * 15) + '</td><td class="mono">' + root.slice(0, 10) + '…' + root.slice(-6) + '</td><td class="num">' + (1.083 + ((n + 1) % 3 - 1) * 0.001).toFixed(4) + '</td></tr>';
+}).join('');
+}
+render();
+fetch('/oracle/rounds?take=24').then(r => r.ok ? r.json() : Promise.reject()).then(async rs => {
+  if (!rs.length) return;
+  // the service answers with capitalised field names (Timestamp, Root, ...): read either spelling
+  const norm = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), v]));
+  LIVE = rs.map(norm); const r = LIVE[0];
+  let ev = {}; try { ev = JSON.parse(r.evidence || '{}'); } catch {}
+  const day = new Date(r.timestamp).toISOString().slice(0, 10);
+  let multi = 0;
+  const srcText = t => {
+    const e = ev[t]; if (!e) return '';
+    const names = Object.keys(e.sources || {}), dropped = e.dropped || [];
+    if (!names.length) return '<span title="one source">1 source</span>';
+    multi++;
+    const detail = names.map(n => n + ' = ' + e.sources[n]).join('\n') + (dropped.length ? '\ndropped: ' + dropped.join(', ') : '');
+    return '<span title="' + detail + '">' + (names.length - dropped.length) + ' of ' + names.length + ' agree</span>' + (dropped.length ? ' <span style="color:var(--muted)">(dropped ' + dropped.join(', ') + ')</span>' : '');
+  };
+  DATA = { timestamp: r.timestamp, root: r.root, tx: r.tx || '', block: null,
+           rows: r.tickers.map((t, i) => ({ ticker: t, value: r.values[i], index: i, leaf: '', src: srcText(t), day: ev[t] && ev[t].asOf && ev[t].asOf !== day ? 'close ' + ev[t].asOf : (ev[t] && ev[t].asOf ? 'today' : '') })) };
+  $('srcs').textContent = multi ? multi + ' of ' + r.tickers.length + ' multi-source' : '1 source';
+  document.querySelector('.banner').style.display = 'none';
+  try { const t = await fetch('/explorer/api/tx/' + r.tx).then(x => x.json()); DATA.block = t.block ? t.block.number : null; } catch {}
+  render();
+}).catch(() => {});
+const TABS = {
+  api: '<pre>GET /oracle/rounds/latest\nGET /oracle/auditpath?ticker=EUR\nGET /oracle/auditpath?ticker=EUR&amp;timestamp=1791390000000\nGET /oracle/health</pre><p style="color:var(--muted);margin:0">Answers are JSON: value, timestamp, root, index, audit path, commitment transaction.</p>',
+  verify: '<pre>leaf  = SHA3-256( "EUR" + ";" + uint32_be(value × 1000) )\nroot  = merkle(leaves)          // same tree as the node (Consensus.MerkleTree)\ncheck = root == committed root  // from the chain, via the Oracle contract</pre><p style="color:var(--muted);margin:0">A reference implementation and test are in <code>src/Oracle</code>.</p>',
+  contract: '<pre>Oracle contract:      ctzn1…  (Commit, Attest)\nFixedPayout contract: Issue / Redeem / Cancel bull and bear positions on a ticker</pre><p style="color:var(--muted);margin:0">Try bets on the testnet; see the docs for the message bodies.</p>'
+};
+const showTab = k => { $('tab').innerHTML = TABS[k]; document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === k)); };
+document.querySelector('.tabs').onclick = e => { if (e.target.dataset.t) showTab(e.target.dataset.t); };
+showTab('api');
+</script>
+<script src="/shell/shell.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navora Run a node</title>
+<meta name="description" content="Run a ZP node on an Ubuntu server with one command: requirements, install, snapshot and seed.">
+<link rel="stylesheet" href="/shell/shell.css">
+<style>
+  .zp .req { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; margin: 14px 0 6px; }
+  .zp .req .card .k { font-size: 13px; color: var(--s-muted); }
+  .zp .req .card .v { font-size: 20px; font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; }
+  .zp .req .card .s { font-size: 13.5px; color: var(--s-muted); }
+  .zp .cmd { position: relative; }
+  .zp .cmd button { position: absolute; top: 6px; right: 6px; font: inherit; font-size: 12.5px; background: var(--s-card); color: var(--s-muted); border: 1px solid var(--s-line); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+  .zp .cmd pre { padding-right: 70px; }
+  .zp ol.what { counter-reset: w; list-style: none; padding: 0; max-width: 72ch; }
+  .zp ol.what li { counter-increment: w; position: relative; padding-left: 38px; margin-bottom: 12px; }
+  .zp ol.what li::before { content: counter(w); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--s-card); border: 1px solid var(--s-line); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--s-accent); }
+  .zp ol.what code { font-size: 13px; }
+  .zp .small { font-size: 14px; color: var(--s-muted); }
+  .zp .quick { background: var(--s-card); border: 1px solid var(--s-accent); border-radius: 10px; padding: 16px 18px; margin: 14px 0 22px; min-width: 0; }
+  .zp .quick h3 { margin-top: 0; }
+  .zp .quick pre { background: var(--s-bg); margin: 8px 0 6px; font-size: 15px; }
+</style>
+<script src="/shell/shell.js" defer></script>
+</head>
+<body class="zp">
+<main>
+<h1>Run a node</h1>
+<p class="lead">A ZP node keeps its own copy of the chain, checks every block and shares it with other nodes. It runs on a small Ubuntu server and installs with one command; a snapshot skips most of the initial sync.</p>
+
+<h2>What you need</h2>
+<div class="req">
+  <div class="card"><div class="k">Processor</div><div class="v">1 CPU core</div><div class="s">2 recommended. The node is capped at 1 core.</div></div>
+  <div class="card"><div class="k">Memory</div><div class="v">2 GB RAM</div><div class="s">The node is capped at 2 GB. 4 GB total leaves room for the system.</div></div>
+  <div class="card"><div class="k">Disk</div><div class="v">20 GB free</div><div class="s">Chain about 10 GB plus a 5 GB snapshot download. 40 GB SSD recommended.</div></div>
+  <div class="card"><div class="k">Network</div><div class="v">Port 9655 TCP</div><div class="s">Open inbound so other nodes can connect. Works without it, with fewer peers.</div></div>
+</div>
+<p class="small">A small cloud server is enough, for example 2 vCPU, 2–4 GB RAM, 40 GB disk on Ubuntu 22.04 or 24.04. The node does not mine.</p>
+
+<h2>Install</h2>
+<div class="quick">
+  <h3>New Ubuntu server: one line</h3>
+  <p>Install Ubuntu 22.04 or 24.04, connect with <code>ssh root@&lt;server-ip&gt;</code> and paste:</p>
+  <div class="cmd"><pre>curl -fsSL https://navora.network/install.sh | bash</pre></div>
+  <p class="small">Nothing else to install first. About 10–20 minutes, most of it the 5 GB snapshot. Run the same line again to update; the chain and the settings are kept. <a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/scripts/install-node.sh">Read the script on GitHub</a>.</p>
+</div>
+<h2>What the line does</h2>
+<ol class="what">
+  <li><b>Prepares the server.</b> Waits for the first automatic updates, adds 2 GB swap when RAM is under 4 GB and there is no swap, installs Git and Docker if they are missing, and opens port 9655 in ufw when ufw is on.</li>
+  <li><b>Fetches the setup.</b> Downloads this community repository to <code>~/zenprotocol</code>: the Docker settings and helper scripts, not the chain.</li>
+  <li><b>Gets the node image.</b> A ready image of the community node on .NET 10, built from this repository: the same validation rules as the official release 1.0.13, checked by replaying the whole mainnet from block 0 against it. It uses less memory and syncs faster than the old Mono build. Its seed list holds this site and the seeds in <code>network.json</code>. If the registry is unreachable it builds the image on the server from the source.</li>
+  <li><b>Loads a snapshot.</b> The newest community chain snapshot (about 5 GB), checked against its SHA-256 and test-extracted. Chain data only, never a wallet. If no community snapshot is reachable it uses the official Feb-2023 snapshot and syncs the rest from the network. Without a snapshot the node syncs from block 0, which takes many hours.</li>
+  <li><b>Starts the node.</b> In the background, restarting after a reboot, capped at 1 CPU and 2 GB RAM. Port 9655 is published for peers (a cloud firewall must allow it, see below); the API (port 11567) stays on the server only, because it controls the node's wallet.</li>
+</ol>
+
+<h2>Check it</h2>
+<div class="cmd"><pre>curl -s http://127.0.0.1:11567/blockchain/info</pre></div>
+<p>The node is synced when <code>blocks</code> equals <code>headers</code>. Logs: <code>cd ~/zenprotocol &amp;&amp; docker compose logs -f --tail 50</code>. If the server has a cloud firewall (for example Hetzner Cloud Firewall), allow inbound TCP 9655 there.</p>
+<p>Manual steps, wallets and every setting: <a href="https://github.com/navoranetwork/zenprotocol/tree/node-upgrade-script/Docker">full setup guide on GitHub</a>. Seed address of this site: <code><span class="host">this-site</span>:9655</code></p>
+
+<h2>Snapshot</h2>
+<div id="snap">Loading…</div>
+<h2>Status of this site's node</h2>
+<div class="status"><span class="dot" id="dot"></span><span id="state">Checking…</span></div>
+<div class="stats">
+ <div><div class="k">Block height</div><div class="v" id="height">–</div></div>
+ <div><div class="k">Chain time</div><div class="v" id="age">–</div></div>
+ <div><div class="k">Peers of this node</div><div class="v" id="peers">–</div></div>
+ <div><div class="k">Difficulty</div><div class="v" id="diff">–</div></div>
+</div>
+
+</main>
+<script>
+const $ = id => document.getElementById(id), fmt = n => Number(n).toLocaleString('en-US');
+async function ask(p, tries = 3) { for (let i = 0; i < tries; i++) { const c = new AbortController(), t = setTimeout(() => c.abort(), 8000); try { const r = await fetch(p, { cache: 'no-store', signal: c.signal }); if (r.ok) return await r.text(); } catch (e) {} finally { clearTimeout(t); } if (i < tries - 1) await new Promise(r => setTimeout(r, 2000)); } return null; }
+let failed = 0;
+async function refresh() {
+  let info = null; try { const t = await ask('/api/info'); info = t && JSON.parse(t); } catch (e) {}
+  if (info && Number.isFinite(Number(info.blocks))) {
+    failed = 0; $('height').textContent = fmt(info.blocks); $('diff').textContent = Number(info.difficulty).toFixed(0);
+    const s = Math.max(0, (Date.now() - info.medianTime) / 1000); $('age').textContent = s < 90 ? Math.round(s) + ' s ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : s < 172800 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago';
+    let cls = 'ok', text = 'Synced and following the chain';
+    if (info.initialBlockDownload || info.blocks < info.headers) { cls = 'warn'; text = 'Syncing: ' + fmt(info.blocks) + ' / ' + fmt(info.headers); }
+    else if (s / 60 > 120) { cls = 'warn'; text = 'No new blocks for ' + Math.round(s / 60) + ' minutes'; }
+    $('dot').className = 'dot ' + cls; $('state').textContent = text;
+  } else { failed++; if (failed >= 3) { $('dot').className = 'dot bad'; $('state').textContent = 'Node unreachable'; } else { $('dot').className = 'dot warn'; $('state').textContent = 'Node is busy, retrying...'; } }
+  const p = await ask('/api/peers'); if (p !== null && /^\s*\d+\s*$/.test(p) && $('peers')) $('peers').textContent = p.trim();
+}
+refresh(); setInterval(refresh, 30000);
+
+(async () => { const el = $('snap'); if (!el) return; try { const s = await (await fetch('/snapshots/latest.json', { cache: 'no-store' })).json();
+  const gb = (s.bytes / 1e9).toFixed(2), row = document.createElement('div');
+  const a = document.createElement('a'); a.className = 'btn'; a.href = '/snapshots/' + encodeURIComponent(s.file); a.textContent = 'Download (' + gb + ' GB)';
+  const i = document.createElement('p'); i.textContent = 'Up to block ' + fmt(s.height) + ' · created ' + s.date;
+  const h = document.createElement('p'); const hc = document.createElement('code'); hc.style.wordBreak = 'break-all'; hc.textContent = 'SHA-256 ' + s.sha256; h.append(hc);
+  const u = document.createElement('p'); u.append('Or let a Docker node fetch it: '); const uc = document.createElement('code'); uc.textContent = 'SNAPSHOT_URL=' + location.origin + '/snapshots/' + s.file; u.append(uc);
+  el.replaceChildren(a, i, h, u); } catch (e) { el.textContent = 'No snapshot published yet.'; } })();
+document.querySelectorAll('.host').forEach(e => e.textContent = location.hostname);
+
+// copy buttons on every command block
+document.querySelectorAll('.cmd').forEach(c => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copy';
+  b.addEventListener('click', () => {
+    const pre = c.querySelector('pre'), done = () => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1500); };
+    const sel = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Press Ctrl+C'; };
+    if (navigator.clipboard) navigator.clipboard.writeText(pre.textContent).then(done, sel); else sel();
+  });
+  c.append(b);
+});
+</script>
+</body>
+</html>

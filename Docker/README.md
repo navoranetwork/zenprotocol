@@ -1,6 +1,6 @@
 # Running a ZP node / miner with Docker
 
-Works on Linux, macOS and Windows (Docker Desktop). On Windows use Docker – the native Windows node fails to create wallets (`cannot derive`). Uses the official 1.0.13 release (no version expiry).
+Works on Linux, macOS and Windows (Docker Desktop). On Windows use Docker – the native Windows node fails to create wallets (`cannot derive`). Uses the community node on .NET 10 by default (validates exactly like the official 1.0.13 release; that one stays available with `ZEN_IMAGE=ghcr.io/navoranetwork/zen-node:latest`) (no version expiry).
 
 Full guide (server, home miner, snapshots, troubleshooting): [docs/SETUP.md](../docs/SETUP.md) · .NET 8 migration plan: [docs/MIGRATION.md](../docs/MIGRATION.md)
 
@@ -11,7 +11,7 @@ Network status, seed and snapshots: **https://navora.network** (maintained by Na
 One command (Linux, macOS; installs Docker on Linux, loads the verified snapshot, starts the node):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-node.sh | bash
+curl -fsSL https://navora.network/install.sh | bash
 ```
 
 Or step by step (this is also the Windows way):

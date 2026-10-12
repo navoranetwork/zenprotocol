@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { deserializeBlock, deserializeTx, serializeTx, txHash, hex, unhex, Writer, Reader, Amount, VarInt, Asset, ZEN_ASSET } from '../src/serialize.js';
+import { Witness, Data, deserializeBlock, deserializeTx, serializeTx, txHash, hex, unhex, Writer, Reader, Amount, VarInt, Asset, ZEN_ASSET } from '../src/serialize.js';
 import { verifyDigest } from '../src/tx.js';
 
 const FIX = new URL('./fixtures/blocks.json', import.meta.url);
@@ -52,4 +52,32 @@ test('mainnet blocks: every transaction re-serializes byte for byte, hashes and 
   }
   console.log(`checked ${blocks.length} blocks, ${txs} transactions, ${sigs} signatures, ${contracts} contract witnesses`);
   assert.ok(txs > blocks.length, 'fixtures should contain non-coinbase transactions');
+});
+
+test('a witness whose declared length is off: strict refuses, lenient (indexer) follows the parsed fields', () => {
+  const w = new Writer();
+  VarInt.write(w, 1); VarInt.write(w, 1 + 33 + 64 + 1);           // PK witness declaring one byte more than it holds (as block 117758)
+  w.u8(1); w.bytes(new Uint8Array(33).fill(2)); w.bytes(new Uint8Array(64).fill(3));
+  w.u8(0x77);                                                    // the next item in the stream
+  const bytes = w.out();
+  assert.throws(() => Witness.read(new Reader(bytes)), /witness size/);
+  const r = new Reader(bytes); r.lenient = true;
+  const x = Witness.read(r);
+  assert.equal(x.type, 'PK');
+  assert.equal(r.u8(), 0x77);
+  assert.deepEqual(r.irregular, [{ id: 1, count: 99, size: 98 }]);
+});
+
+test('dict keys are ordered length first (block 248357 holds Signature before Allocation): strict accepts that order and refuses the other, lenient reads any', () => {
+  const w = new Writer();
+  w.u8(12); VarInt.write(w, 2);                                   // Dict with 2 entries: "Signature", then "Allocation"
+  for (const k of ['Signature', 'Allocation']) { const b = new TextEncoder().encode(k); VarInt.write(w, b.length); w.bytes(b); w.u8(2); w.u8(1); }
+  const bytes = w.out();
+  assert.deepEqual(Data.read(new Reader(bytes)).v.map(e => e[0]), ['Signature', 'Allocation']);
+  const w2 = new Writer();
+  w2.u8(12); VarInt.write(w2, 2);
+  for (const k of ['Allocation', 'Signature']) { const b = new TextEncoder().encode(k); VarInt.write(w2, b.length); w2.bytes(b); w2.u8(2); w2.u8(1); }
+  assert.throws(() => Data.read(new Reader(w2.out())), /dict not sorted/);
+  const r = new Reader(w2.out()); r.lenient = true;
+  assert.deepEqual(Data.read(r).v.map(e => e[0]), ['Allocation', 'Signature']);
 });

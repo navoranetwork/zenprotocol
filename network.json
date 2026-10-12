@@ -4,6 +4,10 @@
   "seeds": [
     "navora.network"
   ],
+  "testnetSeeds": [
+    "testnet.navora.network",
+    "91.98.3.17"
+  ],
   "snapshotSources": [
     "https://navora.network/snapshots",
     "https://github.com/navoranetwork/zenprotocol/releases/download/snapshot-latest"

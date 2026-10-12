@@ -7,7 +7,7 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-navora.network}"
-# Other names served by the same site, e.g. the old domain while moving: EXTRA_DOMAINS="old.example.org"
+# Other names served by the same site, e.g. an old domain while moving: EXTRA_DOMAINS="old.example.org"
 EXTRA_DOMAINS="${EXTRA_DOMAINS:-}"
 WEB=/var/www/zen
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -20,8 +20,14 @@ echo "$DOMAIN -> ${IP:-<no DNS yet>}"
 
 echo "== Files"
 mkdir -p "$WEB/snapshots"
-cp "$REPO/site/index.html" "$WEB/index.html"
-cp "$REPO/site/stats.html" "$REPO/site/assets.html" "$REPO/site/cgp.html" "$REPO/site/explorer.html" "$WEB/"
+for f in index about how-it-works community node mine developers stats assets cgp votes explorer contract; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
+rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
+# the one-line node installer: curl -fsSL https://<domain>/install.sh | bash
+cp "$REPO/scripts/install-node.sh" "$WEB/install.sh"
+# Site frame settings (menus, name, link to the other network). Set SITE_NAME / TEST_URL once; they are kept in the file for later runs.
+old() { grep -o "\"$1\":\"[^\"]*\"" "$WEB/site-config.json" 2>/dev/null | cut -d'"' -f4 || true; }   # values from the last run are kept
+SITE_NAME="${SITE_NAME:-$(old name)}"; [ "$SITE_NAME" = "Zen Chain" ] && SITE_NAME=""; SITE_NAME="${SITE_NAME:-Navora}"; TEST_URL="${TEST_URL:-$(old testUrl)}"; TEST_URL="${TEST_URL:-https://testnet.navora.network}"
+printf '{"kind":"main","name":"%s","testUrl":"%s","github":"https://github.com/navoranetwork/zenprotocol"}\n' "$SITE_NAME" "$TEST_URL" > "$WEB/site-config.json"
 
 echo "== ZP Wallet (built in a throwaway node container: nothing to install on the server)"
 if command -v docker >/dev/null; then
@@ -74,10 +80,10 @@ ExecStart=/usr/bin/python3 $REPO/site/update-stats.py --out $WEB/stats.json
 UNIT
 cat > /etc/systemd/system/zen-stats.timer <<UNIT
 [Unit]
-Description=Refresh ZP network stats every 5 minutes
+Description=Refresh ZP network stats every 15 minutes (each run asks the node for about 2 minutes of work)
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+OnUnitActiveSec=15min
 [Install]
 WantedBy=timers.target
 UNIT
