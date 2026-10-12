@@ -155,6 +155,10 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
     let tryAddTransaction (state, added, notAdded, altered, weight) (ex,wt) =
         let newWeight = weight+wt
         if newWeight > maxWeight && (not <| Connection.isPayoutTransaction chain ex) then (state, added, notAdded, false, weight) else
+        // at most BlockConnection.V1Activations.maxPerBlock V1 activations per block; the rest wait
+        let v1Activations =
+            added |> List.filter (fun (tx:TransactionExtended) -> match tx.tx.contract with Some (HighV (v, _)) when v = Version1 -> true | _ -> false) |> List.length
+        if BlockConnection.V1Activations.isV1Activation ex && v1Activations >= BlockConnection.V1Activations.maxPerBlock then (state, added, notAdded, altered, weight) else
         validateInContext chain getUTXO contractPath blockNumber timestamp
             state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) ContractStates.asDatabase ex
         |> function

@@ -8,6 +8,9 @@ open Serialization
 
 let activationFactor = 300_000u
 let contractExecutionFactor = 100I
+/// V1 contract calls: weight per gas (draft). Measured time per gas for V1 is up to ~4x V0's
+/// pricing assumption (zp-contracts-v1 docs/MEASUREMENTS.md); V0 calls keep 100.
+let contractV1ExecutionFactor = 400I
 let pkWitnessWeight = 100_000I
 let contractSignatureWeight = 80_000I
 let sizeFactor = 100u
@@ -40,7 +43,8 @@ let private accumulateContractWeight total witnesses pInputs =
             match cw.signature with
             | Some _ -> contractSignatureWeight
             | None -> 0I
-        NextInput(total + contractExecutionFactor * bigint cw.cost + signatureWeight, witnessesTail, List.skip (int cw.inputsLength) pInputs)
+        let factor = match cw.contractId with ContractId (version, _) when version = Version1 -> contractV1ExecutionFactor | _ -> contractExecutionFactor
+        NextInput(total + factor * bigint cw.cost + signatureWeight, witnessesTail, List.skip (int cw.inputsLength) pInputs)
     | _ -> Invalid "expecting a contract 0 witness"
 
 let private accumulateWeights total witnesses pInputs =

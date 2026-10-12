@@ -209,3 +209,28 @@ let ``V1 contract still runs after garbage collections``() =
     match Contract.run contract sampleInputTx context "" Zen.Types.Main.Anonymous None [] None with
     | Ok (tx, _, _) -> Assert.AreEqual(expectedOutputTx v1Id, tx)
     | Error e -> Assert.Fail (sprintf "%A" e)
+
+/// V1 calls weigh 400 per gas (V0: 100): the same call witness, with the contract's version
+/// changed, weighs 300 per gas more as V1.
+[<Test>]
+let ``V1 call weighs 400 per gas, V0 100``() =
+    let cost = 214UL
+    let witnessFor version =
+        ContractWitness { contractId = ContractId (version, Hash.zero); command = ""; messageBody = None
+                          stateCommitment = NotCommitted; beginInputs = 0u; beginOutputs = 0u
+                          inputsLength = 0u; outputsLength = 0u; signature = None; cost = cost }
+    let weightOf version =
+        let tx = { version = Version0; contract = None; inputs = []; outputs = []; witnesses = [ witnessFor version ] }
+        Weight.transactionWeight tx TxSkeleton.empty |> unwrap
+    Assert.AreEqual(300I * bigint cost, weightOf Version1 - weightOf Version0)
+
+/// At most two V1 activations per block (each makes every node build a contract).
+[<Test>]
+let ``a block may hold two V1 activations, not three``() =
+    let a = activationTx v1Code 10UL
+    let b = activationTx liarCode 10UL
+    let c = activationTx (v1Code + " ") 10UL
+    let two : Result<unit, string> = BlockConnection.V1Activations.checkTransactions [ a; b ]
+    let three : Result<unit, string> = BlockConnection.V1Activations.checkTransactions [ a; b; c ]
+    Assert.AreEqual((Ok () : Result<unit, string>), two)
+    Assert.AreEqual((Error "block has 3 V1 contract activations, above 2" : Result<unit, string>), three)

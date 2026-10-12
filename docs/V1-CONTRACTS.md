@@ -33,7 +33,15 @@ it only through ZenAbi (`src/ZenAbi`, vendored from zp-contracts-v1 `abi/`, keep
 main/cost functions as V0, so call validation (`InputValidation/ContractV0.fs`) is shared:
 cost commitment, state commitment, prefix and mask checks. On top of that, the V1 rule
 (`ZenAbi.Rules.Rejection`): a call fails when it runs out of gas (main runs with exactly the
-declared cost as budget), declares more than `MaxGasPerCall`, or overflows an asset total.
+declared cost as budget), declares more than `MaxGasPerCall` (draft 1,000,000), or overflows an asset total.
+
+## Limits (drafts)
+
+V1 calls weigh 400 per gas in a block (`Weight.contractV1ExecutionFactor`; V0 calls stay 100),
+and a block holds at most two V1 activations (`BlockConnection.V1Activations`; block templates
+keep the rest for later blocks), because every node builds each activated contract (~20-30 s).
+The size limits on integers (512 bits) and strings (1,024 characters) are in the toolchain's
+build. Measurements and reasons: zp-contracts-v1 docs/MEASUREMENTS.md.
 
 ## Wallet and API
 
@@ -72,7 +80,7 @@ assemblies for the contract, which once hid three loading bugs that only a node 
 height, invalid UTF-8, activation and build, cost and result, a valid call validated in context,
 a wrong cost commitment, an under-declared cost stopped by gas, reload from disk, weight; and
 loading: ZenAbi's version, FSharp.Core next to the contract, a relative contracts path, a call
-after garbage collections.
+after garbage collections; V1 weight per gas, and at most two V1 activations per block.
 `src/Api.Tests/ContractV1ApiTests.fs`: request parsing (version, rlimit), and end to end: activate
 through the wallet API, check the transaction, call the contract through the API.
 

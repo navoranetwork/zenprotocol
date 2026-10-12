@@ -245,6 +245,26 @@ module Weight =
                 return! Error "block weight exceeds maximum"
         }
 
+/// V1 activations per block (draft consensus rule). Every node builds each V1 contract it sees
+/// activated (~20-30 s, nearly independent of size); this bounds that work per block.
+module V1Activations =
+
+    let maxPerBlock = 2
+
+    let isV1Activation (ex: TransactionExtended) =
+        match ex.tx.contract with
+        | Some (HighV (version, _)) when version = Version1 -> true
+        | _ -> false
+
+    let checkTransactions (txs: TransactionExtended list) =
+        let n = txs |> List.filter isV1Activation |> List.length
+        if n <= maxPerBlock then Ok ()
+        else Error (sprintf "block has %d V1 contract activations, above %d" n maxPerBlock)
+
+    let check
+        : Check = fun state env ->
+        checkTransactions env.block.transactions |> Result.map (fun () -> state)
+
 module PayoutTx =
     
     let check
@@ -275,6 +295,7 @@ let connect
     >>= BlockNumber .check
     >>= Difficulty  .check
     >>= Weight      .check
+    >>= V1Activations.check
     >>= PayoutTx    .check
     >>= TxInputs    .check
     >>= Coinbase    .check

@@ -10,7 +10,7 @@ namespace ZenAbi
     public static class Rules
     {
         /// The most gas one contract call may declare (consensus parameter; draft value).
-        public static readonly BigInteger MaxGasPerCall = new BigInteger(10_000_000);
+        public static readonly BigInteger MaxGasPerCall = new BigInteger(1_000_000);
 
         /// Stack size for contract runs: deep but paid-for computations nest deeply.
         public const int ContractStackBytes = 512 * 1024 * 1024;
