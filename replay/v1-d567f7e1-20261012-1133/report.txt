@@ -2,3 +2,10 @@ run: v1-d567f7e1-20261012-1133
 commit: d567f7e1d1a5d9b486c3f7bcfa2e6f5ce7cd6716
 reference: replay/reference/mainnet-1052892 (height 1052892)
 server: ubuntu-16gb-nbg1-2, 8 cores, 15 GB RAM, 129G free
+block hashes: 1053 checked
+state files skipped (node at 1055090, reference at 1052892): block hashes are the check
+RESULT: node matches the reference
+reference check exit code: 0
+live cgp at 1055093: match
+live totalzp at 1055093: match
+live winner at 1055093: match
