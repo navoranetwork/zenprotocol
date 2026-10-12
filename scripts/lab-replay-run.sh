@@ -11,6 +11,8 @@ RUN="v1-$(git rev-parse --short HEAD)-$(date -u +%Y%m%d-%H%M)"
 OUT="$PWD/replay-out/$RUN"; mkdir -p "$OUT"
 API=127.0.0.1:11567
 log() { echo "[$(date -u +%F' '%H:%M)] $*" | tee -a "$OUT/progress.log"; }
+# a fresh server has no git identity; every commit here (the branch root included) needs one
+export GIT_AUTHOR_NAME=zp-lab GIT_AUTHOR_EMAIL=zp-lab@navora.network GIT_COMMITTER_NAME=zp-lab GIT_COMMITTER_EMAIL=zp-lab@navora.network
 
 # results branch in a separate worktree, pushed with the token
 publish() {
