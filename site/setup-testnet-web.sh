@@ -15,15 +15,15 @@ mkdir -p "$WEB"
 # the indexer writes its json files inside the docker volume (/var/lib/docker is closed to nginx): copy them out every minute
 if [ -n "$VOL" ]; then
   cat > /etc/cron.d/zen-testnet-json <<CRON
-* * * * * root for f in stats assets cgp-history community-votes history; do [ -f "$VOL/web/\$f.json" ] && cp -f "$VOL/web/\$f.json" "$WEB/\$f.json"; done
+* * * * * root for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/\$f.json" ] && cp -f "$VOL/web/\$f.json" "$WEB/\$f.json"; done
 CRON
-  for f in stats assets cgp-history community-votes history; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
+  for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
 fi
 # faucet top-up: every hour, the node wallet refills the faucet when it runs low (keeps a reserve; scripts/faucet-topup.sh)
 cat > /etc/cron.d/zen-faucet-topup <<CRON
 17 * * * * root bash $REPO/scripts/faucet-topup.sh >> /var/log/zen-faucet-topup.log 2>&1
 CRON
-for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
+for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet bitzen; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
 cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings. DOMAIN (e.g. testnet.example.org) turns on HTTPS; MAIN_URL links to the mainnet site.
@@ -73,7 +73,7 @@ server {
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
 
     # files the indexer writes (assets, ...)
-    location ~ ^/(stats|assets|cgp-history|community-votes|history)\.json\$ { root $WEB; add_header Cache-Control "no-cache"; }
+    location ~ ^/(stats|assets|cgp-history|community-votes|history|bitzen)\.json\$ { root $WEB; add_header Cache-Control "no-cache"; }
     location / { try_files \$uri \$uri/ =404; }
 }
 CONF

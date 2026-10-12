@@ -23,7 +23,7 @@
   const TEST = [
     ['Home', '/'],
     ['Trade', [['Markets', '/markets.html', 'Oracle prices and order books'], ['Dex', '/dex.html', 'Swap assets on the chain'], ['Oracle', '/oracle.html', 'Prices committed on the chain'], ['Bridge', '/bridge.html', 'USDC in and out (prototype)']]],
-    ['Explore', [['Explorer', '/explorer.html', 'Blocks, transactions, addresses'], ['Assets', '/assets.html', 'Tokens on the testnet'], ['CGP voting', '/cgp.html', 'Votes and payouts']]],
+    ['Explore', [['Explorer', '/explorer.html', 'Blocks, transactions, addresses'], ['Assets', '/assets.html', 'Tokens on the testnet'], ['CGP voting', '/cgp.html', 'Votes and payouts'], ['Bitcoin in ZP', '/bitzen.html', 'A contract that follows Bitcoin']]],
     ['Wallet', '/wallet/'],
     ['Learn', [['Faucet', '/faucet.html', 'Free test ZP for your address'], ['Testnet guide', '/guide.html', 'First steps, test coins'], ['Instruments', '/instruments.html', 'Oracle, Dex and tokens together']]],
     ['Developers', '/developers.html']

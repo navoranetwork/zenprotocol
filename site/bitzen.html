@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitcoin in ZP</title>
+<meta name="description" content="A ZP contract on the testnet follows Bitcoin's block chain by itself: proof of work, the difficulty rule and forks, checked on the chain.">
+<link rel="stylesheet" href="/shell/shell.css">
+<style>
+  .zp .small { font-size: 14px; color: var(--s-muted); }
+  .zp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .zp .state { padding: 10px 14px; border-radius: 8px; margin: 6px 0 0; }
+  .zp .state.ok { background: rgba(31, 154, 85, .12); } .zp .state.warn { background: rgba(214, 140, 20, .14); } .zp .state.err { background: rgba(196, 48, 48, .1); }
+  .zp .tbl { overflow-x: auto; border: 1px solid var(--s-line); border-radius: 10px; margin: 12px 0 18px; }
+  .zp table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .zp th, .zp td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--s-line); white-space: nowrap; }
+  .zp th { font-weight: 600; color: var(--s-muted); background: var(--s-card); }
+  .zp tr:last-child td { border-bottom: 0; }
+  .zp td.hash { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .zp .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--s-card); border: 1px solid var(--s-line); }
+  .zp .tag.reorg { background: rgba(214, 140, 20, .16); border-color: transparent; }
+  .zp ul.plain li { margin: 6px 0; }
+</style>
+<script src="/shell/shell.js" defer></script>
+</head>
+<body class="zp">
+<main>
+<h1>Bitcoin in ZP</h1>
+<p class="lead">A contract on the ZP testnet follows Bitcoin's block chain by itself. It checks every block header it is given: the proof of work, Bitcoin's difficulty rule and which branch has more work. Nobody has to be trusted to tell it what happened on Bitcoin.</p>
+
+<div class="stats">
+  <div><div class="k">Bitcoin tip</div><div class="v" id="s-btc">–</div></div>
+  <div><div class="k">Contract tip</div><div class="v" id="s-tip">–</div></div>
+  <div><div class="k">Blocks behind</div><div class="v" id="s-behind">–</div></div>
+  <div><div class="k">Last check</div><div class="v" id="s-updated">–</div></div>
+</div>
+<div id="state" class="state" hidden></div>
+<p class="small">Contract <a class="mono" id="s-contract" href="#">–</a>. Bitcoin data shown for comparison comes from <a href="https://mempool.space" rel="noopener">mempool.space</a>.</p>
+
+<h2>The last 16 blocks the contract keeps</h2>
+<p class="small">The contract keeps a ring of the last 16 Bitcoin blocks it accepted. A payment proof (the next step) will be checked against these blocks.</p>
+<div class="tbl"><table>
+  <thead><tr><th>Bitcoin height</th><th>Block hash</th><th>On Bitcoin's best chain</th></tr></thead>
+  <tbody id="ring"><tr><td colspan="3" class="small">Loading…</td></tr></tbody>
+</table></div>
+
+<h2>Recent activity</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Time (UTC)</th><th>What</th><th>Bitcoin blocks</th><th>ZP transaction</th></tr></thead>
+  <tbody id="hist"><tr><td colspan="4" class="small">Loading…</td></tr></tbody>
+</table></div>
+
+<h2>How it works</h2>
+<ul class="plain">
+  <li><b>Headers in, checked on the chain.</b> A relayer sends each new Bitcoin block header to the contract. The contract checks that it points to the previous block, that its proof of work is valid, and that it carries the right difficulty, including Bitcoin's retarget every 2,016 blocks.</li>
+  <li><b>Forks.</b> When Bitcoin switches to a branch with more work, the relayer sends that branch from the last common block, and the contract replaces its tip only if the branch is really longer.</li>
+  <li><b>No trust in the relayer.</b> The relayer cannot make the contract accept a header that is not a valid Bitcoin block. Anyone can run another relayer; the contract takes headers from anyone.</li>
+  <li><b>No custody.</b> The contract holds no bitcoin. It is the base for proving a Bitcoin payment inside ZP, so that ZP assets can be exchanged for bitcoin without a middleman.</li>
+</ul>
+
+<h2>Limits of this test</h2>
+<ul class="plain">
+  <li>It runs on the ZP testnet; it follows Bitcoin's main chain, whose headers are public.</li>
+  <li>A branch must stay inside one 2,016-block difficulty period and be at most 6 blocks long; a deeper reorganisation is out of scope (a payment is accepted only after 6 confirmations).</li>
+  <li>The contract starts from a checkpoint, a recent block given at the start, as any light client does.</li>
+  <li>Payment proofs and the swap come next; they need a protocol upgrade that is still being prepared.</li>
+</ul>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = n => n == null ? '–' : Number(n).toLocaleString('en-US');
+const ago = iso => { const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000); return s < 90 ? Math.round(s) + ' s ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago'; };
+const btcLink = h => `<a class="mono" href="https://mempool.space/block/${esc(h)}" rel="noopener">${esc(h)}</a>`;
+let bestTip = null, bestHashes = {};
+
+async function bitcoinTip() {
+  try { const r = await fetch('https://mempool.space/api/blocks/tip/height', { cache: 'no-store' }); if (r.ok) bestTip = Number(await r.text()); } catch (e) { }
+}
+async function bestHash(h) {
+  if (bestHashes[h]) return bestHashes[h];
+  try { const r = await fetch('https://mempool.space/api/block-height/' + h); if (r.ok) return (bestHashes[h] = (await r.text()).trim()); } catch (e) { }
+  return null;
+}
+function state(cls, text) { const s = $('state'); s.className = 'state ' + cls; s.textContent = text; s.hidden = false; }
+
+async function load() {
+  let d;
+  try { d = await (await fetch('/bitzen.json', { cache: 'no-store' })).json(); }
+  catch (e) { state('err', 'The status of the contract is not available right now.'); return; }
+  await bitcoinTip();
+  const btc = bestTip ?? d.bitcoinTip, tip = d.tip?.height;
+  $('s-btc').textContent = num(btc); $('s-tip').textContent = num(tip);
+  $('s-behind').textContent = tip != null && btc != null ? num(Math.max(0, btc - tip)) : '–';
+  $('s-updated').textContent = d.updated ? ago(d.updated) : '–';
+  if (d.contract) { $('s-contract').textContent = d.contract.slice(0, 18) + '…'; $('s-contract').href = d.contractId ? '/contract.html?id=' + encodeURIComponent(d.contractId) : '#'; }
+  const stale = d.updated && Date.now() - Date.parse(d.updated) > 15 * 60000;
+  if (d.error) state('err', 'The relayer reports: ' + d.error);
+  else if (d.contractActive === false) state('err', 'The contract is not active on the testnet.');
+  else if (d.expiry != null && d.zpTip != null && d.expiry - d.zpTip < 2000) state('warn', `The contract stays active until testnet block ${num(d.expiry)}; it needs to be extended soon.`);
+  else if (stale) state('warn', 'No check for more than 15 minutes: the relayer may be stopped.');
+  else if (tip != null && btc != null && btc - tip > 2) state('warn', `The contract is ${btc - tip} blocks behind Bitcoin; it catches up one block per call.`);
+  else if (tip != null) state('ok', 'The contract is on Bitcoin\'s tip.');
+
+  const ring = d.ring || [];
+  if (!ring.length) $('ring').innerHTML = '<tr><td colspan="3" class="small">No blocks yet.</td></tr>';
+  else {
+    $('ring').innerHTML = ring.map(r => `<tr><td>${num(r.height)}</td><td class="hash">${btcLink(r.hash)}</td><td id="b-${r.height}" class="small">…</td></tr>`).join('');
+    for (const r of ring) bestHash(r.height).then(h => { const c = $('b-' + r.height); if (c) c.textContent = h == null ? 'unknown' : h === r.hash ? 'yes' : 'no (replaced)'; });
+  }
+  const hist = d.history || [];
+  $('hist').innerHTML = hist.length ? hist.map(h => {
+    const what = h.kind === 'checkpoint' ? 'Checkpoint' : h.kind === 'reorg' ? '<span class="tag reorg">Fork</span>' : 'New block';
+    const blocks = h.kind === 'reorg' ? `${num(h.from + 1)}–${num(h.to)} (replaced ${h.replaced})` : num(h.height);
+    return `<tr><td>${esc((h.time || '').replace('T', ' ').slice(0, 19))}</td><td>${what}</td><td>${blocks}</td><td><a class="mono" href="/explorer.html?tx=${encodeURIComponent(h.tx)}">${esc((h.tx || '').slice(0, 16))}…</a></td></tr>`;
+  }).join('') : '<tr><td colspan="4" class="small">Nothing yet.</td></tr>';
+}
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
