@@ -13,7 +13,7 @@ fix lands with a test.
 | H1 | Out-of-memory or thread creation failure during a call treated as the contract failing | high | open |
 | H2 | SDK / FSharp.Core not pinned per node; the first FSharp.Core copied is kept for all contracts | high | fixed: pinned in toolchain.lock, checked by every build |
 | H3 | Memory grows: every built contract stays loaded, with its own FSharp.Core | high | open; mempool builds removed (C2) took away the unpaid part |
-| H4 | No run-time sandbox beyond the elaborator's module allow-list | high | open: IL check of built DLLs proposed |
+| H4 | No run-time sandbox beyond the elaborator's module allow-list | high | fixed: every built DLL is checked against an allow-list of referenced members (zp-contracts-v1 tools/ilcheck); console, exit and exception catching removed from the runtime |
 | H5 | No time limit on a build; slow type-checking not tested | high | fixed: type-level computation forbidden; 10-minute limit counts as an environment failure |
 | M1 | Calls validated in the mempool are unpaid (inherited from V0, heavier in V1) | medium | open |
 | M2 | Activation cap not applied in the mempool | medium | addressed by C2 |
