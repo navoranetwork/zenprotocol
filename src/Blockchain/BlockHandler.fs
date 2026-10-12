@@ -188,10 +188,13 @@ let getMemoryState
     let memoryState =
         TransactionHandler.validateOrphanTransactions env.chainParams env.session env.contractsPath blockNumber env.timestamp false memoryState
 
-    Map.fold (fun writer _ (_,ex) ->
+    // In arrival order (MemPool.toList), not in hash order (Map.fold): a contract call that depends on an earlier call
+    // in the mempool (the contract state it left) must be checked after it, or it fails and is dropped for good.
+    MemPool.toList mempool
+    |> List.fold (fun writer ex ->
         Writer.bind writer (fun memoryState ->
             TransactionHandler.validateInputs env.chainParams env.session env.contractsPath blockNumber env.timestamp ex memoryState false
-        )) memoryState mempool
+        )) memoryState
 
 let rollForwardChain
     ( env             : Env                 )

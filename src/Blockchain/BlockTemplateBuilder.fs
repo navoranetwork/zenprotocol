@@ -181,7 +181,9 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
             | Error (Orphan | ContractNotActive) ->
                 (state, added, (ex,wt)::notAdded, altered, weight)
             | Error _ ->
-                (state, added, notAdded, altered, weight)
+                // Tried again in the next pass: the transactions are sorted by weight, so a contract call can come
+                // before the earlier call it depends on; once that one is added, this one may be valid.
+                (state, added, (ex,wt)::notAdded, altered, weight)
             | Ok (tx, acs, contractCache, contractStates) ->
                 let utxoSet = UtxoSet.handleTransaction getUTXO ex.txHash ex.tx state.utxoSet
                 let mempool = MemPool.add ex state.mempool
