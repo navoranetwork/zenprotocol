@@ -44,7 +44,7 @@ publish "started"
 
 # 1. tools
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y -q curl git python3 ca-certificates libgomp1 libgmp10 liblmdb-dev > /dev/null 2>&1 || stop "apt"   # lmdb: the node's database
+apt-get install -y -q curl git python3 ca-certificates libgomp1 libgmp10 liblmdb-dev nodejs > /dev/null 2>&1 || stop "apt"   # lmdb: the node's database
 SDK=10.0.112
 if ! dotnet --list-sdks 2>/dev/null | grep -q "^$SDK "; then
   if [ ! -x /opt/dotnet/dotnet ] || ! /opt/dotnet/dotnet --list-sdks | grep -q "^$SDK "; then
@@ -81,11 +81,17 @@ log "Zulib: all $n_ok modules verify"
 dotnet build src/Node/Node.fsproj -c Debug --configfile nuget.mirror.config -v q > "$OUT/node-build.txt" 2>&1 || stop "node build (node-build.txt)"
 log "node built (Debug)"
 
-# 4. the scenario
-OUT="$OUT/net" ZP_V1_TOOLCHAIN="$TC" bash scripts/lab-testnet-v1.sh > "$OUT/testnet.txt" 2>&1; rc=$?
-log "lab-testnet-v1.sh: exit $rc; $(grep -E 'PASSED|FAIL' "$OUT/net/report.txt" | tail -1)"
-log "$(grep 'contract DLL SHA-256' "$OUT/net/report.txt" | sed 's/^.*4. //')"
-publish "testnet done (exit $rc)"
+# 4. the scenario (SKIP_TESTNET=1: keep the last run's nodes and data, go to step 5)
+if [ -z "${SKIP_TESTNET:-}" ]; then
+  OUT="$OUT/net" ZP_V1_TOOLCHAIN="$TC" bash scripts/lab-testnet-v1.sh > "$OUT/testnet.txt" 2>&1; rc=$?
+  log "lab-testnet-v1.sh: exit $rc; $(grep -E 'PASSED|FAIL' "$OUT/net/report.txt" | tail -1)"
+  log "$(grep 'contract DLL SHA-256' "$OUT/net/report.txt" | sed 's/^.*4. //')"
+fi
+# the built contract DLL, to compare byte by byte with another machine's build
+dll=$(find src/Node/bin/Debug/data/local/0 -name 'Z*.dll' | head -1)
+[ -n "$dll" ] && { sha256sum "$dll" > "$OUT/contract-dll-sha256.txt"; base64 -w 0 "$dll" > "$OUT/contract-dll-base64.txt"; }
+dotnet --info > "$OUT/dotnet-info.txt" 2>&1
+publish "testnet done"
 
 # 5. BitZen T5b (a Bitcoin payment proved in a V1 contract), when the token can read the repo
 B=/opt/bitzen
