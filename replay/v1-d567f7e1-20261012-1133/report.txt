@@ -1,0 +1,4 @@
+run: v1-d567f7e1-20261012-1133
+commit: d567f7e1d1a5d9b486c3f7bcfa2e6f5ce7cd6716
+reference: replay/reference/mainnet-1052892 (height 1052892)
+server: ubuntu-16gb-nbg1-2, 8 cores, 15 GB RAM, 129G free
