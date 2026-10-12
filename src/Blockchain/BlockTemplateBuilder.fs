@@ -176,7 +176,10 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
         if needsV1Build ex state && v1Builds.Value >= maxV1BuildsPerTemplate then (state, added, notAdded, altered, weight) else
         if needsV1Build ex state then v1Builds.Value <- v1Builds.Value + 1
         validateInContext chain getUTXO contractPath blockNumber timestamp
-            state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) ContractStates.asDatabase ex
+            // state.contractStates, not ContractStates.asDatabase: a call must see the contract state left by the calls
+            // already in this template, as block validation does; otherwise two calls each valid alone both go in and
+            // the block fails validation (the miner then retries the same invalid block)
+            state.activeContractSet state.contractCache state.utxoSet (ContractStateRepository.get session) state.contractStates ex
         |> function
             | Error (Orphan | ContractNotActive) ->
                 (state, added, (ex,wt)::notAdded, altered, weight)
