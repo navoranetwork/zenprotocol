@@ -10,6 +10,7 @@
 //   BRIDGE_EVM       rpc URL, or  mock:<file>  (a JSON list of {tx, log, from, to, amount, block} for tests)
 //   BRIDGE_USDC      USDC token address on that chain      BRIDGE_EVM_KEY  private key of the bridge's EVM wallet (for withdrawals)
 //   BRIDGE_LOG_RANGE (450) blocks per log query (public rpc nodes allow ~500)   BRIDGE_CONFIRMATIONS (12)   BRIDGE_DATA (./data)   BRIDGE_LISTEN (127.0.0.1:8090)   BRIDGE_INTERVAL (15 s)
+//   BRIDGE_FUNDERS   comma-separated EVM addresses whose USDC transfers top up the reserves: never treated as deposits, no zUSDC issued
 //   BRIDGE_ZO        command that runs zen-oracle (dotnet src/Oracle/bin/Release/zen-oracle.dll)
 //   BRIDGE_EXPLORER  explorer API for reading withdrawal transactions (http://127.0.0.1:11580/explorer/api)
 import http from 'node:http';
@@ -27,6 +28,7 @@ const [HOST, PORT] = env('BRIDGE_LISTEN', '127.0.0.1:8090').split(':');
 const ZO = env('BRIDGE_ZO', 'dotnet src/Oracle/bin/Release/zen-oracle.dll').split(' ');
 const EXPLORER = env('BRIDGE_EXPLORER', 'http://127.0.0.1:11580/explorer/api');
 const INTERVAL = Number(env('BRIDGE_INTERVAL', '15')) * 1000;
+const FUNDERS = new Set(env('BRIDGE_FUNDERS', '').split(',').map(a => a.trim().toLowerCase()).filter(a => /^0x[0-9a-f]{40}$/.test(a)));
 
 fs.mkdirSync(DATA, { recursive: true });
 const file = n => path.join(DATA, n);
@@ -110,6 +112,7 @@ async function depositsRound() {
   for (const d of all) {
     const key = d.tx + ':' + d.log;
     if (keys.has(key) || done[key]) continue; keys.add(key);
+    if (FUNDERS.has(d.from)) { log('reserve top-up', d.amount, 'from', d.from, d.tx); continue; }   // funds the reserves, issues nothing
     const link = links[d.from];
     if (!link) { keep.push(d); continue; }       // wait until the sender links a ZP address
     try {
