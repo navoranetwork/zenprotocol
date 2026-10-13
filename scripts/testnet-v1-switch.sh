@@ -66,7 +66,10 @@ install)
   [ -n "$h" ] && [ "$h" -ge 2050 ] && [ -z "${FORCE:-}" ] && { log "already at or past the fork height 2050: this node would have to resync (FORCE=1 to go on)"; exit 1; }
   [ -n "$h" ] && [ "$h" -lt 2011 ] && [ -z "${FORCE:-}" ] && { log "the CGP payout at 2010 is not done yet (FORCE=1 to switch before it)"; exit 1; }
   gunzip -c "$TAR" | docker load | tail -1
-  docker tag "$(docker inspect -f '{{.Image}}' "$NAME")" $OLD && log "rollback image: $OLD"
+  # the rollback image is the one that ran before V1: keep it if an earlier install already tagged it
+  if docker image inspect $OLD > /dev/null 2>&1; then log "rollback image kept: $OLD ($(docker image inspect -f '{{.Id}}' $OLD | cut -c1-19))"
+  else docker tag "$(docker inspect -f '{{.Image}}' "$NAME")" $OLD && log "rollback image: $OLD"; fi
+  log "installing image $(docker image inspect -f '{{.Id}}' $NEW) from $(cut -c1-16 "$TAR.sha256")..."
   recreate $NEW
   for i in $(seq 1 60); do sleep 10; n=$(height); [ -n "$n" ] && [ "$n" -ge "${h:-0}" ] && break; done
   log "node on $NEW at block $(height); following for 10 minutes"
@@ -90,7 +93,9 @@ install-when-ready)
   done
   ;;
 status)
-  log "node $NAME on $(docker inspect -f '{{.Config.Image}}' "$NAME") at block $(height)"
+  log "node $NAME on $(docker inspect -f '{{.Config.Image}}' "$NAME") (image $(docker inspect -f '{{.Image}}' "$NAME")) at block $(height)"
+  docker image inspect $NEW > /dev/null 2>&1 && log "loaded $NEW: $(docker image inspect -f '{{.Id}}' $NEW)"
+  for f in /root/zen-node-testnet-v1.tar.gz.sha256; do [ -f "$f" ] && log "image file waiting: $(cut -c1-64 "$f")"; done
   dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$NAME" 2>/dev/null)
   if [ -n "$dir" ]; then
     log "compose: $dir ($(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$NAME")), service $(docker inspect -f '{{index .Config.Labels "com.docker.compose.service"}}' "$NAME")"
