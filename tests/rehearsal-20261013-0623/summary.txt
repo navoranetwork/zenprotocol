@@ -1,0 +1,4 @@
+[2026-10-13 06:23] rehearsal of testnet-v1 a41325d5 Merge branch 'v1-contracts' into testnet-v1
+  Chain.fs:130:        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
+  Chain.fs:176:        v1ContractsHeight=2050ul
+  Chain.fs:201:        v1ContractsHeight=localV1Height
