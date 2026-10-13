@@ -1,4 +1,4 @@
-# Moving the USDC bridge (zUSDC) to a V1 contract: handoff
+# Moving the testnet's contracts (oracle, USDC bridge, Dex) to V1: handoff
 
 Written 2026-10-13, the evening before the testnet's V1 fork, so that a new working session can take this over.
 Update the "State" sections when something changes. Everything here is about the **testnet**; nothing holds real money.
@@ -19,9 +19,10 @@ Update the "State" sections when something changes. Everything here is about the
 
 ## Decision
 
-Move zUSDC from the V0 contract to a V1 contract, but only after the V1 fork (block 2050, night of 2026-10-13/14) has
-run stable for a few days and BitZen runs on it. One change at a time: if something breaks right after the fork, it
-must be V1, not the bridge.
+Move the testnet's own V0 contracts (oracle, zUSDC bridge token, Dex) to V1, but only after the V1 fork (block 2050,
+night of 2026-10-13/14) has run stable for a few days and BitZen runs on it. One change at a time: if something breaks
+right after the fork, it must be V1, not these contracts. Mainnet's V0 contracts (CGP, Dex, FixedPayout) stay as they
+are until a community vote decides otherwise.
 
 Why move at all: V0 contracts cannot be fixed (the 2018 toolchain is frozen), activating a V0 contract blocked the
 node's API for 35 minutes on 2026-10-12, V1 has gas that stops any run at its declared cost, and the vote may close
@@ -72,40 +73,45 @@ V0 activations after the fork. It is also the rehearsal for moving a live contra
 - The ZP Wallet can activate a V1 contract signed in the browser (`wallet/src/wallet.js` `prepareActivateV1`), and
   calls contracts with a PK sender (`prepareSignedCall`). The bridge itself signs through the node wallet.
 
-## Plan
+## Plan (simple path: the testnet has no users but Alon)
 
-### 1. The V1 zUSDC contract
+Only Alon uses the testnet, so there are no holders to protect and no transition period is needed: no parallel
+contracts for weeks, no migration endpoint. Order: oracle, then bridge, then Dex, each after the previous one works.
+The old V0 contracts stay on the chain until they expire; nothing calls them any more.
 
-- Port `AuthenticatedSupply` to V1: `Issue` (Amount, returnAddress) and `Destroy` (Amount), only the bridge key
-  (the same public key as today, `m/44'/258'/0'/3/0` of the node wallet). Same asset rules: the contract's default
-  asset, 6 decimals by convention (amounts in USDC base units).
-- Tests like BitZen's (`tests/v1/` with the ZenAbi harness): issue by the key, issue by another key refused, destroy
-  more than sent refused, cost equals the declared cost, gas. Then on the lab devnet (V1 node) before the testnet.
-- Activate on the testnet with the node wallet (`/wallet/contract/activate` with `version: 1`), enough blocks.
+### 1. Oracle (no funds held)
 
-### 2. Migration of existing zUSDC (1:1)
+- Port `src/ContractExamples/Oracle.fst` to V1 (same commands and message formats), test (ZenAbi harness, then lab
+  devnet), activate on the testnet with the node wallet.
+- Point the oracle service at it (`ORACLE_CONTRACT` in `testnet-stack.env`), and every consumer: the FixedPayout
+  contract and its pages, the Markets data, the site's `contract-names.json`.
+- Check: a new round committed, `/oracle/rounds/latest` and the Markets tab show it.
 
-A V1 contract cannot destroy the V0 asset (only the V0 contract can), so the bridge does the swap:
+### 2. USDC bridge (zUSDC)
 
-- New endpoint `POST /migrate {zpTx}`: the holder pays old zUSDC to the bridge's ZP address; the bridge checks the
-  transaction (like a withdrawal), calls `Destroy` on the **V0** contract for that amount, then `Issue` on the **V1**
-  contract for the same amount to the paying ZP address. Recorded in `done.json` as `m:<zptx>`; idempotent.
-- Invariant after every step: USDC held ≥ old zUSDC outstanding + new zUSDC outstanding. Show both on the bridge page.
-- No link to an EVM address is needed for migration (the payer gets the new token at the same ZP address).
+- Before: Alon withdraws his zUSDC to USDC through the bridge page (old token), so old zUSDC outstanding is 0 and
+  every USDC is backed by nothing on ZP; back up `bridge-data`.
+- Port `AuthenticatedSupply` to V1: `Issue` (Amount, returnAddress) and `Destroy` (Amount), only the bridge key (the
+  node wallet's `m/44'/258'/0'/3/0`, the same as today). Tests: issue by the key, by another key refused, destroy
+  more than sent refused, cost equals the declared cost.
+- Activate; set `BRIDGE_CONTRACT`/`BRIDGE_ASSET` to the new contract; restart the `bridge` service
+  (`docker compose -f docker-compose.testnet-stack.yml up -d bridge` in `~/zenprotocol-testnet`).
+- Check: a 1 USDC deposit from the linked account issues new zUSDC; a withdrawal burns it and pays USDC; the bridge
+  page shows reserves ≥ zUSDC outstanding.
 
-### 3. Switch the bridge to the new token
+### 3. Dex
 
-- `BRIDGE_CONTRACT`/`BRIDGE_ASSET` become the V1 contract; keep the V0 ones as `BRIDGE_OLD_CONTRACT`/`BRIDGE_OLD_ASSET`
-  for migration and for withdrawals of old zUSDC during the transition.
-- Deposits issue only the new token. Withdrawals accept both.
-- Market maker: `MM_ASSET` → the new asset; cancel its old zUSDC orders on the Dex first.
-- Wallet, explorer, assets page: name the new asset "zUSDC" and the old one "zUSDC (old)" with a hint to migrate.
-- Bridge page: "Migrate old zUSDC" button (wallet payment + `/migrate`), both supplies shown.
+- Before: cancel the market maker's and Alon's open orders on the V0 Dex (the ZP comes back).
+- Port `src/ContractExamples/Dex.fst` to V1, test, activate; set `ZEN_DEX`, `MM_DEX`, `MM_ASSET` (the new zUSDC);
+  restart the market maker; update the Dex page, the explorer's Dex API and the wallet's Markets tab to the new id.
+- Check: the market maker places orders, a trade from the Dex page fills.
 
-### 4. End of the transition
+### Optional rehearsal for mainnet
 
-- After an announced date: withdrawals only in the new token; old zUSDC can still be migrated, then withdrawn.
-- Update `docs/BRIDGE.md`, the community document's tables if relevant, and this file.
+Mainnet will need the long way (holders, no forced withdrawals): a V1 token next to the V0 one and a bridge
+`POST /migrate {zpTx}` that destroys the old token through the V0 contract and issues the new one 1:1, both supplies
+shown, then an end date. If wanted, rehearse that on the testnet with a few test holders before doing the simple
+path above.
 
 ## Checks before each step
 
@@ -116,6 +122,5 @@ A V1 contract cannot destroy the V0 asset (only the V0 contract can), so the bri
 
 ## Open questions for later
 
-- Should the Dex also move to V1 (it holds zUSDC orders)? Separate step, after the bridge.
 - Custody: one key holds the reserves and the issuing key. Multi-key custody and a pause switch are listed as "not
   done" in `docs/BRIDGE.md`; a V1 contract is the natural place to add them, but not in this move.
