@@ -3,7 +3,7 @@
 # from the fork height on (testParameters.v1ContractsHeight) to build activated contracts.
 #
 # The toolchain repo is private: copy the pinned commit into the build context first
-#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ c9b085d | tar -x -C .
+#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ 944f6d1 | tar -x -C .
 #   docker build -f Docker/Dockerfile.testnet-v1 -t zen-node:testnet-v1 .
 # The image build fails unless every Zulib module verifies and the token template builds to the
 # DLL hash recorded in docs/V1-REVIEW.md (the same bytes as on the other machines).
