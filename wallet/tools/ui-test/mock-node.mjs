@@ -58,7 +58,11 @@ http.createServer((req, res) => {
           if (swap) {
             if (!/^0[23][0-9a-f]{64}$/.test(body.options?.sender || '')) return send(res, 400, 'offer needs id, sats, s0, returnAddress, and a signed call', 'text/plain');
             const left = inSum - outputs.reduce((a, o) => a + o.spend.amount, 0n);
-            if (body.command === 'offer') add.outputs.push({ lock: { type: 'Contract', contractId: { version: 1, hash: unhex(SWAP.slice(8)) } }, spend: { asset: zen, amount: left } });
+            const swapLock = { type: 'Contract', contractId: { version: 1, hash: unhex(SWAP.slice(8)) } }, marker = { contract: { version: 1, hash: unhex(SWAP.slice(8)) }, subtype: new Uint8Array(32) };
+            if (body.command === 'offer') {   // as BitZenSwap: the ZP to the swap, plus its state marker (1 own token minted and locked to it)
+              add.inputs.push({ type: 'mint', spend: { asset: marker, amount: 1n } });
+              add.outputs.push({ lock: swapLock, spend: { asset: zen, amount: left } }, { lock: swapLock, spend: { asset: marker, amount: 1n } });
+            }
             if (body.command === 'cancel') { add.inputs.push({ type: 'outpoint', outpoint: { txHash: unhex('ee'.repeat(32)), index: 0 } }); add.outputs.push({ lock: { type: 'PK', hash: key0.pkHash }, spend: { asset: zen, amount: 300000000n } }); }
           }
           const tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract', contractId: swap ? { version: 1, hash: unhex(SWAP.slice(8)) } : { version: 0, hash: unhex(VOTING.slice(8)) }, command: body.command,

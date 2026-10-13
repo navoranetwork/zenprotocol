@@ -54,7 +54,7 @@ with sync_playwright() as p:
     chk = subprocess.run(['node', '-e', '''
       import('./src/serialize.js').then(({ deserializeTx, unhex, hex }) => {
         const tx = deserializeTx(unhex(process.argv[1]));
-        const c = tx.witnesses.find(w => w.type === 'Contract'), out = tx.outputs.find(o => o.lock.type === 'Contract');
+        const c = tx.witnesses.find(w => w.type === 'Contract'), out = tx.outputs.find(o => o.lock.type === 'Contract' && o.spend.asset.contract.version === 0);
         console.log(JSON.stringify({ cmd: c.command, signed: !!c.signature, locked: String(out.spend.amount), pk: tx.witnesses.filter(w => w.type === 'PK').length }));
       });''', pub[0]], capture_output=True, text=True, cwd=os.path.join(os.path.dirname(__file__), '..', '..'))
     info = json.loads(chk.stdout or '{}'); print('   ', info)

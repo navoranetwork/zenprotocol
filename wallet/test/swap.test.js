@@ -57,7 +57,10 @@ function fixture({ tamper, contractAdds } = {}) {
 }
 const swapLock = { type: 'Contract', contractId: { version: 1, hash: unhex(SWAP.slice(8)) } };
 const scripts = [btcScript('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'), btcScript('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')];
-const offerAdds = amount => () => ({ inputs: [], outputs: [{ lock: swapLock, spend: { asset: ZEN_ASSET, amount } }] });
+// as BitZenSwap does (finish/withMarker): the offer's ZP to the swap, plus 1 of the swap's own token minted and locked to it
+const swapAsset = { contract: { version: 1, hash: unhex(SWAP.slice(8)) }, subtype: new Uint8Array(32) };
+const offerAdds = amount => () => ({ inputs: [{ type: 'mint', spend: { asset: swapAsset, amount: 1n } }],
+  outputs: [{ lock: swapLock, spend: { asset: ZEN_ASSET, amount } }, { lock: swapLock, spend: { asset: swapAsset, amount: 1n } }] });
 
 // what ContractV0.fs getSender checks: SHA3(txHash ‖ Serialization.Message.serialize {recipient, command, body})
 const senderMsg = (tx, cw) => { const w = new Writer(); ContractId.write(w, cw.contractId); Str.write(w, cw.command); w.u8(1); Data.write(w, cw.messageBody); return sha3_256(Uint8Array.from([...txHash(tx), ...w.out()])); };
@@ -67,7 +70,6 @@ test('an offer: ZP for the contract from two inputs, the seller signs the call, 
   const out = await prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount, sats: 50000n, scripts });
   assert.equal(f.calls[0].options.sender, hex(f.k.publicKey));
   const tx = deserializeTx(unhex(out.hex));
-  assert.equal(tx.inputs.length, 2);
   assert.deepEqual(tx.witnesses.map(x => x.type + ':' + (x.sigHash || '')), ['PK:TxHash', 'PK:FollowingWitnesses', 'Contract:']);
   assert.ok(verifyDigest(tx.witnesses[0].signature, txHash(tx), f.k.publicKey));
   assert.ok(verifyDigest(tx.witnesses[1].signature, sha3_256(Uint8Array.from([...txHash(tx), ...witnessesHash([tx.witnesses[2]])])), f.k.publicKey));
@@ -75,7 +77,8 @@ test('an offer: ZP for the contract from two inputs, the seller signs the call, 
   assert.equal(hex(cw.signature.publicKey), hex(f.k.publicKey));
   assert.ok(verifyDigest(cw.signature.signature, senderMsg(tx, cw), f.k.publicKey));
   // change 0.99999999 ZP, fee 1 kalapa, 4 ZP locked in the contract
-  assert.deepEqual(tx.outputs.map(o => [o.lock.type, o.spend.amount]), [['PK', 99999999n], ['Fee', 1n], ['Contract', amount]]);
+  assert.deepEqual(tx.outputs.map(o => [o.lock.type, o.spend.amount]), [['PK', 99999999n], ['Fee', 1n], ['Contract', amount], ['Contract', 1n]]);
+  assert.equal(tx.inputs.length, 3); assert.equal(tx.inputs[2].type, 'mint');
   const body = Object.fromEntries(cw.messageBody.v.map(([k, v]) => [k, v]));
   assert.equal(body.id.v, 'o-test'); assert.equal(body.sats.v, 50000n); assert.equal(body.s0.v, scripts[0]); assert.equal(body.s1.v, scripts[1]); assert.equal(body.s2, undefined);
   assert.equal(hex(body.returnAddress.v.hash), hex(signerOf(f.w).pkHash));
@@ -88,6 +91,11 @@ test('a node or contract that sends the offer’s ZP elsewhere, or changes our p
     return prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount, sats: 50000n, scripts }); };
   await assert.rejects(run(() => ({ inputs: [], outputs: [{ lock: thief, spend: { asset: ZEN_ASSET, amount } }] })), /not signed/);
   await assert.rejects(run(offerAdds(amount - 1n)), /not signed/);
+  const otherAsset = { contract: { version: 1, hash: new Uint8Array(32).fill(5) }, subtype: new Uint8Array(32) };
+  await assert.rejects(run(() => ({ inputs: [{ type: 'mint', spend: { asset: swapAsset, amount: 1n } }],   // the marker sent elsewhere
+    outputs: [{ lock: swapLock, spend: { asset: ZEN_ASSET, amount } }, { lock: thief, spend: { asset: swapAsset, amount: 1n } }] })), /not signed/);
+  await assert.rejects(run(() => ({ inputs: [{ type: 'mint', spend: { asset: otherAsset, amount: 1n } }],  // a mint of another contract's token
+    outputs: [{ lock: swapLock, spend: { asset: ZEN_ASSET, amount } }, { lock: swapLock, spend: { asset: otherAsset, amount: 1n } }] })), /not signed/);
   await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, outputs: [{ ...tx.outputs[0], lock: thief }, ...tx.outputs.slice(1)] })), /changed the outputs/);
   await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, witnesses: [{ ...tx.witnesses[0], messageBody: { t: 'Dict', v: [] } }] })), /changed the message/);
   await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, witnesses: [{ ...tx.witnesses[0], outputsLength: 0 }] })), /unexpected contract witness/);
