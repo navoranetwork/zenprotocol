@@ -7,7 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1 } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
-import { EngineClient, checkParam, v1ContractId, activationCost } from '../src/engine.js';
+import { EngineClient, checkParam, v1ContractId, activationCost, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
@@ -118,20 +118,33 @@ function swapCard() {
 // The site's engine (/engine/, zp-contracts-v1 docs/SERVICE.md) makes and checks a contract; the wallet shows the source
 // and the tests, computes the contract id itself, and signs the activation with the user's key.
 const engine = () => siteBase() ? new EngineClient(siteBase()) : null;
+// the job being made survives a reload: the engine keeps a job's result for a day
+const CC_KEY = 'zp-wallet.cc.v1', CC_KEEP_MS = 23 * 3600e3;
+const savedCc = () => { try { const x = JSON.parse(localStorage.getItem(CC_KEY))?.[net()]; return x && /^[0-9a-f]{8,64}$/.test(x.jobId) && Date.now() - x.at < CC_KEEP_MS ? x : null; } catch { return null; } };
+function saveCc(x) { try { const all = JSON.parse(localStorage.getItem(CC_KEY) || '{}') || {}; if (x) all[net()] = x; else delete all[net()]; localStorage.setItem(CC_KEY, JSON.stringify(all)); } catch { /* private mode */ } }
 async function loadEngine() {
   const e = engine(); if (!e) { S.engine = { error: 'Creating contracts needs the community node, which serves the contract engine.' }; return render(); }
-  try { const f = await e.families(); S.engine = { families: Array.isArray(f) ? f.filter(x => x && typeof x.id === 'string' && x.params && typeof x.params === 'object') : [] }; }
-  catch { S.engine = { error: 'The contract engine is not available on this network yet.' }; }
+  try {
+    const [f, h] = await Promise.all([e.families(), e.health().catch(() => null)]);
+    S.engine = { families: Array.isArray(f) ? f.filter(x => x && typeof x.id === 'string' && x.params && typeof x.params === 'object') : [], ask: h?.ask && typeof h.ask === 'object' ? h.ask : null };
+  } catch { S.engine = { error: 'The contract engine is not available on this network yet.' }; }
   render();
+  const s = !S.cc && S.engine.families && savedCc();
+  if (s) {
+    const family = s.familyId ? S.engine.families.find(x => x.id === s.familyId) : null;
+    if (s.kind === 'make' && !family) return saveCc(null);
+    S.cc = { step: 'job', kind: s.kind, jobId: s.jobId, job: null, family, values: s.values || {}, text: s.text || '' }; render();
+    ccFollow(s.jobId);
+  }
 }
 function createCard() {
-  const E = S.engine;
+  const E = S.engine, A = E?.ask, askOff = A && (A.enabled === false || A.left === 0);
   const chips = E?.families ? E.families.map(f => `<button class="chip" data-act="cc-family" data-id="${esc(f.id)}">${esc(f.title || f.id)}</button>`).join('')
-    + '<button class="chip" data-act="cc-ask">Describe it… <span class="muted small">experimental</span></button>' : '';
+    + `<button class="chip" data-act="cc-ask" ${askOff ? 'disabled' : ''}>Describe it… <span class="muted small">experimental${A && A.enabled !== false && A.perDay != null ? ` · ${Number(A.left ?? 0)} of ${Number(A.perDay)} left today` : A?.enabled === false ? ' · off' : ''}</span></button>` : '';
   return `<div class="card"><h2>Create a contract</h2>
     <p class="muted small">Start from a ready template or describe what you need. The contract engine writes the contract and its tests and checks it as a node will; you read it, and you sign the activation yourself.</p>
     ${!E ? '<p class="muted small">Loading…</p>' : E.error ? `<p class="muted small">${esc(E.error)}</p>` : `<div class="wrapchips" data-s="mt10">${chips}</div>`}
-    ${S.cc && ['job', 'result'].includes(S.cc.step) ? `<button class="btn small" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
+    ${S.cc && ['job', 'result', 'try'].includes(S.cc.step) ? `<button class="btn small" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
 }
 const ccStatus = j => !j ? 'Sending…' : j.status === 'queued' ? `Waiting in line${j.position ? ' (' + j.position + ' ahead)' : ''}…` : j.status === 'running' ? (j.kind === 'ask' ? `Writing and checking the contract${j.rounds?.length ? ' (round ' + j.rounds.length + ')' : ''}…` : 'Building, testing and checking the contract…') : '';
 function createView() {
@@ -152,6 +165,7 @@ function createView() {
       ${errBox()}<button class="btn primary big">Write the contract</button></form>${nav('contracts')}`;
   if (c.step === 'job') return `${back}<div class="screen"><div class="card"><p><span class="spin"></span> ${esc(ccStatus(c.job))}</p><p class="muted small">This takes up to a minute${c.kind === 'ask' ? ' or a few' : ''}. You can leave this screen; the contract waits for you here for a day.</p></div>${errBox()}</div>${nav('contracts')}`;
   if (c.step === 'result') return `${back}<div class="screen">${resultHtml(c)}</div>${nav('contracts')}`;
+  if (c.step === 'try' && c.try) return tryView();
   return `${back}<div class="screen"><p class="muted">Nothing to show.</p></div>${nav('contracts')}`;
 }
 function resultHtml(c) {
@@ -164,15 +178,17 @@ function resultHtml(c) {
   const src = c.source, id = v1ContractId(src), chk = c.check || j.check || {}, v1h = chk.activation?.v1Height, early = v1h && S.tip != null && S.tip + 1 < v1h;
   const sameAsReport = id.slice(8) === String(j.report?.contractId || '').replace(/^00000001/, '');
   const checked = !c.edited || (c.check && c.checkedSource === src && c.check.verdict === 'accepted');
-  const tests = Array.isArray(j.tests) ? j.tests : [];
+  const tests = Array.isArray(j.tests) ? j.tests : [], costs = tests.map(t => Number(t.expect?.declaredCost)).filter(n => Number.isFinite(n) && n > 0);
+  const canTry = commandsOf(c.family).length && checked && chk.verdict !== 'refused';
   return `<div class="card">${c.edited ? `<h2>Your edited version</h2>` : '<h2 class="ok">✓ Made and checked</h2>'}
       <div class="kv"><span class="muted">Contract id</span><span class="mono small" title="${esc(id)}">${esc(id.slice(0, 14))}…${esc(id.slice(-8))}</span></div>
       <div class="kv"><span class="muted">Size</span><span>${src.length.toLocaleString('en-US')} characters</span></div>
       <div class="kv"><span class="muted">A node's check</span><span>${c.edited && !c.check ? 'not checked yet' : chk.verdict === 'accepted' ? '✓ accepted' : chk.verdict === 'refused' ? '✗ refused' : esc(chk.verdict || '–')}</span></div>
       <div class="kv"><span class="muted">Tests</span><span>${tests.length} ${tests.length === 1 ? 'test passes' : 'tests pass'}${c.edited ? ' <span class="muted small">(engine\'s version)</span>' : ''}</span></div>
-      <div class="kv"><span class="muted">Cost proof</span><span class="small">not needed: gas enforces costs</span></div>
+      ${costs.length ? `<div class="kv"><span class="muted">Per call</span><span>${esc(Math.min(...costs) === Math.max(...costs) ? Math.min(...costs).toLocaleString('en-US') : Math.min(...costs).toLocaleString('en-US') + '–' + Math.max(...costs).toLocaleString('en-US'))} gas · fee 1 kalapa</span></div>` : ''}
       ${c.kind === 'ask' ? `<div class="warn" data-s="mt10">Written by an AI model${Array.isArray(j.rounds) ? ` in ${j.rounds.length} round${j.rounds.length === 1 ? '' : 's'}` : ''}. Its tests are its own: read them, and the source, before activating.</div>` : ''}
-      ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}</div>
+      ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}
+      ${canTry ? '<button class="btn" data-s="mt10" data-act="cc-try-open">Try it (no real money)</button>' : ''}</div>
     <div class="card"><details><summary><b>Tests</b></summary><div class="list">${tests.map(t => `<div class="item"><div><div>${esc(t.name || t.command || 'test')}</div><div class="muted small">${esc(t.command || '')}${t.expect?.declaredCost != null ? ' · cost ' + esc(t.expect.declaredCost) : ''} · expects ${t.expect?.ok === false ? 'a refusal' : 'success'}</div></div></div>`).join('') || '<p class="muted small">None.</p>'}</div></details></div>
     <div class="card"><details ${c.editing ? 'open' : ''}><summary><b>Source</b>${c.edited ? ' <span class="pill">edited</span>' : ''}</summary>
       ${c.editing ? `<form data-form="cc-check" class="screen" data-s="flush"><textarea name="source" rows="16" class="mono" spellcheck="false">${esc(src)}</textarea>
@@ -199,13 +215,79 @@ async function ccRun(kind, start) {
   const e = engine(); if (!e) throw new Error('No contract engine on this network');
   const res = await start(e);
   S.cc = { ...S.cc, step: 'job', kind, jobId: res.job, job: null }; S.error = ''; render();
-  const id = res.job;
-  const j = await e.wait(id, x => { if (S.cc?.jobId === id) { S.cc.job = x; if (S.screen === 'create' && S.cc.step === 'job') render(); } }, { stopped: () => S.cc?.jobId !== id });
+  saveCc({ kind, jobId: res.job, familyId: S.cc.family?.id, values: S.cc.values, text: S.cc.text, at: Date.now() });
+  if (kind === 'ask' && S.engine?.ask?.left > 0) S.engine.ask.left--;
+  await ccFollow(res.job);
+}
+async function ccFollow(id) {
+  const e = engine(); let j;
+  try { j = await e.wait(id, x => { if (S.cc?.jobId === id) { S.cc.job = x; if (S.screen === 'create' && S.cc.step === 'job') render(); } }, { stopped: () => S.cc?.jobId !== id }); }
+  catch (err) {
+    if (err.status === 404) { saveCc(null); if (S.cc?.jobId === id) S.cc = { ...S.cc, step: 'result', job: { ok: false, error: 'The engine no longer has this contract (results are kept for a day). Make it again.' } }; return render(); }
+    if (S.cc?.jobId === id) { S.cc = { ...S.cc, step: 'result', job: { ok: false, error: err.message } }; render(); } return;
+  }
   if (!j || S.cc?.jobId !== id) return;
   if (j.status !== 'done') { S.cc = { ...S.cc, step: 'result', job: { ok: false, error: j.error || (j.status === 'timeout' ? 'The engine took too long.' : 'The engine could not run.') } }; return render(); }
-  S.cc = { ...S.cc, step: 'result', job: j, source: typeof j.source === 'string' ? j.source : '', edited: false, check: null, editing: false };
+  S.cc = { ...S.cc, step: 'result', job: j, source: typeof j.source === 'string' ? j.source : '', edited: false, check: null, editing: false, try: null };
   if (j.ok && !S.cc.source) S.cc.job = { ok: false, error: 'The engine returned no source.' };
   render();
+}
+
+// ---------------------------------------------------------------- trying calls (no real money: the engine runs the call as a node would)
+const keyRoles = c => Object.fromEntries(Object.entries(c.family?.params || {}).filter(([n, p]) => p.type === 'publickey' && /^0[23][0-9a-f]{64}$/i.test(String(c.values?.[n] || ''))).map(([n]) => [n, String(c.values[n]).toLowerCase()]));
+const ccAsset = c => String(c.values?.asset || c.family?.params?.asset?.default || 'zp').toLowerCase();
+function whoLabel(w) {
+  if (!w || typeof w !== 'object') return 'someone';
+  if (w.self) return 'this contract';
+  if (w.role) return 'the ' + w.role;
+  if (w.kind === 'fee') return 'the fee'; if (w.kind === 'destroy') return 'destroyed'; if (w.kind === 'mint') return 'newly minted';
+  const h = String(w.hash || ''); return (w.kind === 'contract' ? 'contract ' : 'key ') + (h ? h.slice(0, 8) + '…' : '');
+}
+function tryView() {
+  const c = S.cc, T = c.try, cmds = commandsOf(c.family), cmd = cmds.find(x => x.name === T.cmd) || cmds[0];
+  const roles = keyRoles(c), held = holdings(T.session.wallet), L = T.last;
+  const signers = [...Object.keys(roles).map(r => [r, 'the ' + r + (cmd?.signedBy.includes(r) ? '' : ' (not allowed)')]), ['', 'nobody (unsigned)']];
+  const sel = T.signer ?? (cmd?.signedBy.find(r => r in roles) ?? '');
+  const out = !L ? '' : L.check ? `<div class="card">${refusalHtml(L.check)}</div>` : `<div class="card"><div class="between"><h2>What happens</h2><span class="pill ${L.ok ? 'ok' : 'bad'}">${L.ok ? 'OK' : 'Refused'}</span></div>
+      ${L.ok ? (L.moves.length ? `<div class="list">${L.moves.map(m => { const n = BigInt(String(m.change)); return `<div class="item"><div>${esc(whoLabel(m.who))} ${n < 0n ? 'pays' : 'gets'} <b>${esc(formatAmount(n < 0n ? -n : n, m.asset))}</b></div></div>`; }).join('')}</div>` : '<p class="muted small">Nothing moves.</p>')
+        : `<p class="bad small">${esc(L.error || 'The contract refused the call.')}</p><p class="muted small">Nothing moves.</p>`}
+      <div class="kv"><span class="muted">Gas</span><span>${esc(L.declared ?? '–')} declared · ${esc(L.used ?? '–')} used</span></div>
+      ${L.ok && (L.inputs.length || L.outputs.length) ? `<details class="how"><summary>Details</summary>
+        <p class="muted small"><b>In</b></p>${L.inputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}
+        <p class="muted small"><b>Out</b></p>${L.outputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}</details>` : ''}</div>`;
+  return `<div class="back"><button class="iconbtn" data-act="cc-try-back" aria-label="Back">${I.back}</button><h1>${esc('Try ' + (c.family?.title || 'the contract'))}</h1></div><div class="screen">
+    <p class="muted small">No real money: the engine runs each call as a node would, at the next block. Calls in a row build on each other.</p>
+    <div class="wrapchips">${cmds.map(x => `<button class="chip ${x.name === cmd?.name ? 'on' : ''}" aria-pressed="${x.name === cmd?.name}" data-act="cc-cmd" data-name="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
+    ${cmd ? `<form data-form="cc-try" class="card">${cmd.description ? `<p class="muted small">${esc(cmd.description)}</p>` : ''}
+      <label class="field">Signed by<select name="signer">${signers.map(([v, t]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      ${cmd.sends ? `<label class="field">Sends in (${esc(assetLabel(ccAsset(c)))})<input name="spend" autocomplete="off" inputmode="decimal" placeholder="${isZpAsset(ccAsset(c)) ? '2.5 ZP' : '100'}" value="${esc(T.values.spend ?? '')}"></label>` : ''}
+      ${cmd.body.map(([n, f]) => `<label class="field">${esc(n)}<input name="t_${esc(n)}" autocomplete="off" spellcheck="false" placeholder="${esc(f.example ?? (['u64', 'amount'].includes(f.type) ? '2.5 ZP' : ''))}" value="${esc(T.values['t_' + n] ?? '')}"></label>${f.description ? `<p class="muted small" data-s="mt4">${esc(f.description)}</p>` : ''}`).join('')}
+      <p class="muted small">${held.length ? 'The contract holds ' + held.map(h => esc(formatAmount(h.amount, h.asset))).join(', ') + ' in this session.' : 'The contract holds nothing yet in this session.'}</p>
+      ${errBox()}${T.running ? `<p><span class="spin"></span> Running the call…</p>` : `<div class="row"><button class="btn primary">${L ? 'Run' : 'Run the call'}</button>${T.runs ? '<button type="button" class="btn" data-act="cc-try-reset">Start over</button>' : ''}</div>`}</form>` : '<p class="muted">The engine lists no commands for this contract.</p>'}
+    ${out}</div>${nav('contracts')}`;
+}
+const isZpAsset = a => a === 'zp';
+async function ccTry(v) {
+  const c = S.cc, T = c.try, cmd = commandsOf(c.family).find(x => x.name === T.cmd) || commandsOf(c.family)[0], roles = keyRoles(c);
+  T.values = { ...v }; T.signer = v.signer ?? '';
+  const call = { command: cmd.name, wallet: T.session.wallet, ...(T.session.state != null ? { state: T.session.state } : {}), context: { blockNumber: (S.tip || 0) + 1, timestamp: String(Date.now()) } };
+  if (T.signer) { if (!roles[T.signer]) throw new Error('Fill in that key first'); call.sender = { publicKey: roles[T.signer] }; }
+  if (cmd.sends && String(v.spend || '').trim()) { const asset = ccAsset(c); call.spend = [{ asset, amount: asset === 'zp' ? kalapasOf(v.spend, 'Sends in') : (/^\d+$/.test(String(v.spend).trim()) ? String(v.spend).trim() : (() => { throw new Error('Sends in: a whole number of tokens'); })()) }]; }
+  const bh = bodyHexOf(cmd.body, Object.fromEntries(cmd.body.map(([n]) => [n, v['t_' + n]]))); if (bh) call.bodyHex = bh;
+  const e = engine(), sourceId = c.edited ? c.check?.contractId : (c.tryId || c.job?.report?.contractId);
+  T.running = true; S.error = ''; render();
+  try {
+    const res = await e.try({ source: c.source, sourceId: sourceId ? (String(sourceId).length === 64 ? '00000001' + sourceId : String(sourceId)) : null, call, roles });
+    const j = await e.wait(res.job, null, { stopped: () => S.cc !== c });
+    if (!j || S.cc !== c) return;
+    if (j.status !== 'done') throw new Error(j.error || 'The engine could not run the call: try again');
+    if (j.check && !j.try) { T.last = { check: j.check }; T.runs++; return; }
+    const t = j.try || {}, r = t.result || {};
+    if (typeof t.contract === 'string') c.tryId = t.contract;
+    T.last = { ok: !!r.ok, error: r.error, declared: r.declaredCost, used: r.gasUsed, moves: Array.isArray(t.moves) ? t.moves : [], inputs: Array.isArray(r.inputs) ? r.inputs : [], outputs: Array.isArray(r.outputs) ? r.outputs : [] };
+    if (t.next && typeof t.next === 'object') T.session = { wallet: Array.isArray(t.next.wallet) ? t.next.wallet : [], state: t.next.state ?? null };
+    T.runs++;
+  } finally { T.running = false; render(); }
 }
 
 function fail(e) { S.error = e?.message || String(e); S.busy = false; render(); $app.querySelector('.modal .err, .err')?.scrollIntoView?.({ block: 'center' }); }   // the message may sit below the button that was pressed
@@ -951,6 +1033,10 @@ $app.addEventListener('click', async e => {
     if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) i.value = t.dataset.v; return; }
     if (act === 'cc-again') { S.cc = { ...S.cc, step: S.cc.kind === 'ask' ? 'ask' : 'form' }; S.error = ''; return render(); }
     if (act === 'cc-edit') { S.cc.editing = true; return render(); }
+    if (act === 'cc-try-open') { const k = S.cc.try; S.cc.try = k && k.source === S.cc.source ? k : { source: S.cc.source, cmd: commandsOf(S.cc.family)[0]?.name, values: {}, signer: null, session: { wallet: [], state: null }, last: null, runs: 0 }; S.cc.step = 'try'; S.error = ''; render(); return window.scrollTo(0, 0); }
+    if (act === 'cc-try-back') { if (S.cc) { S.cc.step = 'result'; S.error = ''; render(); window.scrollTo(0, 0); } return; }
+    if (act === 'cc-cmd') { if (S.cc?.try && !S.cc.try.running) { S.cc.try.cmd = t.dataset.name; S.cc.try.signer = null; S.cc.try.values = {}; S.error = ''; render(); } return; }
+    if (act === 'cc-try-reset') { if (S.cc?.try && !S.cc.try.running) { Object.assign(S.cc.try, { session: { wallet: [], state: null }, last: null, runs: 0 }); S.error = ''; render(); } return; }
     if (act === 'cc-reset') { S.cc = { ...S.cc, source: S.cc.job.source, edited: false, editing: false, check: null }; return render(); }
     if (act === 'confirm-activate') {
       S.busy = true; render();
@@ -1109,6 +1195,7 @@ $app.addEventListener('submit', async e => {
         S.cc.text = v.text.trim(); if (S.cc.text.length < 10) throw new Error('Say a little more about what the contract should do');
         return await ccRun('ask', e => e.ask(S.cc.text));
       }
+      case 'cc-try': { if (S.cc?.try?.running) return; return await ccTry(v); }
       case 'cc-check': {
         const src = v.source; if (src === S.cc.source && !S.cc.edited) { S.cc.editing = false; return render(); }
         v1ContractId(src);   // size and text rules first

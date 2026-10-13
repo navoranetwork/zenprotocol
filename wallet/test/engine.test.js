@@ -2,10 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient } from '../src/engine.js';
+import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient, kalapasOf, formatAmount, bodyHexOf, commandsOf, holdings } from '../src/engine.js';
 import { openWallet, prepareActivateV1 } from '../src/wallet.js';
 import { deriveKey } from '../src/keys.js';
-import { deserializeTx, txHash, hex, unhex } from '../src/serialize.js';
+import { deserializeTx, txHash, hex, unhex, Writer, Data } from '../src/serialize.js';
 import { verifyDigest } from '../src/tx.js';
 
 const src = 'module X\nlet main = 1   // é ✓\n';
@@ -57,4 +57,29 @@ test('engine client: polls a job until done, explains errors', async () => {
   const steps = []; const j = await e.wait(job, s => steps.push(s.status), { everyMs: 1 });
   assert.equal(j.status, 'done'); assert.deepEqual(steps, ['running', 'running', 'done']);
   await assert.rejects(e.ask('x'), /daily limit/);
+});
+
+test('try: amounts, body bytes, commands and holdings', () => {
+  assert.equal(kalapasOf('2.5 ZP'), '250000000'); assert.equal(kalapasOf('300'), '300');
+  assert.throws(() => kalapasOf('2.5'), /kalapas, or an amount/);
+  assert.equal(formatAmount('-600000000', 'zp'), '-6 ZP'); assert.equal(formatAmount('250000000', { contract: { version: 0, hash: '00'.repeat(32) }, subtype: '00'.repeat(32) }), '2.5 ZP');
+  assert.equal(formatAmount('7', 'ab'.repeat(32)), '7 token abababab…');
+  // the escrow body { amount: u64 } as the node signs it: Dict(12), 1 entry, "amount", U64(5) 300
+  const w = new Writer(); Data.write(w, { t: 'Dict', v: [['amount', { t: 'U64', v: 300n }]] });
+  assert.equal(bodyHexOf([['amount', { type: 'u64' }]], { amount: '300' }), hex(w.out()));
+  assert.equal(bodyHexOf([['amount', { type: 'u64' }]], { amount: '0.000003 ZP' }), hex(w.out()));
+  assert.equal(bodyHexOf([], {}), null);
+  assert.throws(() => bodyHexOf([['who', { type: 'publickey' }]], { who: '04' + 'ab'.repeat(32) }), /public key/);
+  assert.throws(() => bodyHexOf([['x', { type: 'mystery' }]], { x: '1' }), /cannot fill/);
+  const cmds = commandsOf({ commands: { release: { description: 'pays the seller', signedBy: ['buyer', 'arbiter'], body: { amount: { type: 'u64' } } }, deposit: { sends: true } } });
+  assert.deepEqual(cmds.map(c => c.name), ['release', 'deposit']); assert.deepEqual(cmds[0].signedBy, ['buyer', 'arbiter']); assert.equal(cmds[0].body[0][0], 'amount');
+  assert.deepEqual(commandsOf({ commands: [{ name: 'refund', body: [{ name: 'amount', type: 'u64' }] }] })[0].body[0][1].type, 'u64');
+  assert.deepEqual(holdings([{ asset: 'zp', amount: '200' }, { asset: 'zp', amount: '400' }]).map(h => h.amount), [600n]);
+});
+
+test('try: sourceId first, the source again when the engine no longer has it', async () => {
+  const sent = [];
+  const f = async (url, o) => { const b = JSON.parse(o.body); sent.push(b); return b.sourceId ? new Response(JSON.stringify({ error: 'send the source' }), { status: 404 }) : new Response(JSON.stringify({ job: 'ab'.repeat(12) }), { status: 202 }); };
+  const r = await new EngineClient('https://x', f).try({ source: 'let main = 1', sourceId: '00000001' + 'ab'.repeat(32), call: { command: 'deposit' }, roles: { buyer: '03' + 'ab'.repeat(32) } });
+  assert.equal(r.job, 'ab'.repeat(12)); assert.equal(sent.length, 2); assert.ok(!('source' in sent[0])); assert.equal(sent[1].source, 'let main = 1'); assert.equal(sent[1].roles.buyer, '03' + 'ab'.repeat(32));
 });
