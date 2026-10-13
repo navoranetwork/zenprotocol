@@ -9,6 +9,8 @@
 #            docker-compose project with the new image (same volume, same environment), waits for it to
 #            sync and checks it follows the chain
 #   rollback (on the testnet server, only BEFORE block 2050): back to zen-node:testnet-pre-v1
+#   smoke    the V1 toolchain inside the running node container: SDK, F*, Zulib stamp, and one real
+#            contract build (token template, pinned hash); install runs it right after the switch
 #   status   height, image, compose project (what install will recreate), last errors
 #   install-when-ready <tar.gz>  waits (checking every minute) until block 2011, then runs install; run it
 #            under systemd-run so nobody has to be awake for the payout:
@@ -45,6 +47,23 @@ recreate() {   # $1: image. The node's compose project, file and service, from t
     || { log "the compose file does not take ZEN_TESTNET_IMAGE (image is $(docker inspect -f '{{.Config.Image}}' "$NAME")): set image: $img in it and run again"; exit 1; }
 }
 
+smoke() {   # the V1 build toolchain inside the running container ($1: container)
+  log "smoke test in $1 (image $(docker inspect -f '{{.Image}}' "$1" | cut -c1-19))"
+  docker exec "$1" sh -c '
+    set -e
+    echo "sdks: $(dotnet --list-sdks | tr "\n" " ")"
+    echo "fstar: $($FSTAR_HOME/bin/fstar.exe --version | head -1)  (FSTAR_HOME=$FSTAR_HOME)"
+    echo "python3: $(python3 --version)"
+    echo "toolchain: $ZP_V1_TOOLCHAIN, Zulib stamp $(cat $ZP_V1_TOOLCHAIN/zulib/.cache_full/SOURCES.sha256)"
+    ls /zen/libsecp256k1.so > /dev/null && echo "libsecp256k1: present"
+    W=$(mktemp -d); $ZP_V1_TOOLCHAIN/tools/engine/zp-engine make token --out $W/t > /dev/null
+    $ZP_V1_TOOLCHAIN/scripts/build-contract.sh --lax $W/t/contract.fst $W/out > $W/b.txt 2>&1 || { echo "build exit $?"; tail -5 $W/b.txt; exit 1; }
+    echo "token template DLL: $(sha256sum $W/out/Z*.dll | cut -c1-64)"; rm -rf $W' 2>&1 | sed 's/^/  /'
+  local rc=${PIPESTATUS[0]}
+  if [ "$rc" = 0 ]; then log "SMOKE OK"; else log "SMOKE FAILED (exit $rc): this node cannot build V1 contracts - roll back BEFORE block 2050 (testnet-v1-switch.sh rollback)"; fi
+  return $rc
+}
+
 case $MODE in
 build)
   : "${GH_TOKEN:?}"; TC_COMMIT=${TC_COMMIT:-aec63af}; SRC=/opt/zp-pow-image; GH="https://x-access-token:$GH_TOKEN@github.com"
@@ -72,7 +91,9 @@ install)
   log "installing image $(docker image inspect -f '{{.Id}}' $NEW) from $(cut -c1-16 "$TAR.sha256")..."
   recreate $NEW
   for i in $(seq 1 60); do sleep 10; n=$(height); [ -n "$n" ] && [ "$n" -ge "${h:-0}" ] && break; done
-  log "node on $NEW at block $(height); following for 10 minutes"
+  log "node on $NEW at block $(height)"
+  smoke "$NAME"
+  log "following for 10 minutes"
   sleep 600; log "now at block $(height)"
   docker logs --since 15m "$NAME" 2>&1 | grep -iE "\[(ERR|FTL)|unhandled exception|invalid block" | tail -10
   ;;
@@ -91,6 +112,9 @@ install-when-ready)
     [ $(( $(date +%s) / 60 % 30 )) = 0 ] && log "block ${h:-?}"
     sleep 60
   done
+  ;;
+smoke)
+  smoke "${2:-$NAME}"
   ;;
 status)
   log "node $NAME on $(docker inspect -f '{{.Config.Image}}' "$NAME") (image $(docker inspect -f '{{.Image}}' "$NAME")) at block $(height)"
