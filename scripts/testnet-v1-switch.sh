@@ -9,7 +9,10 @@
 #            docker-compose project with the new image (same volume, same environment), waits for it to
 #            sync and checks it follows the chain
 #   rollback (on the testnet server, only BEFORE block 2050): back to zen-node:testnet-pre-v1
-#   status   height, V1 height of the image, last errors
+#   status   height, image, compose project (what install will recreate), last errors
+#   install-when-ready <tar.gz>  waits (checking every minute) until block 2011, then runs install; run it
+#            under systemd-run so nobody has to be awake for the payout:
+#            systemd-run --unit zp-switch bash /root/testnet-v1-switch.sh install-when-ready /root/zen-node-testnet-v1.tar.gz
 #
 #   systemd-run --unit zp-image --property=EnvironmentFile=/etc/zp-lab.env bash /opt/zp-lab/scripts/testnet-v1-switch.sh build
 #   scp root@zp-lab-1:/opt/zp-lab/zen-node-testnet-v1.tar.gz* /root/ && bash testnet-v1-switch.sh install /root/zen-node-testnet-v1.tar.gz
@@ -74,8 +77,26 @@ rollback)
   h=$(height); [ -n "$h" ] && [ "$h" -ge 2050 ] && [ -z "${FORCE:-}" ] && { log "past the fork: rolling back means leaving V1 (FORCE=1)"; exit 1; }
   recreate $OLD; sleep 60; log "node on $OLD at block $(height)"
   ;;
+install-when-ready)
+  TAR=${2:?the image .tar.gz}
+  (cd "$(dirname "$TAR")" && sha256sum -c "$(basename "$TAR").sha256") || { log "checksum mismatch"; exit 1; }
+  log "waiting for block 2011 (the CGP payout at 2010 first)"
+  while :; do
+    h=$(height)
+    if [ -n "$h" ] && [ "$h" -ge 2050 ]; then log "block $h: past the fork, NOT switching (needs a decision)"; exit 1; fi
+    if [ -n "$h" ] && [ "$h" -ge 2011 ]; then log "block $h: switching"; exec bash "$0" install "$TAR"; fi
+    [ $(( $(date +%s) / 60 % 30 )) = 0 ] && log "block ${h:-?}"
+    sleep 60
+  done
+  ;;
 status)
   log "node $NAME on $(docker inspect -f '{{.Config.Image}}' "$NAME") at block $(height)"
+  dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$NAME" 2>/dev/null)
+  if [ -n "$dir" ]; then
+    log "compose: $dir ($(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$NAME")), service $(docker inspect -f '{{index .Config.Labels "com.docker.compose.service"}}' "$NAME")"
+    grep -n "image:" "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$NAME" | cut -d, -f1)" | head -3
+  else log "NOT started by docker compose: install will stop and print what to recreate by hand"; fi
+  log "env: $(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | grep -E '^(MINER_THREADS|WALLET_API|EXTERNAL_IP|SEEDS|NETWORK)=' | tr '\n' ' ')"
   docker logs --since 30m "$NAME" 2>&1 | grep -iE "V1|\[(ERR|FTL)|invalid block" | tail -10
   ;;
 *) echo "unknown mode $MODE"; exit 2 ;;
