@@ -1,0 +1,15 @@
+[07:37:41] lab testnet: V1 fork at block 60; node f81c0e09, toolchain 944f6d1
+[07:37:41] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[07:38:00] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[07:38:15] 1. before the fork (height 1): activation not accepted (not supported)
+[07:38:24] 2. activation sent from A at height 314
+[07:38:41]    active on A and B; both built the same DLL, SHA-256 c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
+   build time: 8146ms
+   build time: 0ms
+   build time: 0ms
+   build time: 8117ms
+[07:38:42]    call buy sent from A
+[07:38:42]    buy mined: A's wallet holds 500 tokens; A and B agree at height 357
+[07:38:42] 3. reorg: A at 357, C (alone) at 364; A stops mining
+[07:38:44]    C at 368 joins A
+[07:54:12] FAIL: after 900 s: all three on one tip

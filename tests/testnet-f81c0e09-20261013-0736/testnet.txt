@@ -1,0 +1,63 @@
+[07:37:41] lab testnet: V1 fork at block 60; node f81c0e09, toolchain 944f6d1
+[07:37:41] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[07:38:00] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[07:38:15] 1. before the fork (height 1): activation not accepted (not supported)
+[07:38:24] 2. activation sent from A at height 314
+[07:38:41]    active on A and B; both built the same DLL, SHA-256 c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
+   build time: 8146ms
+   build time: 0ms
+   build time: 0ms
+   build time: 8117ms
+[07:38:42]    call buy sent from A
+[07:38:42]    buy mined: A's wallet holds 500 tokens; A and B agree at height 357
+[07:38:42] 3. reorg: A at 357, C (alone) at 364; A stops mining
+[07:38:44]    C at 368 joins A
+[07:54:12] FAIL: after 900 s: all three on one tip
+--- A
+[07:54:09 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:54:10 INF] Handling new block header #861
+[07:54:10 INF] Request block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c from peers
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:54:10 INF] Handling new block header #861
+[07:54:10 INF] Request block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c from peers
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:54:11 INF] Blockchain: Handling command ValidateBlock started
+[07:54:11 INF] Validating new block #861 with 1 txs 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c
+[07:54:11 WRN] Refusing a chain reorganization of 356 blocks (limit 100): fork at #1, competing block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c. Restart with --max-reorg-depth to accept it if this node was cut off from the network.
+[07:54:11 INF] Blockchain: Handling command ValidateBlock ended
+[07:54:11 INF] Blockchain: Handling command ValidateBlock started
+[07:54:11 INF] Blockchain: Handling command ValidateBlock ended
+--- B
+[07:54:09 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:54:10 INF] Handling new block header #861
+[07:54:10 INF] Request block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c from peers
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:54:10 INF] Handling new block header #861
+[07:54:10 INF] Request block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c from peers
+[07:54:10 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:54:11 INF] Blockchain: Handling command ValidateBlock started
+[07:54:11 INF] Validating new block #861 with 1 txs 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c
+[07:54:11 WRN] Refusing a chain reorganization of 356 blocks (limit 100): fork at #1, competing block #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c. Restart with --max-reorg-depth to accept it if this node was cut off from the network.
+[07:54:11 INF] Blockchain: Handling command ValidateBlock ended
+[07:54:11 INF] Blockchain: Handling command ValidateBlock started
+[07:54:11 INF] Blockchain: Handling command ValidateBlock ended
+--- C
+[07:54:10 INF] BlockHandler: New tip #861 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c
+[07:54:10 INF] Blockchain: Handling command ValidateMinedBlock ended
+[07:54:10 DBG] Wallet adding block #861 of block 000005451cf80c2bb9122f73eabf06ebd4a4166ce13624e0a8116c31f51f0b9c
+[07:54:10 INF] Blockchain: Handling request GetMempool started
+[07:54:10 INF] Blockchain: Handling request GetMempool ended
+[07:54:11 INF] Blockchain: Handling command RequestBlock started
+[07:54:11 INF] Blockchain: Handling command RequestBlock ended
+[07:54:11 INF] Blockchain: Handling command RequestBlock started
+[07:54:11 INF] Blockchain: Handling command RequestBlock ended
+[07:54:11 INF] Blockchain: Handling command RequestBlock started
+[07:54:11 INF] Blockchain: Handling command RequestBlock ended
+[07:54:11 INF] Blockchain: Handling command RequestBlock started
+[07:54:11 INF] Blockchain: Handling command RequestBlock ended
+[07:54:11 INF] Blockchain: Handling request GetBlockTemplate started
+[07:54:11 INF] Blockchain: Handling request GetBlockTemplate ended
