@@ -59,6 +59,16 @@ const sign = (st, utxos, payments) => buildTransaction({ utxos: utxos.map(u => (
     ({ st, free } = await pool());
     const big = free.filter(u => u.spend.amount > UNIT * 2n).sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : -1));
     const batches = [];
+    // too few large outputs for parallel batches: first split the largest into one chunk per batch of 200, so the
+    // whole split takes 2-3 blocks instead of one block per 200 outputs
+    const chunks = Math.ceil(need / 200), chunk = 201n * UNIT;
+    if (big.length && big.length < chunks) {
+      const k = Math.min(200, chunks - big.length + 1, Number(big[0].spend.amount / chunk));
+      if (k >= 2) {
+        batches.push(sign(st, [big[0]], Array.from({ length: k }, () => ({ lock: { type: 'PK', hash: me }, spend: { asset: ZEN_ASSET, amount: chunk } }))));
+        used.add(op(big[0])); big.shift();
+      }
+    }
     for (const u of big) {
       if (need <= 0) break;
       const n = Math.min(200, need, Number((u.spend.amount - 1n) / UNIT));
