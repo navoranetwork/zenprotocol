@@ -12,6 +12,12 @@ export const CGP_PARAMS = {
   test: { intervalLength: 100, snapshot: 90, nomination: 5, upperAllocationBound: 90, allocationCorrectionCap: 15 },
 };
 
+// the CGP fund contract of each network (Chain.fs cgpContractId); its outputs are the fund
+export const CGP_CONTRACT = {
+  main: '00000000cdaa2a511cd2e1d07555b00314d1be40a649d3b6f419eb1e4e7a8e63240a36d1',
+  test: '00000000eac6c58bed912ff310df9f6960e8ed5c28aac83b8a98964224bab1e06c779b93',
+};
+
 // the voting contract of each network (Chain.fs); the testnet id is that of the old testnet until ours is activated
 export const VOTING_CONTRACT = {
   main: '000000006ea5457ed23e3e13f31fe4cfd46c200587f2e4cc22df30ac77790f6d2c15cc12',

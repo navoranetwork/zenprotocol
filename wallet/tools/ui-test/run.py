@@ -97,7 +97,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/10-nomination-review.png')
     ok(len(errors) == 0, 'no console errors: ' + '; '.join(errors[:5]))
     # a wallet with no ZP, and a node that does not answer: clear messages, no blank screen
-    reload_vote(VOTE_TIP, LAST, zp=0)
+    NEXT = VOTE_TIP + (100 if NET == 'test' else 10000)   # the next interval: this wallet already voted in this phase (one ballot per wallet and phase)
+    reload_vote(NEXT, LAST, zp=0)
     t = pg.inner_text('body'); pg.screenshot(path=f'{OUT}/11-zero-balance.png', full_page=True)
     pg.fill('input[name=pct]', '10' if NET == 'test' else '89'); pg.click('form[data-form=vote-alloc] button.primary'); pg.wait_for_timeout(1200)
     t = pg.inner_text('body'); ok('little ZP' in t or 'spendable output' in t, 'no ZP: the wallet says it needs a little ZP for the fee')

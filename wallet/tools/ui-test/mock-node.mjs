@@ -6,13 +6,13 @@
 import http from 'node:http';
 import { deriveKey, encodeAddress } from '../../src/keys.js';
 import { openWallet } from '../../src/wallet.js';
-import { VOTING_CONTRACT } from '../../src/cgp.js';
+import { VOTING_CONTRACT, CGP_CONTRACT } from '../../src/cgp.js';
 import { Reader, VarInt, Output, Outpoint, Data, serializeTx, deserializeTx, txHash, hex, unhex } from '../../src/serialize.js';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
 const NET = arg('net', 'test'), PORT = Number(arg('port', 8082));
 const st = { tip: Number(arg('tip', 95)), alloc: Number(arg('alloc', 0)), zp: BigInt(arg('zp', '5000')) * 100000000n, cands: true, published: [], asked: {}, utxo: 0 };
-const VOTING = VOTING_CONTRACT[NET];
+const VOTING = VOTING_CONTRACT[NET], CGP_ADDR = encodeAddress(unhex(CGP_CONTRACT[NET]), NET, true);   // the CGP fund holds 1,000 ZP
 // ZP <-> BTC swap (a V1 contract) and the site's prover status (/swap/status) when the wallet's node URL ends in /node
 const SWAP = '00000001' + 'dd'.repeat(32), SWAP_ADDR = encodeAddress(unhex(SWAP), NET, true);
 const w = openWallet({ id: 'm', name: 'm', network: NET, kind: 'mnemonic' }, Array(23).fill('abandon').concat('art').join(' '));
@@ -44,7 +44,7 @@ http.createServer((req, res) => {
         case '/swap/status': return send(res, 200, { swapId: SWAP, zpTip: st.tip, btcNet: 'main', offers: offers() });
         case '/contract/active': return send(res, 200, [{ contractId: VOTING, address: encodeAddress(unhex(VOTING), NET, true), expire: st.tip + 90000, code: '// voting contract\n'.padEnd(4000, 'x') }]);
         case '/addressdb/outputs': return send(res, 200, body.addresses?.includes(addr0) ? fund() : []);
-        case '/addressdb/balance': return send(res, 200, body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }] : []);
+        case '/addressdb/balance': return send(res, 200, body.addresses?.includes(CGP_ADDR) ? [{ asset: '00', balance: '100000000000' }] : body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }] : []);
         case '/addressdb/transactions': return send(res, 200, []);
         case '/addressdb/discovery': return send(res, 200, (body.addresses || []).map(a => ({ address: a, hasBalance: a === addr0, hasTxs: a === addr0 })));
         case '/blockchain/contract/execute': {

@@ -1,11 +1,11 @@
 // ZP Wallet - user interface. Plain DOM, no framework; every value shown that comes from a user
 // or a node goes through esc(). Secrets live in memory only while unlocked.
 import qrcode from 'qrcode-generator';
-import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress } from '../src/keys.js';
+import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress, encodeAddress } from '../src/keys.js';
 import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
-import { CGP_PARAMS, VOTING_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock } from '../src/cgp.js';
-import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
+import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock } from '../src/cgp.js';
+import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
@@ -191,15 +191,10 @@ const views = {
       ${c ? `<button class="card cgp" data-go="vote" data-s="plain">
         <div class="row k"><span>CGP · INTERVAL ${c.community}</span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt4">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
-        <div class="muted small">Fund ${cgpBalance()} · ${zpStr(c.cgpPerBlock)} ZP per block to the CGP · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
+        <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
       ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span title="${esc(x.asset)}">${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${formatZP(x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
-      <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => {
-        const amt = BigInt(h.amount), inn = amt > 0n;
-        const what = h.lock?.Coinbase ? 'Mining reward' : inn ? 'Received' : 'Sent';
-        return `<div class="item"><div><div>${what}</div><div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'}</div></div>
-          <div class="amt ${inn ? 'in' : ''}">${inn ? '+' : '−'}${h.asset === '00' ? formatZP(inn ? amt : -amt) + ' ZP' : esc(String(inn ? amt : -amt))}</div></div>`;
-      }).join('')}</div></div>${nav('home')}`;
+      <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => activityRow(h, a)).join('')}</div></div>${nav('home')}`;
   },
 
   send: () => {
@@ -228,7 +223,8 @@ const views = {
     return `${top()}<div class="screen"><h1>CGP vote</h1>
       ${c ? `<div class="card cgp"><div class="row k"><span>INTERVAL ${c.community} <span class="muted">(node ${c.interval})</span></span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt6">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
-        <div class="kv" data-s="mt6"><span class="muted">To the CGP</span><span>${zpStr(c.cgpPerBlock)} ZP / block (${alloc()}%)</span></div>
+        <div class="kv" data-s="mt6"><span class="muted">Each block reward</span><span>${zpStr(c.reward - c.cgpPerBlock)} ZP to the miner · ${zpStr(c.cgpPerBlock)} ZP to the fund</span></div>
+        <div class="kv"><span class="muted">Split in force</span><span>miners ${100 - alloc()}% · CGP fund ${alloc()}%</span></div>
         <div class="kv"><span class="muted">CGP fund</span><span title="${esc(S.stats?.cgp?.balance ? 'at block ' + S.stats.cgp.balance.block : '')}">${cgpBalance()}</span></div>
         <div class="kv"><span class="muted">Snapshot block</span><span>${c.snapshot.toLocaleString('en-US')}</span></div></div>` : S.nodeOk === false ? `<div class="err" role="alert">Cannot reach the node (${esc(S.nodeError || 'no answer')}). The vote needs a node: check the address in Settings, then try again.</div><button class="btn" data-act="refresh">Try again</button>` : '<p class="muted">Loading…</p>'}
       <div class="card"><h2>Wallets that vote</h2>
@@ -305,8 +301,68 @@ function cgpInfo() {
 }
 const cgpBalance = (withBlock = false) => {
   const b = S.stats?.cgp?.balance;
-  return b && Number.isFinite(b.zp) ? zpStr(b.zp) + ' ZP' + (withBlock ? ` <span class="muted small">at block ${Number(b.block).toLocaleString('en-US')}</span>` : '') : 'not available from this node';
+  return b && Number.isFinite(b.zp) ? zpStr(b.zp) + ' ZP' + (withBlock ? ` <span class="muted small">at block ${Number(b.block).toLocaleString('en-US')}</span>` : '') : 'not available (the node has no address index)';
 };
+
+// ---------------------------------------------------------------- activity: who sent, who received
+// The address index gives only the amount per transaction. The other side comes from the transaction itself
+// (/blockchain/transaction): for a payment out, its outputs to addresses that are not ours; for a payment in, the owner
+// of the output that its first input spends. Looked up in the background for the rows on screen, kept per transaction.
+S.txInfo = new Map();
+const lockAddr = l => { if (!l || typeof l !== 'object') return null; const k = Object.keys(l)[0], v = l[k]; return v && typeof v.address === 'string' ? { kind: k, address: v.address, id: v.id } : { kind: k }; };
+const knownContract = id => id === VOTING_CONTRACT[net()] ? 'the CGP vote' : id === CGP_CONTRACT[net()] ? 'the CGP fund' : null;
+async function txInfo(hash, w) {
+  if (S.txInfo.has(hash)) return S.txInfo.get(hash);
+  S.txInfo.set(hash, null);
+  const n = node(); if (!n) return null;
+  try {
+    const t = await n.request('/blockchain/transaction?hash=' + hash), tx = t && t.tx;
+    if (!tx || !Array.isArray(tx.outputs)) return null;
+    const mine = new Set(addresses(S.open.get(w.id)));
+    const outs = tx.outputs.map(o => lockAddr(o.lock)).filter(Boolean);
+    const vote = outs.find(o => o.kind === 'Contract' && o.id && knownContract(o.id) === 'the CGP vote');
+    const to = outs.find(o => o.address && !mine.has(o.address) && o.kind !== 'Fee');
+    let from = null;
+    const op = (tx.inputs || []).map(i => i && i.outpoint).find(Boolean);
+    if (op && /^[0-9a-f]{64}$/.test(op.txHash)) {
+      const p = await n.request('/blockchain/transaction?hash=' + op.txHash).catch(() => null);
+      const o = p && p.tx && Array.isArray(p.tx.outputs) ? lockAddr(p.tx.outputs[op.index]?.lock) : null;
+      if (o && o.address) from = o;
+    }
+    const info = { vote: !!vote, to: to || null, from };
+    S.txInfo.set(hash, info);
+    return info;
+  } catch { return null; }
+}
+let txInfoBusy = false;
+async function loadTxInfo(w, rows) {
+  if (txInfoBusy) return; txInfoBusy = true;
+  try { let any = false; for (const h of rows.slice(0, 20)) if (h.txHash && !S.txInfo.has(h.txHash)) { await txInfo(h.txHash, w); any = true; } if (any && !S.modal && S.screen === 'home') render(); }
+  finally { txInfoBusy = false; }
+}
+function activityRow(h, w) {
+  const amt = BigInt(h.amount), inn = amt > 0n, info = h.txHash ? S.txInfo.get(h.txHash) : null;
+  const mineVote = (S.myVotes ||= loadVotes()).find(v => v.hash === h.txHash);
+  let what = h.lock?.Coinbase ? 'Mining reward' : inn ? 'Received' : 'Sent', who = '', back = '';
+  if (!h.lock?.Coinbase && info) {
+    // a ballot costs 1 kalapa and pays nobody: votes from another device are recognised by that too
+    if (!inn && (info.vote || mineVote || (amt === -1n && !info.to))) { what = 'CGP ballot'; who = mineVote ? esc(mineVote.kind + ': ' + mineVote.label) : 'vote fee (1 kalapa)'; }
+    else {
+      const o = inn ? info.from : info.to, name = o && o.kind === 'Contract' && o.id ? knownContract(o.id) : null;
+      if (o && o.address) {
+        what = inn ? 'Received from' : 'Sent to';
+        who = name ? esc(name.replace(/^the /, 'The ')) : `<span class="mono" title="${esc(o.address)}">${esc(shortAddr(o.address))}</span>`;
+        const copy = `<button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address)}">Copy</button>`;
+        back = (inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}">Send back</button>` : !inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}">Send again</button>` : '') + (o.kind !== 'Contract' ? copy : '');
+      }
+    }
+  } else if (mineVote && !inn) { what = 'CGP ballot'; who = esc(mineVote.kind + ': ' + mineVote.label); }
+  else if (!info && h.txHash && !h.lock?.Coinbase) who = '<span class="muted">…</span>';
+  return `<div class="item act"><div class="act-main"><div>${what}${who ? ` <span class="act-who">${who}</span>` : ''}</div>
+      <div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'}</div>
+      ${back ? `<div class="row" data-s="mt4">${back}</div>` : ''}</div>
+    <div class="amt ${inn ? 'in' : ''}">${inn ? '+' : '−'}${h.asset === '00' ? formatZP(inn ? amt : -amt) + ' ZP' : esc(String(inn ? amt : -amt))}</div></div>`;
+}
 
 // ---------------------------------------------------------------- CGP ballots
 function ballotsCard(c) {
@@ -315,10 +371,20 @@ function ballotsCard(c) {
   const note = none ? '<p class="muted small">Select at least one wallet that can sign above.</p>' : '';
   if (ph.phase === 'before') return `<div class="card"><h2>Casting ballots</h2><p class="muted small">Ballots open after the snapshot block (${c.snapshot.toLocaleString('en-US')}). Your balance at that block is your weight for this interval.</p></div>`;
   const cur = alloc(), r = allocationRange(CGP_PARAMS[net()], cur), many = r.max - r.min > 5;
+  const pAlloc = priorVote('Allocation', ph.interval, ph.phase), pNom = priorVote('Nomination', ph.interval, ph.phase), pPay = priorVote('Payout', ph.interval, ph.phase);
+  // each form says whether it is open now and, when closed, when it opens; a closed form cannot be filled in (disabled fieldset)
+  const p = CGP_PARAMS[net()], snap = snapshotBlock(p, ph.interval), n0 = snap + 1, n1 = snap + p.nomination, v0 = n1 + 1, v1 = ph.interval * p.intervalLength;
+  const nextSnap = snapshotBlock(p, ph.interval + 1), num = i => (net() === 'test' ? i : i - 24), blk = b => b.toLocaleString('en-US');
+  const left = b => { const k = b - (S.tip || 0); return k > 0 ? ` · ${k} block${k === 1 ? '' : 's'} left` : ''; };
+  const openNom = ph.phase === 'Nomination', openVote = ph.phase === 'Vote';
+  const status = (open, text) => `<p class="small phase ${open ? 'open' : 'closed'}" role="status">${open ? '● Open now' : '○ Closed'} · ${text}</p>`;
+  const nomStatus = openNom ? status(true, `nominations in blocks ${blk(n0)}–${blk(n1)}${left(n1)}`)
+    : status(false, `nominations for interval ${num(ph.interval)} were blocks ${blk(n0)}–${blk(n1)}. Next: blocks ${blk(nextSnap + 1)}–${blk(nextSnap + p.nomination)} (interval ${num(ph.interval + 1)})`);
+  const voteStatus = openVote ? status(true, `voting until block ${blk(v1)}${left(v1)}`) : status(false, `voting opens at block ${blk(v0)} and runs to ${blk(v1)}`);
   const values = many ? [...new Set([r.min, cur, r.max])] : Array.from({ length: r.max - r.min + 1 }, (_, i) => r.min + i);
   const pct0 = S.draft.pct || String(cur);
-  const allocForm = `<form data-form="vote-alloc" class="screen" data-s="flush"><h2>Allocation vote</h2>
-      <p class="muted small">Share of each block reward paid to the CGP fund; the miners get the rest. Counted in the voting phase. With ${cur}% in force the valid votes are ${r.min}% to ${r.max}%: anything else is ignored.</p>
+  const allocForm = `<form data-form="vote-alloc" class="screen" data-s="flush"><h2>Allocation vote</h2>${voteStatus}
+      <fieldset class="phasebox" ${openVote ? '' : 'disabled'}><p class="muted small">Share of each block reward paid to the CGP fund; the miners get the rest. Counted in the voting phase. With ${cur}% in force the valid votes are ${r.min}% to ${r.max}%: anything else is ignored.</p>
       <div class="cmp"><div><div class="k">Now in force</div><div class="v">CGP ${cur}%</div><div class="muted small">miners ${100 - cur}%</div></div>
         <div class="arrow" aria-hidden="true">→</div>
         <div><div class="k">Your vote</div><div class="v" id="alloc-v">CGP ${esc(pct0)}%</div><div class="muted small" id="alloc-m"></div></div></div>
@@ -326,27 +392,31 @@ function ballotsCard(c) {
       ${many ? `<input type="range" class="slider" name="pctr" min="${r.min}" max="${r.max}" step="1" value="${esc(pct0)}" aria-label="Allocation (%)">` : ''}
       <label class="field">Allocation (%)<input name="pct" inputmode="numeric" autocomplete="off" value="${esc(pct0)}" data-min="${r.min}" data-max="${r.max}" data-cur="${cur}" required></label>
       <div class="small" id="alloc-note" aria-live="polite"></div>
-      ${ph.phase === 'Vote' ? `<button class="btn primary" id="alloc-go" ${none ? 'disabled' : ''}>Review</button>` : '<p class="muted small">Opens with the voting phase.</p>'}</form>`;
+      ${openVote ? (pAlloc ? votedBox(pAlloc) : `<button class="btn primary" id="alloc-go" ${none ? 'disabled' : ''}>Review</button>`) : ''}</fieldset></form>`;
   const fundZp = S.stats?.cgp?.balance && Number.isFinite(S.stats.cgp.balance.zp) ? S.stats.cgp.balance.zp : null;
   const mine = walletsHere().map(w => ({ name: w.name, addr: receiveAddress(S.open.get(w.id)) })).filter(x => x.addr);
-  const nom = `<form data-form="vote-nom" class="screen" data-s="flush"><h2>Payout nomination</h2>
-      <p class="muted small">Propose that the CGP fund pays an amount of ZP to an address. Needs 3% of all ZP behind it to become a candidate.</p>
+  const nom = `<form data-form="vote-nom" class="screen" data-s="flush"><h2>Payout nomination</h2>${nomStatus}
+      <fieldset class="phasebox" ${openNom ? '' : 'disabled'}><p class="muted small">Propose that the CGP fund pays an amount of ZP to an address. Needs 3% of all ZP behind it to become a candidate.</p>
       <label class="field">Recipient address<input name="to" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.nto || '')}" required></label>
       <div class="row wrapchips"><button type="button" class="chip" data-act="paste-to">Paste</button>${mine.map(x => `<button type="button" class="chip" data-act="use-addr" data-addr="${esc(x.addr)}" title="${esc(x.addr)}">${esc(x.name)}</button>`).join('')}</div>
       <div class="small" id="to-note" aria-live="polite"></div>
       <label class="field">Amount (ZP)<input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.namount || '')}" data-fund="${fundZp === null ? '' : fundZp}" required></label>
       <div class="small muted" id="amt-note" aria-live="polite">${fundZp === null ? '' : `The CGP fund holds ${zpStr(fundZp)} ZP: a larger request cannot be paid.`}</div>
-      ${ph.phase === 'Nomination' ? `<button class="btn primary" ${none ? 'disabled' : ''}>Review</button>` : '<p class="muted small">Opens in the nomination phase.</p>'}</form>`;
-  const cands = S.cands ? (S.cands.length ? S.cands.map((x, i) => `<button class="item" data-act="vote-cand" data-i="${i}" data-s="plain" ${ph.phase === 'Vote' && !none ? '' : 'disabled'}>
+      ${openNom ? (pNom ? votedBox(pNom) : `<button class="btn primary" ${none ? 'disabled' : ''}>Review</button>`) : ''}</fieldset></form>`;
+  const cands = S.cands ? (S.cands.length ? S.cands.map((x, i) => `<button class="item" data-act="vote-cand" data-i="${i}" data-s="plain" ${ph.phase === 'Vote' && !none && !pPay ? '' : 'disabled'}>
       <span class="mono small" data-s="wrap">${esc(x.recipient)}</span><span class="amt">${x.spendlist.map(s => s.asset === '00' ? formatZP(BigInt(s.amount)) + ' ZP' : 'asset ' + esc(s.asset.slice(0, 8)) + '…').join(' + ')}</span></button>`).join('') : '<p class="muted small">No candidates in this interval.</p>')
     : `<button class="btn" data-act="load-cands">Show candidates</button>`;
   return `<div class="card"><h2>Casting ballots</h2>
     <p class="muted small">Signed on this device by the selected wallets; each sends one transaction with a 1 kalapa fee. Only the first vote of each key counts in a phase.</p>${note}
     <div class="card">${allocForm}</div><div class="card">${nom}</div>
-    <div class="card"><h2>Payout vote</h2><p class="muted small">Pick a candidate. Counted in the voting phase.</p><div class="list">${cands}</div></div>${errBox()}</div>`;
+    <div class="card"><h2>Payout vote</h2>${voteStatus}<p class="muted small">Pick a candidate. Counted in the voting phase.</p>${pPay ? votedBox(pPay) : ''}<div class="list">${cands}</div></div>${errBox()}</div>`;
 }
 async function reviewVote(kind, command, ballotHex, label, rows = []) {
   const sel = voters(); if (!sel.length) throw new Error('Select at least one wallet that can sign');
+  const ph0 = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), prior = priorVote(command, ph0.interval, ph0.phase);
+  if (prior) throw new Error(votedText(prior));
+  const need = command === 'Nomination' ? 'Nomination' : 'Vote';
+  if (ph0.phase !== need) throw new Error(need === 'Nomination' ? 'Nominations are closed now: they open after the next snapshot block.' : 'Voting is closed now: it opens after the nomination phase.');
   const funder = S.open.get(active().id) && canSpend(S.open.get(active().id)) && sel.some(w => w.id === active().id) ? active() : sel[0];
   await refreshWallet(funder.id);
   const d = S.data.get(funder.id); if (!d?.state) throw new Error('Could not read the balance from the node');
@@ -361,7 +431,7 @@ async function reviewVote(kind, command, ballotHex, label, rows = []) {
     if (exclude.length && /little ZP/.test(e.message)) throw new Error('Your last vote is still waiting for its block (about 4 minutes). Wait for it, then send the next one.');
     throw e;
   }
-  S.modal = { type: 'confirm-vote', kind, label, rows, prepared, weight: voteWeight() }; S.error = ''; render();
+  S.modal = { type: 'confirm-vote', kind, command, label, rows, prepared, weight: voteWeight(), voters: sel.map(w => w.id) }; S.error = ''; render();
 }
 
 // ---------------------------------------------------------------- modal
@@ -503,6 +573,15 @@ async function refreshNode() {
   }
   refreshExtras().then(render);        // names, stats and contracts are shown when they arrive: the balance does not wait for them
 }
+async function loadCgpFund(n) {
+  try {
+    const id = Uint8Array.from(CGP_CONTRACT[net()].match(/../g).map(h => parseInt(h, 16)));
+    const rows = await n.balance([encodeAddress(id, net(), true)]);
+    const zp = (Array.isArray(rows) ? rows : []).filter(x => x && x.asset === '00').reduce((a, x) => a + BigInt(x.balance), 0n);
+    S.stats = { ...(S.stats || {}), cgp: { ...(S.stats?.cgp || {}), balance: { zp: Number(zp) / 1e8, block: S.tip } } };
+    render();
+  } catch { /* the node has no address index: the fund stays "not available" */ }
+}
 async function refreshExtras() {
   const n = node(); if (!n) return;
   // the community site publishes stats.json next to /node/ (CGP fund balance, named contracts)
@@ -520,6 +599,9 @@ async function refreshExtras() {
       }
     }
   } catch { /* optional */ }
+  // no stats.json (the testnet site, or a node of your own): ask the node's address index for the CGP contract's ZP.
+  // On mainnet the contract has a long history and this can take minutes, so it runs in the background and only when needed.
+  if (!(S.stats?.cgp?.balance && Number.isFinite(S.stats.cgp.balance.zp))) loadCgpFund(n);
   const list = Array.isArray(S.stats?.contracts) ? S.stats.contracts : await n.activeContracts().catch(() => null);
   S.contracts = Array.isArray(list) ? list
     .map(c => ({ id: String(c.id ?? c.contractId ?? ''), address: String(c.address ?? ''), expire: Number(c.expire) }))
@@ -535,6 +617,7 @@ async function refreshWallet(id, full, onState) {
     d.state = await readState(w, n); d.error = '';
     S.data.set(id, d); if (onState) onState();                   // balance first: the history follows
     d.history = await readHistory(w, n);
+    loadTxInfo(S.vault.wallets.find(x => x.id === id) || active(), d.history);
   } catch (e) { d.error = e.message; d.history ||= []; }
   S.data.set(id, d);
 }
@@ -575,6 +658,23 @@ async function refreshVotes() {
   }
   if (changed) { saveVotes(); if (!S.modal && !document.activeElement?.closest?.('form[data-form]')) render(); }
 }
+// A ballot already sent from this browser for the same command, interval and phase by one of the selected wallets.
+// Only the first ballot of each key counts in a phase (Tally_Handler), so a second one would only cost a fee.
+const COMMAND_OF = { 'allocation vote': 'Allocation', 'payout vote': 'Payout', nomination: 'Nomination' };
+function priorVote(command, interval, phase) {
+  const sel = new Set(voters().map(w => w.id));
+  const v = (S.myVotes ||= loadVotes()).find(x => x.net === net() && x.interval === interval && x.phase === phase
+    && (x.command || COMMAND_OF[x.kind]) === command && x.state !== 'failed'
+    && (!Array.isArray(x.voters) || x.voters.some(id => sel.has(id))));   // older records do not name the wallets: assume they apply
+  if (!v) return null;
+  const names = Array.isArray(v.voters) ? walletsHere().filter(w => v.voters.includes(w.id) && sel.has(w.id)).map(w => w.name) : [];
+  return { v, names };
+}
+function votedText({ v, names }) {
+  const who = names.length ? (names.length === 1 ? `Wallet “${names[0]}”` : `Wallets ${names.map(n => `“${n}”`).join(', ')}`) : 'This browser';
+  return `${who} already sent a ${v.kind} in this phase (${v.label}). Only the first vote of a wallet counts and it cannot be changed${names.length ? '; to vote with other wallets, select only those' : ''}.`;
+}
+const votedBox = p => `<div class="card" data-s="flush"><p class="ok small">✓ ${esc(votedText(p))}</p></div>`;
 function sentCard(c) {
   const list = (S.myVotes ||= loadVotes()).filter(v => v.net === net() && c && v.interval === c.interval).reverse();
   if (!list.length) return '';
@@ -590,6 +690,8 @@ function syncAlloc(raw, from) {
   if (from !== 'field') inp.value = t;
   const okv = /^\d{1,3}$/.test(t) && n >= min && n <= max;
   const slider = $app.querySelector('input[name=pctr]'); if (slider && okv) slider.value = n;
+  // the green part of the slider (style.css .slider): fraction of the allowed range, set through the CSSOM (the CSP forbids inline styles)
+  if (slider) { const lo = +slider.min, hi = +slider.max, v = +slider.value; slider.style.setProperty('--f', hi > lo ? String((v - lo) / (hi - lo)) : '1'); }
   $app.querySelectorAll('[data-act=alloc-pick]').forEach(b => b.classList.toggle('on', b.dataset.v === t));
   const v = $app.querySelector('#alloc-v'), m = $app.querySelector('#alloc-m'), note = $app.querySelector('#alloc-note'), go = $app.querySelector('#alloc-go');
   if (v) v.textContent = okv ? `CGP ${n}%` : 'CGP ?';
@@ -739,6 +841,7 @@ $app.addEventListener('click', async e => {
     if (act === 'close') { S.modal = null; S.error = ''; return render(); }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
+    if (act === 'send-back') { S.draft = { ...S.draft, to: t.dataset.to }; return go('send'); }
     if (act === 'copy') { await navigator.clipboard.writeText(t.dataset.text); t.innerHTML = I.copy + 'Copied'; return; }
     if (act === 'max') { const zp = S.data.get(active().id)?.state?.assets.find(x => x.asset === '00'); $app.querySelector('[name=amount]').value = formatZP(zp?.spendable || 0n).replace(/,/g, ''); return; }
     if (act === 'node-default') { S.settings.nodes[net()] = defaultNode(net()); saveSettings(); render(); return refreshAll(); }
@@ -753,7 +856,7 @@ $app.addEventListener('click', async e => {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
       (S.pendingVotes ||= []).push({ spent: m.prepared.spent, at: Date.now() });
-      rememberVote({ hash, kind: m.kind, label: m.label, to: (m.rows || []).find(r => r[0] === 'To')?.[1] || '', interval: m.prepared.phase.interval, phase: m.prepared.phase.phase });
+      rememberVote({ hash, kind: m.kind, command: m.command, voters: m.voters, label: m.label, to: (m.rows || []).find(r => r[0] === 'To')?.[1] || '', interval: m.prepared.phase.interval, phase: m.prepared.phase.phase });
       S.busy = false; S.modal = { type: 'voted', hash, kind: m.kind, label: m.label }; render(); setTimeout(refreshVotes, 5000); return;
     }
     if (act === 'confirm-send') {
