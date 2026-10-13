@@ -127,3 +127,17 @@ DLLs no longer carry F# signature or optimization data (nothing compiles against
 The three-node lab testnet also passed on zp-lab-1 (tests/testnet-d5a8761d-20261012-2118 on
 branch replay-results), and BitZen's T5b (a real Bitcoin payment proved in a V1 contract) passed
 there (tests/testnet-56a313ad-20261012-2132).
+
+## Open: environment failures that still count as a refusal (found 2026-10-13)
+
+- **E1 (fixed, zp-contracts-v1 944f6d1):** a stale Zulib cache (sources changed after `verify-zulib.sh`)
+  made `build-contract.sh` refuse a valid contract (exit 10, `Module ContractEntry.fst was not checked`).
+  `verify-zulib.sh` now stamps the cache with the SHA-256 of the Zulib sources; the build checks it (exit 20).
+- **E2 (open, after the testnet settles):** after a successful build, `ContractV1.load` failing
+  (DLL missing, `FSharp.Core.dll` or `libsecp256k1` missing next to the node) is mapped to `BadContract`
+  in `TransactionValidation` like a refusal. These are environment conditions: they should stop the node
+  (`onEnvironmentFailure`) instead of rejecting the activation. On a working node the files are always
+  present, so the risk is low; fix together with H1, H3, M1, M3.
+- Testnet image for the switch at 2011: zp-pow testnet-v1 3dfd394a + toolchain 944f6d1
+  (sha256 of the saved image fa06fada…3403); unit tests Consensus 238/0, Blockchain 80/0; lab testnet,
+  T5b and T7 passed on that code.
