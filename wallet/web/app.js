@@ -36,7 +36,7 @@ const S = {
 function loadSettings() {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { /* default */ }
-  return { network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
+  return { mtab: ['oracle', 'dex', 'swap'].includes(s.mtab) ? s.mtab : 'oracle', network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
            voteWallets: { main: Array.isArray(s.voteWallets?.main) ? s.voteWallets.main : null, test: Array.isArray(s.voteWallets?.test) ? s.voteWallets.test : null } };
 }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S.settings)); } catch { /* private mode */ } }
@@ -97,20 +97,20 @@ async function loadSwap() {
 const mySellers = () => new Map(walletsHere().map(w => [w, S.open.get(w.id)]).filter(([, o]) => o && canSpend(o)).map(([w, o]) => [hex(signerOf(o).publicKey), w]));
 const swapState = o => o.payment?.proof ? 'Paid: the ZP went to the buyer' : o.payment ? `Buyer paid, ${o.payment.confs ?? 0} of ${o.payment.need} confirmations` : o.state === 'reserved' ? `Reserved until block ${Number(o.until).toLocaleString('en-US')}` : o.state === 'expired' ? 'A reservation expired: open again' : 'Open';
 function swapCard() {
-  if (!siteBase()) return '';
+  if (!siteBase()) return '<div class="card"><p class="muted small">ZP ⇄ BTC needs the community node, which serves the swap next to it.</p></div>';
   const sw = S.swap;
-  if (!sw) return `<div class="card"><h2>Sell ZP for bitcoin</h2><p class="muted small">${esc(S.swapError || 'Loading…')}</p></div>`;
+  if (!sw) return `<div class="card"><p class="muted small">${esc(S.swapError || 'Loading…')}</p></div>`;
   const me = mySellers(), mine = sw.offers.filter(o => me.has(o.seller)), a = active(), can = !!(a && S.open.get(a.id) && canSpend(S.open.get(a.id)));
-  return `<div class="card"><h2>Sell ZP for bitcoin</h2>
-    <p class="muted small">Your ZP waits in a contract. A buyer reserves the offer and pays bitcoin straight to your Bitcoin address; the contract checks the payment and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p>
+  return `<div class="card"><div class="row" data-s="between"><h2>Your offers</h2><button class="btn primary small" data-s="fixed" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
     <div class="list">${mine.length ? mine.map(o => `<div class="item"><div><div>${esc(formatZP(BigInt(o.amount)))} ZP for ${esc(formatBTC(o.sats))} BTC</div>
         <div class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</div>
-        <div class="muted small">${esc(swapState(o))} · ${esc(me.get(o.seller).name)} · ${esc(o.id)}</div><div class="muted small">${o.scripts - o.used} of ${o.scripts} Bitcoin addresses unused</div></div>
+        <div class="muted small">${esc(swapState(o))} · ${esc(me.get(o.seller).name)}</div><div class="muted small">${o.scripts - o.used} of ${o.scripts} Bitcoin addresses unused</div></div>
         ${o.state !== 'reserved' && !o.payment ? `<button class="btn small" data-act="swap-cancel" data-id="${esc(o.id)}">Take back</button>` : ''}</div>`).join('')
-      : '<p class="muted small">You have no offers.</p>'}</div>
-    ${S.modal ? '' : errBox()}
-    <div class="row" data-s="mt10"><button class="btn primary" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
-    <p class="muted small">Buyers see all offers at <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC</a>. ${sw.offers.length} offer${sw.offers.length === 1 ? '' : 's'} in the market.</p></div>`;
+      : '<p class="muted small">You have no offers. Sell ZP for bitcoin: the buyer pays straight to your Bitcoin address.</p>'}</div>
+    ${S.modal ? '' : errBox()}</div>
+    <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
+      <p class="muted small" data-s="mt10">Buyers reserve and pay on the <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC page</a>.</p>
+      <details class="how"><summary>How a sale works</summary><p class="muted small">Your ZP waits in a contract. A buyer reserves the offer for about 6 hours and pays bitcoin to your Bitcoin address; the contract checks the payment on Bitcoin and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p></details></div>`;
 }
 
 function fail(e) { S.error = e?.message || String(e); S.busy = false; render(); $app.querySelector('.modal .err, .err')?.scrollIntoView?.({ block: 'center' }); }   // the message may sit below the button that was pressed
@@ -239,31 +239,40 @@ const views = {
   },
 
   markets: () => {
-    const m = S.markets, base = siteBase();
+    const m = S.markets, base = siteBase(), tab = S.settings.mtab || 'oracle', loading = !m && !S.marketsError;
     const unit = (asset, v) => { const big = BigInt(v); return asset === '00' ? formatZP(big) + ' ZP' : (S.assetNames[asset] === 'zUSDC' ? (Number(big) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 6 }) + ' zUSDC' : big.toString() + ' ' + (S.assetNames[asset] || shortAddr(asset))); };
-    const rows = (m?.round?.tickers || []).map((t, i) => {
-      const e = m.evidence[t] || {}, names = Object.keys(e.sources || {}), dropped = e.dropped || [];
-      const src = !names.length ? '1 source' : `${names.length - dropped.length} of ${names.length} agree${dropped.length ? ' · dropped ' + dropped.join(', ') : ''}`;
-      const day = e.asOf && m.day && e.asOf !== m.day ? 'close ' + e.asOf : '';
-      const tip = names.map(n => n + ' = ' + e.sources[n]).join('\n');
-      return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b></div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
-    }).join('');
-    const orders = (m?.orders || []).slice(0, 12).map(o => {
-      let text = '';
-      try { text = `${unit(o.under_asset, o.under_amount)} for ${unit(o.pair_asset, o.pair_total)}`; } catch { text = 'order'; }
-      return `<div class="item"><div><div>${esc(text)}</div><div class="muted small mono" title="${esc(o.maker || '')}">${esc(shortAddr(String(o.maker || '')))}</div></div></div>`;
-    }).join('');
-    return `${top()}<div class="screen"><h1>Markets</h1>
-      ${S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : ''}
-      <div class="card"><h2>Oracle prices (USD)${m?.round ? ' · ' + esc(ago(m.round.timestamp)) : ''}</h2><div class="list">${!m && !S.marketsError ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices yet.</p>'}</div></div>
-      ${swapCard()}
-      <div class="card"><h2>Dex orders</h2><div class="list">${!m && !S.marketsError ? '<p class="muted small">Loading…</p>' : orders || '<p class="muted small">No open orders.</p>'}</div></div>
-      <div class="card"><p class="muted small">Prices come from the community oracle: several sources must agree, stocks and gold are end-of-day closes. Trading from the wallet arrives in the next version. Today use <a href="${esc(base)}/dex.html" rel="noopener">the Dex page</a>.</p></div></div>${nav('markets')}`;
+    const tabs = [['oracle', 'Oracle'], ['dex', 'Dex'], ['swap', 'ZP ⇄ BTC']];
+    const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>`;
+    const errCard = S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : '';
+    let body = '';
+    if (tab === 'oracle') {
+      const rows = (m?.round?.tickers || []).map((t, i) => {
+        const e = m.evidence[t] || {}, names = Object.keys(e.sources || {}), dropped = e.dropped || [];
+        const src = !names.length ? '1 source' : `${names.length - dropped.length} of ${names.length} sources agree`;
+        const day = e.asOf && m.day && e.asOf !== m.day ? 'close ' + e.asOf : '';
+        const tip = names.map(n => n + ' = ' + e.sources[n]).join('\n') + (dropped.length ? '\ndropped: ' + dropped.join(', ') : '');
+        return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b></div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
+      }).join('');
+      body = `${errCard}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices yet.</p>'}</div>
+        <p class="muted small" data-s="mt10">Several sources must agree; stocks and gold are end-of-day closes.</p></div>`;
+    } else if (tab === 'dex') {
+      const orders = (m?.orders || []).slice(0, 20).map(o => {
+        let text = '';
+        try { text = `${unit(o.under_asset, o.under_amount)} for ${unit(o.pair_asset, o.pair_total)}`; } catch { text = 'order'; }
+        return `<div class="item"><div><div>${esc(text)}</div><div class="muted small mono" title="${esc(o.maker || '')}">${esc(shortAddr(String(o.maker || '')))}</div></div></div>`;
+      }).join('');
+      body = `${errCard}<div class="card"><h2>Open orders</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : orders || '<p class="muted small">No open orders.</p>'}</div>
+        ${base ? `<p class="muted small" data-s="mt10">Trading from the wallet comes next. Today trade on <a href="${esc(base)}/dex.html" rel="noopener">the Dex page</a>.</p>` : ''}</div>`;
+    } else body = swapCard();
+    return `${top()}<div class="screen"><h1>Markets</h1>${head}${body}</div>${nav('markets')}`;
   },
 
   contracts: () => {
     const cs = S.contracts, wa = active(), mayExtend = !!(wa && S.open.get(wa.id) && canSpend(S.open.get(wa.id)));
     return `${top()}<div class="screen"><h1>Smart contracts</h1>
+    <div class="card"><div class="row" data-s="between"><h2>Create a contract</h2><span class="pill soon">Coming with V1</span></div>
+      <p class="muted small">Start from a ready template or describe what you need in words. The contract is checked, tested and its cost proven before you can publish it, and you sign the publishing yourself.</p>
+      <div class="tabs3" data-s="mt10"><button class="chip" disabled>Token</button><button class="chip" disabled>Time-locked vault</button><button class="chip" disabled>Describe it…</button></div></div>
     <div class="card"><h2>Active contracts</h2><div class="list">${!cs ? '<p class="muted small">Loading…</p>' : cs.length === 0 ? '<p class="muted small">None.</p>' : cs.map((k, i) => {
       const left = k.expire - (S.tip || k.expire), cls = left < 300 ? 'lvl-bad' : left < 3000 ? 'lvl-warn' : '';
       return `<div class="item"><div><div>${esc(k.name || 'Unnamed')}</div><div class="muted small mono" title="${esc(k.address)}">${esc(shortAddr(k.address))}</div></div>
@@ -793,6 +802,7 @@ $app.addEventListener('click', async e => {
     return go(t.dataset.go);
   }
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.error = ''; return render(); }
+  if (t.dataset.mtab) { S.settings.mtab = t.dataset.mtab; saveSettings(); S.error = ''; render(); window.scrollTo(0, 0); return; }
   if (t.dataset.wallet) { S.settings.active = t.dataset.wallet; saveSettings(); render(); if (!S.data.get(t.dataset.wallet)?.state) { await refreshWallet(t.dataset.wallet); render(); } return; }
   if (t.dataset.net) { S.settings.network = t.dataset.net; saveSettings(); S.tip = null; S.nodeOk = null; render(); return refreshAll(); }
   const act = t.dataset.act; if (!act) return;

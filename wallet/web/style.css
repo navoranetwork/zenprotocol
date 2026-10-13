@@ -122,3 +122,10 @@ button.item { background: none; border: 0; border-bottom: 1px solid var(--line2)
 .act-who { color: var(--ink2); font-weight: 400; overflow-wrap: anywhere; }
 .chip.mini { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
 .row[data-s~="mt4"] { gap: 6px; }
+
+/* Markets sub-tabs stay in reach while the list scrolls */
+.tabs3.sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; margin: -4px 0 4px; }
+[data-s~="between"] { justify-content: space-between; align-items: center; }
+.how { margin-top: 10px; } .how summary { cursor: pointer; font-size: 14px; color: var(--accent); } .how p { margin: 8px 0 0; }
+.pill.soon { font-size: 12px; }
+.chip[disabled] { opacity: .55; cursor: not-allowed; }
