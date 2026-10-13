@@ -1,258 +1,3 @@
-[06:52:08 INF] Blockchain: Handling request GetMempool started
-[06:52:08 INF] Blockchain: Handling request GetMempool ended
-[06:53:12 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[06:53:12 INF] Handling new block header #1780
-[06:53:12 INF] Request block #1780 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81 from peers
-[06:53:12 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[06:53:12 INF] Blockchain: Handling command ValidateBlock started
-[06:53:12 INF] Validating new block #1780 with 1 txs 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81
-[06:53:12 INF] BlockHandler: New block #1780 of 26-10-13 06:53:12 with 1 txs 0x506880307 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81
-[06:53:12 INF] Tally adding block #1780 of block 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81 for interval #18
-[06:53:12 INF] BlockHandler: BlockAdded #1780 hash #565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81
-[06:53:12 INF] BlockHandler: Connecting to longest chain
-[06:53:12 INF] BlockHandler: New tip #1780 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81
-[06:53:12 INF] Blockchain: Handling command ValidateBlock ended
-[06:53:12 INF] AddressDB adding block #1780 of block 565bb1e434f3c0211227c31c0026a1a5713a3d884608253efab1382b5171ff81
-[06:53:12 INF] Blockchain: Handling request GetMempool started
-[06:53:12 INF] Blockchain: Handling request GetMempool ended
-[06:53:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[06:53:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[06:54:47 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[06:54:47 INF] Handling new block header #1781
-[06:54:47 INF] Request block #1781 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6 from peers
-[06:54:47 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[06:54:47 INF] Blockchain: Handling command ValidateBlock started
-[06:54:47 INF] Validating new block #1781 with 1 txs 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6
-[06:54:47 INF] BlockHandler: New block #1781 of 26-10-13 06:54:47 with 1 txs 0x506788446 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6
-[06:54:47 INF] Tally adding block #1781 of block 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6 for interval #18
-[06:54:47 INF] BlockHandler: BlockAdded #1781 hash #0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6
-[06:54:47 INF] BlockHandler: Connecting to longest chain
-[06:54:47 INF] BlockHandler: New tip #1781 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6
-[06:54:47 INF] Blockchain: Handling command ValidateBlock ended
-[06:54:47 INF] AddressDB adding block #1781 of block 0121e22b82983d4cf07ac34785576d93db756ea1405128ccdc28a1fd16bd09c6
-[06:54:47 INF] Blockchain: Handling request GetMempool started
-[06:54:47 INF] Blockchain: Handling request GetMempool ended
-[06:55:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[06:55:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[06:56:08 INF] Blockchain: Handling command HandleNewTransactions started
-[06:56:08 INF] Blockchain: Handling command HandleNewTransactions ended
-[06:56:08 INF] Blockchain: Handling command ValidateTransaction started
-[06:56:08 INF] Transaction d732bc910d889c40cbc345a380e4ffd7aac0adf73c1b7f9fbb4194def8a5be55 added to mempool
-[06:56:08 INF] Blockchain: Handling command ValidateTransaction ended
-[06:57:35 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[06:57:35 INF] Handling new block header #1782
-[06:57:35 INF] Request block #1782 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6 from peers
-[06:57:35 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[06:57:35 INF] Blockchain: Handling command ValidateBlock started
-[06:57:35 INF] Validating new block #1782 with 2 txs 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6
-[06:57:35 INF] BlockHandler: New block #1782 of 26-10-13 06:57:35 with 2 txs 0x506714626 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6
-[06:57:35 INF] Tally adding block #1782 of block 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6 for interval #18
-[06:57:35 INF] BlockHandler: BlockAdded #1782 hash #4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6
-[06:57:35 INF] BlockHandler: Connecting to longest chain
-[06:57:35 INF] BlockHandler: New tip #1782 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6
-[06:57:35 INF] Blockchain: Handling command ValidateBlock ended
-[06:57:35 INF] AddressDB adding block #1782 of block 4d38726f7b4fd4ff5319c5e9a3132887691c4b9b4257d7eb61d1b12cae0b1fc6
-[06:57:35 INF] Blockchain: Handling request GetMempool started
-[06:57:35 INF] Blockchain: Handling request GetMempool ended
-[06:57:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[06:57:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[06:59:37 INF] Blockchain: Handling command HandleNewTransactions started
-[06:59:37 INF] Blockchain: Handling command HandleNewTransactions ended
-[06:59:37 INF] Blockchain: Handling command ValidateTransaction started
-[06:59:37 INF] Transaction 4bbcd5c318a9d290818adea70a751d7c8b2a7749accc0256ad0c59aec9c340fb added to mempool
-[06:59:37 INF] Blockchain: Handling command ValidateTransaction ended
-[06:59:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[06:59:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:01:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:01:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:03:01 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:03:01 INF] Handling new block header #1783
-[07:03:01 INF] Request block #1783 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84 from peers
-[07:03:01 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:03:01 INF] Blockchain: Handling command ValidateBlock started
-[07:03:01 INF] Validating new block #1783 with 2 txs 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84
-[07:03:01 INF] BlockHandler: New block #1783 of 26-10-13 07:03:01 with 2 txs 0x506669187 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84
-[07:03:01 INF] Tally adding block #1783 of block 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84 for interval #18
-[07:03:01 INF] BlockHandler: BlockAdded #1783 hash #834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84
-[07:03:01 INF] BlockHandler: Connecting to longest chain
-[07:03:01 INF] BlockHandler: New tip #1783 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84
-[07:03:01 INF] Blockchain: Handling command ValidateBlock ended
-[07:03:01 INF] AddressDB adding block #1783 of block 834827c5686ee993bc1aa9c5b7ecd6461b39ccd9ff57ed1d1c7afecc58ab5d84
-[07:03:01 INF] Blockchain: Handling request GetMempool started
-[07:03:01 INF] Blockchain: Handling request GetMempool ended
-[07:03:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:03:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:03:51 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:03:51 INF] Handling new block header #1784
-[07:03:51 INF] Request block #1784 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f from peers
-[07:03:51 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:03:51 INF] Blockchain: Handling command ValidateBlock started
-[07:03:51 INF] Validating new block #1784 with 1 txs 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f
-[07:03:51 INF] BlockHandler: New block #1784 of 26-10-13 07:03:51 with 1 txs 0x506718555 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f
-[07:03:51 INF] Tally adding block #1784 of block 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f for interval #18
-[07:03:51 INF] BlockHandler: BlockAdded #1784 hash #3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f
-[07:03:51 INF] BlockHandler: Connecting to longest chain
-[07:03:51 INF] BlockHandler: New tip #1784 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f
-[07:03:51 INF] Blockchain: Handling command ValidateBlock ended
-[07:03:51 INF] AddressDB adding block #1784 of block 3c7187fda311f1ad75fd55053a5aa23a70b5ebcfdb7782bc4b37fc3ee795a29f
-[07:03:51 INF] Blockchain: Handling request GetMempool started
-[07:03:51 INF] Blockchain: Handling request GetMempool ended
-[07:04:56 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:04:56 INF] Handling new block header #1785
-[07:04:56 INF] Request block #1785 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796 from peers
-[07:04:56 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:04:56 INF] Blockchain: Handling command ValidateBlock started
-[07:04:56 INF] Validating new block #1785 with 1 txs 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796
-[07:04:56 INF] BlockHandler: New block #1785 of 26-10-13 07:04:56 with 1 txs 0x506626192 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796
-[07:04:56 INF] Tally adding block #1785 of block 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796 for interval #18
-[07:04:56 INF] BlockHandler: BlockAdded #1785 hash #96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796
-[07:04:56 INF] BlockHandler: Connecting to longest chain
-[07:04:56 INF] BlockHandler: New tip #1785 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796
-[07:04:56 INF] Blockchain: Handling command ValidateBlock ended
-[07:04:56 INF] AddressDB adding block #1785 of block 96215f979548da7862967069ba1ab2d989bcf3cf10ac88d346c982db2ff8b796
-[07:04:56 INF] Blockchain: Handling request GetMempool started
-[07:04:56 INF] Blockchain: Handling request GetMempool ended
-[07:05:16 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:05:16 INF] Handling new block header #1786
-[07:05:16 INF] Request block #1786 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc from peers
-[07:05:16 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:05:16 INF] Blockchain: Handling command ValidateBlock started
-[07:05:16 INF] Validating new block #1786 with 1 txs 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc
-[07:05:16 INF] BlockHandler: New block #1786 of 26-10-13 07:05:16 with 1 txs 0x506548500 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc
-[07:05:16 INF] Tally adding block #1786 of block 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc for interval #18
-[07:05:16 INF] BlockHandler: BlockAdded #1786 hash #74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc
-[07:05:16 INF] BlockHandler: Connecting to longest chain
-[07:05:16 INF] BlockHandler: New tip #1786 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc
-[07:05:16 INF] Blockchain: Handling command ValidateBlock ended
-[07:05:16 INF] AddressDB adding block #1786 of block 74c5f82d97ea33fd2fa2457d5648e4e318bfedb3a956a09880f532b527002afc
-[07:05:16 INF] Blockchain: Handling request GetMempool started
-[07:05:16 INF] Blockchain: Handling request GetMempool ended
-[07:05:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:05:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:06:19 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:06:19 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:06:19 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:06:19 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:06:29 INF] Blockchain: Handling command HandleNewTransactions started
-[07:06:29 INF] Blockchain: Handling command HandleNewTransactions ended
-[07:06:29 INF] Blockchain: Handling command ValidateTransaction started
-[07:06:29 INF] Transaction 6f79906a711ebe5b1adca9ffd971d6297006599488b33d76bf4e121e42fa0b95 added to mempool
-[07:06:29 INF] Blockchain: Handling command ValidateTransaction ended
-[07:07:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:07:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:08:04 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:08:04 INF] Handling new block header #1787
-[07:08:04 INF] Request block #1787 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9 from peers
-[07:08:04 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:08:04 INF] Blockchain: Handling command ValidateBlock started
-[07:08:04 INF] Validating new block #1787 with 2 txs 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9
-[07:08:04 INF] BlockHandler: New block #1787 of 26-10-13 07:08:04 with 2 txs 0x506435711 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9
-[07:08:04 INF] Tally adding block #1787 of block 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9 for interval #18
-[07:08:04 INF] BlockHandler: BlockAdded #1787 hash #5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9
-[07:08:04 INF] BlockHandler: Connecting to longest chain
-[07:08:04 INF] BlockHandler: New tip #1787 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9
-[07:08:04 INF] Blockchain: Handling command ValidateBlock ended
-[07:08:04 INF] AddressDB adding block #1787 of block 5852e159425bd22448d05791ad5c6799531cf43c1452bfa304e377de707526c9
-[07:08:04 INF] Blockchain: Handling request GetMempool started
-[07:08:04 INF] Blockchain: Handling request GetMempool ended
-[07:09:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:09:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:11:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:11:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:12:38 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:12:38 INF] Handling new block header #1788
-[07:12:38 INF] Request block #1788 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f from peers
-[07:12:38 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:12:38 INF] Blockchain: Handling command ValidateBlock started
-[07:12:38 INF] Validating new block #1788 with 1 txs 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f
-[07:12:38 INF] BlockHandler: New block #1788 of 26-10-13 07:12:38 with 1 txs 0x506401085 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f
-[07:12:38 INF] Tally adding block #1788 of block 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f for interval #18
-[07:12:38 INF] BlockHandler: BlockAdded #1788 hash #261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f
-[07:12:38 INF] BlockHandler: Connecting to longest chain
-[07:12:38 INF] BlockHandler: New tip #1788 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f
-[07:12:38 INF] Blockchain: Handling command ValidateBlock ended
-[07:12:38 INF] AddressDB adding block #1788 of block 261e5e2d24721135acccb39065144d4a6179e3d9d69e23bc52f71a788777e66f
-[07:12:38 INF] Blockchain: Handling request GetMempool started
-[07:12:38 INF] Blockchain: Handling request GetMempool ended
-[07:12:59 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:12:59 INF] Handling new block header #1789
-[07:12:59 INF] Request block #1789 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02 from peers
-[07:12:59 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:12:59 INF] Blockchain: Handling command ValidateBlock started
-[07:12:59 INF] Validating new block #1789 with 1 txs 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02
-[07:12:59 INF] BlockHandler: New block #1789 of 26-10-13 07:12:59 with 1 txs 0x506432479 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02
-[07:12:59 INF] Tally adding block #1789 of block 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02 for interval #18
-[07:12:59 INF] BlockHandler: BlockAdded #1789 hash #7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02
-[07:12:59 INF] BlockHandler: Connecting to longest chain
-[07:12:59 INF] BlockHandler: New tip #1789 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02
-[07:12:59 INF] Blockchain: Handling command ValidateBlock ended
-[07:12:59 INF] AddressDB adding block #1789 of block 7b30d6308f542e5b55b2fdddba0fb6dfc1a0c376e1c9b5dbeb3c3c7713748c02
-[07:12:59 INF] Blockchain: Handling request GetMempool started
-[07:12:59 INF] Blockchain: Handling request GetMempool ended
-[07:13:47 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:13:47 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:14:04 INF] Blockchain: Handling command HandleNewTransactions started
-[07:14:04 INF] Blockchain: Handling command HandleNewTransactions ended
-[07:14:04 INF] Blockchain: Handling command ValidateTransaction started
-[07:14:04 INF] Transaction 97561ac6f180532611873744dcfe6522a4c1c893562c0155a1f4d7ed19d69994 added to mempool
-[07:14:04 INF] Blockchain: Handling command ValidateTransaction ended
-[07:15:48 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:15:48 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:16:50 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:16:50 INF] Handling new block header #1790
-[07:16:50 INF] Request block #1790 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c from peers
-[07:16:50 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:16:50 INF] Blockchain: Handling command ValidateBlock started
-[07:16:50 INF] Validating new block #1790 with 2 txs 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c
-[07:16:50 INF] BlockHandler: New block #1790 of 26-10-13 07:16:50 with 2 txs 0x506322555 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c
-[07:16:50 INF] Tally adding block #1790 of block 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c for interval #18
-[07:16:50 INF] BlockHandler: BlockAdded #1790 hash #28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c
-[07:16:50 INF] BlockHandler: Connecting to longest chain
-[07:16:50 INF] BlockHandler: New tip #1790 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c
-[07:16:50 INF] Blockchain: Handling command ValidateBlock ended
-[07:16:50 INF] AddressDB adding block #1790 of block 28c989d0f61372059195f307eb154034ca8e7b5b7321655d6b4a00e4afd8e42c
-[07:16:50 INF] Blockchain: Handling request GetMempool started
-[07:16:50 INF] Blockchain: Handling request GetMempool ended
-[07:17:19 INF] Blockchain: Handling command HandleNewTransactions started
-[07:17:19 INF] Blockchain: Handling command HandleNewTransactions ended
-[07:17:19 INF] Blockchain: Handling command ValidateTransaction started
-[07:17:19 INF] Transaction 5d41b1c8036ead3f5ee504adcf7eb7d5946210caadcf674314888e3d4dba70e1 added to mempool
-[07:17:19 INF] Blockchain: Handling command ValidateTransaction ended
-[07:17:48 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:17:48 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:19:04 INF] Blockchain: Handling command HandleNewTransactions started
-[07:19:04 INF] Blockchain: Handling command HandleNewTransactions ended
-[07:19:04 INF] Blockchain: Handling command ValidateTransaction started
-[07:19:04 INF] Transaction 4ff8c2e162d2c56cb50e94e8578ed41bbd66a9d3b0c5b0d65442d43fc878b36a added to mempool
-[07:19:04 INF] Blockchain: Handling command ValidateTransaction ended
-[07:19:48 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:19:48 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:20:05 INF] Blockchain: Handling command ValidateNewBlockHeader started
-[07:20:05 INF] Handling new block header #1791
-[07:20:05 INF] Request block #1791 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92 from peers
-[07:20:05 INF] Blockchain: Handling command ValidateNewBlockHeader ended
-[07:20:05 INF] Blockchain: Handling command ValidateBlock started
-[07:20:05 INF] Validating new block #1791 with 3 txs 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92
-[07:20:05 INF] BlockHandler: New block #1791 of 26-10-13 07:20:05 with 3 txs 0x506326958 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92
-[07:20:05 INF] Tally adding block #1791 of block 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92 for interval #18
-[07:20:05 INF] BlockHandler: BlockAdded #1791 hash #001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92
-[07:20:05 INF] BlockHandler: Connecting to longest chain
-[07:20:05 INF] BlockHandler: New tip #1791 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92
-[07:20:05 INF] Blockchain: Handling command ValidateBlock ended
-[07:20:05 INF] AddressDB adding block #1791 of block 001a0300d6b9d34a96c858bd6ec89c52ff4aea25e92a5b9c01e816ea91185a92
-[07:20:05 INF] Blockchain: Handling request GetMempool started
-[07:20:05 INF] Blockchain: Handling request GetMempool ended
-[07:20:25 INF] Blockchain: Handling command HandleNewTransactions started
-[07:20:25 INF] Blockchain: Handling command HandleNewTransactions ended
-[07:20:25 INF] Blockchain: Handling command ValidateTransaction started
-[07:20:25 INF] Transaction 1c06a48d11f7a281c0c9a24fdc0c944e4722bbf46027456a8a9142f24c324002 added to mempool
-[07:20:25 INF] Blockchain: Handling command ValidateTransaction ended
-[07:21:19 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:21:19 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:21:19 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:21:19 INF] Blockchain: Handling request GetBlockChainInfo ended
-[07:21:48 INF] Blockchain: Handling request GetBlockChainInfo started
-[07:21:48 INF] Blockchain: Handling request GetBlockChainInfo ended
 [07:23:48 INF] Blockchain: Handling request GetBlockChainInfo started
 [07:23:48 INF] Blockchain: Handling request GetBlockChainInfo ended
 [07:24:07 INF] Blockchain: Handling command ValidateNewBlockHeader started
@@ -298,3 +43,258 @@
 [07:36:19 INF] Blockchain: Handling request GetBlockChainInfo ended
 [07:36:19 INF] Blockchain: Handling request GetBlockChainInfo started
 [07:36:19 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:37:41 INF] Blockchain: Handling command HandleNewTransactions started
+[07:37:41 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:37:41 INF] Blockchain: Handling command ValidateTransaction started
+[07:37:41 INF] Transaction 845b07ee7e6dd1a5b0344a3cf98694607141a3762869e034b277db54f00841fb added to mempool
+[07:37:41 INF] Blockchain: Handling command ValidateTransaction ended
+[07:37:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:37:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:39:27 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:39:27 INF] Handling new block header #1793
+[07:39:27 INF] Request block #1793 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270 from peers
+[07:39:27 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:39:27 INF] Blockchain: Handling command ValidateBlock started
+[07:39:27 INF] Validating new block #1793 with 4 txs 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270
+[07:39:27 INF] BlockHandler: New block #1793 of 26-10-13 07:39:27 with 4 txs 0x506313393 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270
+[07:39:27 INF] Tally adding block #1793 of block 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270 for interval #18
+[07:39:27 INF] BlockHandler: BlockAdded #1793 hash #82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270
+[07:39:27 INF] BlockHandler: Connecting to longest chain
+[07:39:27 INF] BlockHandler: New tip #1793 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270
+[07:39:27 INF] Blockchain: Handling command ValidateBlock ended
+[07:39:27 INF] AddressDB adding block #1793 of block 82498221c845aae28633bdb3c64b57f83d6c41d6dc72d4f2a08812cd35906270
+[07:39:27 INF] Blockchain: Handling request GetMempool started
+[07:39:27 INF] Blockchain: Handling request GetMempool ended
+[07:39:27 INF] Blockchain: Handling command HandleNewTransactions started
+[07:39:27 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:39:27 INF] Blockchain: Handling command ValidateTransaction started
+[07:39:27 INF] Transaction 62c91c3587c83c98d4420bea71bf3abf74b240c0d088b7e655ff40be31572d26 added to mempool
+[07:39:27 INF] Blockchain: Handling command ValidateTransaction ended
+[07:39:45 INF] Blockchain: Handling command HandleNewTransactions started
+[07:39:45 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:39:45 INF] Blockchain: Handling command ValidateTransaction started
+[07:39:45 INF] Transaction e19fde61441f8d984f17a55e787bab7f15784f46a2473bb4b94ca10ba6eaba95 added to mempool
+[07:39:45 INF] Blockchain: Handling command ValidateTransaction ended
+[07:39:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:39:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:40:18 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:40:18 INF] Handling new block header #1794
+[07:40:18 INF] Request block #1794 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227 from peers
+[07:40:18 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:40:18 INF] Blockchain: Handling command ValidateBlock started
+[07:40:18 INF] Validating new block #1794 with 3 txs 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227
+[07:40:18 INF] BlockHandler: New block #1794 of 26-10-13 07:40:18 with 3 txs 0x506627334 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227
+[07:40:18 INF] Tally adding block #1794 of block 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227 for interval #18
+[07:40:18 INF] BlockHandler: BlockAdded #1794 hash #49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227
+[07:40:18 INF] BlockHandler: Connecting to longest chain
+[07:40:18 INF] BlockHandler: New tip #1794 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227
+[07:40:18 INF] Blockchain: Handling command ValidateBlock ended
+[07:40:18 INF] AddressDB adding block #1794 of block 49e1894da81f21d1f7346e9a08226dce495011ca14bbb88529d9d1fb9503e227
+[07:40:18 INF] Blockchain: Handling request GetMempool started
+[07:40:18 INF] Blockchain: Handling request GetMempool ended
+[07:40:19 INF] Blockchain: Handling command HandleNewTransactions started
+[07:40:19 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:40:19 INF] Blockchain: Handling command ValidateTransaction started
+[07:40:19 INF] Transaction d32f4855033debe5d432ea382a041a1b8fb448b0fd473fd2b317fd3583c5b098 added to mempool
+[07:40:19 INF] Blockchain: Handling command ValidateTransaction ended
+[07:40:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:40:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:40:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:40:26 INF] Transaction d268dbfe5b6cb370fc82f2f318b8c5620f1dbb6e26526729987b832375f10b57 added to mempool
+[07:40:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:41:25 INF] Blockchain: Handling command HandleNewTransactions started
+[07:41:25 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:41:25 INF] Blockchain: Handling command ValidateTransaction started
+[07:41:25 INF] Transaction 16e2e7b2dc8deb778ed72b4a87298a97619ca48cd7c63e336741a8a9cb109442 added to mempool
+[07:41:25 INF] Blockchain: Handling command ValidateTransaction ended
+[07:41:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:41:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:42:15 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:42:15 INF] Handling new block header #1795
+[07:42:15 INF] Request block #1795 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527 from peers
+[07:42:15 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:42:15 INF] Blockchain: Handling command ValidateBlock started
+[07:42:15 INF] Validating new block #1795 with 4 txs 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527
+[07:42:15 INF] BlockHandler: New block #1795 of 26-10-13 07:42:15 with 4 txs 0x506527870 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527
+[07:42:15 INF] Tally adding block #1795 of block 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527 for interval #18
+[07:42:15 INF] BlockHandler: BlockAdded #1795 hash #3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527
+[07:42:15 INF] BlockHandler: Connecting to longest chain
+[07:42:15 INF] BlockHandler: New tip #1795 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527
+[07:42:15 INF] Blockchain: Handling command ValidateBlock ended
+[07:42:15 INF] AddressDB adding block #1795 of block 3155736dd74c635c4adfc74d769798ab24c6114694de19174aa48fc66a4b7527
+[07:42:15 INF] Blockchain: Handling request GetMempool started
+[07:42:15 INF] Blockchain: Handling request GetMempool ended
+[07:42:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:42:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:42:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:42:26 INF] Transaction aa4f4f2a4915ee47258876a57d7ac3c9bc4ff16e9fbf5c1909220579d52dbdee added to mempool
+[07:42:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:42:48 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:42:48 INF] Handling new block header #1796
+[07:42:48 INF] Request block #1796 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20 from peers
+[07:42:48 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:42:48 INF] Blockchain: Handling command ValidateBlock started
+[07:42:48 INF] Validating new block #1796 with 2 txs 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20
+[07:42:48 INF] BlockHandler: New block #1796 of 26-10-13 07:42:48 with 2 txs 0x506478194 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20
+[07:42:48 INF] Tally adding block #1796 of block 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20 for interval #18
+[07:42:48 INF] BlockHandler: BlockAdded #1796 hash #23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20
+[07:42:48 INF] BlockHandler: Connecting to longest chain
+[07:42:48 INF] BlockHandler: New tip #1796 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20
+[07:42:48 INF] Blockchain: Handling command ValidateBlock ended
+[07:42:48 INF] AddressDB adding block #1796 of block 23a61f2b5b584565cdea20adfc03f089c46a7d39f7b3db6c6b53b0da28d48c20
+[07:42:48 INF] Blockchain: Handling request GetMempool started
+[07:42:48 INF] Blockchain: Handling request GetMempool ended
+[07:43:23 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:43:23 INF] Handling new block header #1797
+[07:43:23 INF] Request block #1797 e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1 from peers
+[07:43:23 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:43:23 INF] Blockchain: Handling command ValidateBlock started
+[07:43:23 INF] Validating new block #1797 with 1 txs e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1
+[07:43:24 INF] BlockHandler: New block #1797 of 26-10-13 07:43:23 with 1 txs 0x506378056 e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1
+[07:43:24 INF] Tally adding block #1797 of block e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1 for interval #18
+[07:43:24 INF] BlockHandler: BlockAdded #1797 hash #e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1
+[07:43:24 INF] BlockHandler: Connecting to longest chain
+[07:43:24 INF] BlockHandler: New tip #1797 e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1
+[07:43:24 INF] Blockchain: Handling command ValidateBlock ended
+[07:43:24 INF] AddressDB adding block #1797 of block e2e7e6bbe2fa6388a322f9c98ea61390499020c65c2d7ef29a73907570a902d1
+[07:43:24 INF] Blockchain: Handling request GetMempool started
+[07:43:24 INF] Blockchain: Handling request GetMempool ended
+[07:43:25 INF] Blockchain: Handling command HandleNewTransactions started
+[07:43:25 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:43:25 INF] Blockchain: Handling command ValidateTransaction started
+[07:43:25 INF] Transaction 9887f01613264f94ed4c8b2bc00b3ead2e256b3d25256050148550e71745e00c added to mempool
+[07:43:25 INF] Blockchain: Handling command ValidateTransaction ended
+[07:43:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:43:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:44:16 INF] Blockchain: Handling command HandleNewTransactions started
+[07:44:16 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:44:16 INF] Blockchain: Handling command ValidateTransaction started
+[07:44:16 INF] Transaction 9237b01d350c40c8eccddcb7928449c91888ebef24ef7ada1798c630b152bede added to mempool
+[07:44:16 INF] Blockchain: Handling command ValidateTransaction ended
+[07:44:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:44:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:44:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:44:26 INF] Transaction de6b6bac64fd9a6cc7118bb35a130314237e28d6b9f46a9e7fde98599bf7a38b added to mempool
+[07:44:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:45:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:45:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:45:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:45:26 INF] Transaction 3c296d226338bb3a590f26984ef1687450334ba8003b8c0e0b6fc182589906c0 added to mempool
+[07:45:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:45:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:45:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:46:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:46:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:46:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:46:26 INF] Transaction ff9c35d466020304b7dd689f096339bbfac7157ee5965c2b2a9ee0bacf7d6a8e added to mempool
+[07:46:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:47:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:47:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:47:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:47:26 INF] Transaction e9da9803f369e48138d6f992d47fe54d8e33b5717a39e7957b7db09a19c244d2 added to mempool
+[07:47:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:47:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:47:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:47:53 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:47:53 INF] Handling new block header #1798
+[07:47:53 INF] Request block #1798 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7 from peers
+[07:47:53 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:47:53 INF] Blockchain: Handling command ValidateBlock started
+[07:47:53 INF] Validating new block #1798 with 7 txs 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7
+[07:47:53 INF] BlockHandler: New block #1798 of 26-10-13 07:47:53 with 7 txs 0x506293871 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7
+[07:47:53 INF] Tally adding block #1798 of block 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7 for interval #18
+[07:47:53 INF] BlockHandler: BlockAdded #1798 hash #65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7
+[07:47:53 INF] BlockHandler: Connecting to longest chain
+[07:47:53 INF] BlockHandler: New tip #1798 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7
+[07:47:53 INF] Blockchain: Handling command ValidateBlock ended
+[07:47:53 INF] AddressDB adding block #1798 of block 65498f7e3cd896afc33c72d5301d8e5c71dd3d9c4af3521479829fe61a57f1f7
+[07:47:53 INF] Blockchain: Handling request GetMempool started
+[07:47:53 INF] Blockchain: Handling request GetMempool ended
+[07:47:54 INF] Blockchain: Handling command HandleNewTransactions started
+[07:47:54 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:47:54 INF] Blockchain: Handling command ValidateTransaction started
+[07:47:54 INF] Transaction 2d7803260fc1a1cedaa7aa0d63faa95b8c14b3d3d3fc12788dc99bae865431c6 added to mempool
+[07:47:54 INF] Blockchain: Handling command ValidateTransaction ended
+[07:48:25 INF] Blockchain: Handling command HandleNewTransactions started
+[07:48:25 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:48:25 INF] Blockchain: Handling command ValidateTransaction started
+[07:48:25 INF] Transaction f902236ea2e95bb77865b07db856d7361701c0bfcfa2f94967ce597c8cbf0a81 added to mempool
+[07:48:25 INF] Blockchain: Handling command ValidateTransaction ended
+[07:48:47 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:48:47 INF] Handling new block header #1799
+[07:48:47 INF] Request block #1799 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167 from peers
+[07:48:47 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:48:47 INF] Blockchain: Handling command ValidateBlock started
+[07:48:47 INF] Validating new block #1799 with 3 txs 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167
+[07:48:47 INF] BlockHandler: New block #1799 of 26-10-13 07:48:47 with 3 txs 0x506300078 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167
+[07:48:47 INF] Tally adding block #1799 of block 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167 for interval #18
+[07:48:47 INF] BlockHandler: BlockAdded #1799 hash #083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167
+[07:48:47 INF] BlockHandler: Connecting to longest chain
+[07:48:47 INF] BlockHandler: New tip #1799 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167
+[07:48:47 INF] Blockchain: Handling command ValidateBlock ended
+[07:48:47 INF] AddressDB adding block #1799 of block 083ba1d5dcc905d2e280d10961584cf7f75a1089ccd109963302411b05d0e167
+[07:48:47 INF] Blockchain: Handling request GetMempool started
+[07:48:47 INF] Blockchain: Handling request GetMempool ended
+[07:48:49 INF] Blockchain: Handling command HandleNewTransactions started
+[07:48:49 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:48:49 INF] Blockchain: Handling command ValidateTransaction started
+[07:48:49 INF] Transaction 5c9e93325fd8ee1aedef89cf8e28003b3f762434599aa7ad4b31cd0c5f74a06b added to mempool
+[07:48:49 INF] Blockchain: Handling command ValidateTransaction ended
+[07:49:25 INF] Blockchain: Handling command HandleNewTransactions started
+[07:49:25 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:49:25 INF] Blockchain: Handling command ValidateTransaction started
+[07:49:25 INF] Transaction 1b68906e0269a3c5a95f3f730890a494ffdba6265b539ac2eea5b4c4dfbbb14c added to mempool
+[07:49:25 INF] Blockchain: Handling command ValidateTransaction ended
+[07:49:48 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:49:48 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:50:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:50:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:50:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:50:26 INF] Transaction 623b9f3c6d761b15a593890da3511d5d407c2ca51a6dfe823ba0260a7f0c194f added to mempool
+[07:50:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:50:36 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[07:50:36 INF] Handling new block header #1800
+[07:50:36 INF] Request block #1800 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389 from peers
+[07:50:36 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[07:50:36 INF] Blockchain: Handling command ValidateBlock started
+[07:50:36 INF] Validating new block #1800 with 4 txs 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389
+[07:50:36 INF] BlockHandler: New block #1800 of 26-10-13 07:50:36 with 4 txs 0x506225130 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389
+[07:50:36 INF] Tally adding block #1800 of block 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389 for interval #18
+[07:50:36 INF] BlockHandler: BlockAdded #1800 hash #17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389
+[07:50:36 INF] BlockHandler: Connecting to longest chain
+[07:50:36 INF] BlockHandler: New tip #1800 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389
+[07:50:36 INF] Blockchain: Handling command ValidateBlock ended
+[07:50:36 INF] AddressDB adding block #1800 of block 17befd6d5ac6b0e192373c437aab1ae4a50a8049fdb38fbe8b96e22cd0f9b389
+[07:50:36 INF] Blockchain: Handling request GetMempool started
+[07:50:36 INF] Blockchain: Handling request GetMempool ended
+[07:51:25 INF] Blockchain: Handling command HandleNewTransactions started
+[07:51:25 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:51:25 INF] Blockchain: Handling command ValidateTransaction started
+[07:51:25 INF] Transaction 55da9a33680e91c6a5ec4715815b20536f9200acf52646520a6c0f89ea91eed5 added to mempool
+[07:51:25 INF] Blockchain: Handling command ValidateTransaction ended
+[07:51:49 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:51:49 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:52:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:52:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:52:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:52:26 INF] Transaction dd12f971106b407c9aa1fc134db0684927b29190ecc6a0532f577267711c4eca added to mempool
+[07:52:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:53:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:53:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:53:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:53:26 INF] Transaction 23b5294cdc4f2fa930cdd685ee2dd482897e2c6d30e1cc8fddc6cbaa2aebe5d2 added to mempool
+[07:53:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:53:49 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:53:49 INF] Blockchain: Handling request GetBlockChainInfo ended
+[07:54:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:54:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:54:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:54:26 INF] Transaction c7b39a67f84646aac1b07904713cddc427807ba20f991282cd65b0c4d00419b7 added to mempool
+[07:54:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:55:26 INF] Blockchain: Handling command HandleNewTransactions started
+[07:55:26 INF] Blockchain: Handling command HandleNewTransactions ended
+[07:55:26 INF] Blockchain: Handling command ValidateTransaction started
+[07:55:26 INF] Transaction b7eab468461868821f4e0e89394ca85ba8c67b481cbb902c86ebf24897ee0609 added to mempool
+[07:55:26 INF] Blockchain: Handling command ValidateTransaction ended
+[07:55:49 INF] Blockchain: Handling request GetBlockChainInfo started
+[07:55:49 INF] Blockchain: Handling request GetBlockChainInfo ended

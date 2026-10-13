@@ -12,3 +12,6 @@
 [2026-10-13 07:21] following: 1791 blocks, headers 1791
 [2026-10-13 07:36] following: 1792 blocks, headers 1792
 [2026-10-13 07:36] node: 1792 blocks; error/rejected lines in log: 0
+[2026-10-13 07:36] lab testnet on testnet-v1: start
+[2026-10-13 07:55] lab testnet: exit 0 ([2026-10-13 07:36] lab testnet on f81c0e09 Merge branch 'v1-contracts' into testnet-v1 [2026-10-13 07:54] lab-testnet-v1.sh: exit 1; [07:54:12] FAIL: after 900 s: all three on one tip [2026-10-13 07:55] T5b: 07:55:51 RESULT: PASS )
+[2026-10-13 07:55] done; node zp-rehearsal keeps running
