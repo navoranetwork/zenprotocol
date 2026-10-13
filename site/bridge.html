@@ -58,6 +58,7 @@
 <p class="lead">Bring test USDC from Base Sepolia onto the ZP testnet as <b>zUSDC</b>, one for one, and take it back whenever you want. Every zUSDC is backed by a USDC the bridge holds.</p>
 
 <div class="health" id="health" aria-live="polite"><span class="dot"></span><b>Checking the bridge…</b></div>
+<p class="sub" id="live" style="margin: 4px 0 0; font-size: 13px; color: var(--s-muted)"></p>
 
 <div class="pair">
   <div class="side"><div class="k">USDC held by the bridge</div><div class="v" id="res">–</div><small id="resnet">on the EVM test network</small></div>
@@ -235,7 +236,8 @@
       const data = '0xa9059cbb' + S.bridgeEvm.slice(2).toLowerCase().padStart(64, '0') + units.toString(16).padStart(64, '0');
       const tx = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: S.usdc, data }] });
       show('m3', 'ok', `Sent. Transaction ${evmLink('tx', tx)}. The zUSDC arrives at <code>${esc(lk.zp.slice(0, 14))}…</code> after the confirmations; your activity below updates by itself.`);
-      $('s3').classList.add('done'); watch();
+      sentDeposits.push({ evmTx: String(tx).toLowerCase(), amount: String(units), from: account, confs: 0 });
+      $('s3').classList.add('done'); lookup(account); trackSent(); watch();
     } catch (e) { show('m3', 'err', 'Not sent: ' + errText(e)); }
   };
 
@@ -258,6 +260,24 @@
 
   // ---- activity -----------------------------------------------------------------------------
   let lastLookup = null;
+  // deposits sent from this page that the bridge has not reported yet: shown at once, with their confirmations
+  // on the EVM chain (read through the wallet), until the bridge's own row for them arrives
+  const sentDeposits = [];
+  let tracking = null;
+  async function trackSent() {
+    clearTimeout(tracking);
+    if (!sentDeposits.length || !eth()) return;
+    try {
+      const head = parseInt(await eth().request({ method: 'eth_blockNumber', params: [] }), 16);
+      for (const d of sentDeposits) {
+        const rc = await eth().request({ method: 'eth_getTransactionReceipt', params: [d.evmTx] });
+        d.confs = rc && rc.blockNumber ? head - parseInt(rc.blockNumber, 16) + 1 : 0;
+        if (rc && rc.status === '0x0') d.failed = true;
+      }
+      if (account) lookup(account);
+    } catch { }
+    tracking = setTimeout(trackSent, 4000);
+  }
   async function lookup(evm) {
     lastLookup = evm;
     const box = $('lk');
@@ -265,7 +285,12 @@
       const r = await fetch('/bridge/lookup?evm=' + encodeURIComponent(evm.toLowerCase()), { cache: 'no-store' });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
       if (j.zp && account && evm.toLowerCase() === account) { $('s2').classList.add('done'); if (!$('zpaddr').value) $('zpaddr').value = j.zp; }
+      const known = new Set([...j.waiting, ...j.deposits].map(d => String(d.evmTx).toLowerCase()));
+      for (let i = sentDeposits.length - 1; i >= 0; i--) if (known.has(sentDeposits[i].evmTx)) sentDeposits.splice(i, 1);
+      const need = S?.confirmations ?? 12;
       const rows = [
+        ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx),
+          d.failed ? 'failed on the EVM chain' : d.confs >= need ? 'confirmed, being issued' : `confirming: ${Math.max(0, d.confs)} of ${need}`]),
         ...j.waiting.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), j.zp ? 'being issued' : 'waiting for a link']),
         ...j.deposits.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), 'zUSDC issued ' + zpLink('tx', d.zpTx)]),
         ...j.withdrawals.map(d => ['Withdrawal', usdc(d.amount), zpLink('tx', d.zpTx), String(d.evmTx).startsWith('mock') ? 'USDC paid' : 'USDC paid ' + evmLink('tx', d.evmTx)])];
@@ -281,12 +306,13 @@
   // live: the bridge pushes an event when a deposit, withdrawal or link happens (GET /bridge/events); the page then
   // refreshes the status and the activity shown. Polling every 60 s stays as a fallback when the stream is down.
   let soon = null, live = false;
+  const liveMark = () => { const el = $('live'); if (el) el.textContent = live ? 'Live: updates appear by themselves' : 'Reconnecting… (checking every minute)'; };
   const refresh = () => { clearTimeout(soon); soon = setTimeout(() => { loadStatus(); if (account) { lookup(account); balance(); } else if (lastLookup) lookup(lastLookup); }, 300); };
   if ('EventSource' in window) {
     const es = new EventSource('/bridge/events');
     es.addEventListener('change', refresh);
-    es.onopen = () => { if (!live) { live = true; refresh(); } };
-    es.onerror = () => { live = false; };
+    es.onopen = () => { if (!live) { live = true; refresh(); } liveMark(); };
+    es.onerror = () => { live = false; liveMark(); };
   }
   setInterval(() => { if (!live) refresh(); }, 60000);
 
