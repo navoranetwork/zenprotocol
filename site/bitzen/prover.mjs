@@ -1,4 +1,3 @@
-// Copy of navoranetwork/bitzen services/prover.mjs (tested there: tests/prover/run.sh). Keep the two identical.
 // BitZen prover: makes the swap automatic. Watches the BitZenSwap contract's reserved offers, finds on Bitcoin the
 // payment to each reservation's script, and as soon as its block has the confirmations the offer's price needs (2 up
 // to 0.01 BTC, 3 up to 0.1, 4 up to 1, else 6) and is in BitZenChain's ring, sends the proof (`pay` to the chain
@@ -6,20 +5,51 @@
 // Anyone can run it; it only carries public data, and the contracts check everything (a wrong proof is refused).
 // The node's wallet pays the call's fee. Node 18+, no packages.
 //
+// It also serves the swap page (site/swap.html) when PROVER_LISTEN is set:
+//   GET  /status    the offers (amount, price, state, the Bitcoin address to pay, the payment and its confirmations)
+//   POST /reserve   { id, buyer: tzn1… address }: reserves the offer for that address (the node's wallet pays the fee)
+//
 // env: PROVER_NODE (http://127.0.0.1:31567)  PROVER_PASSWORD  PROVER_CHAIN, PROVER_SWAP (contract addresses ctzn1…)
-//      PROVER_BTC_API (https://mempool.space/api)  PROVER_LOOP_MS (30000)  PROVER_STATE (./prover-state.json)
+//      PROVER_BTC_API (https://mempool.space/api)  PROVER_BTC_NET (main | test: address prefix bc / tb)
+//      PROVER_LOOP_MS (30000)  PROVER_STATE (./prover-state.json)  PROVER_LISTEN (host:port, off when unset)
 import { createHash } from 'node:crypto';
+import http from 'node:http';
 import { readFileSync, writeFileSync } from 'node:fs';
 const env = process.env;
 const NODE = env.PROVER_NODE || 'http://127.0.0.1:31567', PW = env.PROVER_PASSWORD || 'testnet';
 const CHAIN = env.PROVER_CHAIN, SWAP = env.PROVER_SWAP, BTC = env.PROVER_BTC_API || 'https://mempool.space/api';
 const LOOP_MS = Number(env.PROVER_LOOP_MS || 30000), STATE = env.PROVER_STATE || './prover-state.json';
 const RING = 16;
+const NET = env.PROVER_BTC_NET || 'main', LISTEN = env.PROVER_LISTEN || '';
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const sha = b => createHash('sha256').update(b).digest();
 const rev = h => h.match(/../g).reverse().join('');
 const blockHash = hex => rev(sha(sha(Buffer.from(hex, 'hex'))).toString('hex'));
+// a Bitcoin output script as an address (P2WPKH, P2WSH, P2TR: bech32 / bech32m; P2PKH, P2SH: base58check); null otherwise
+const B32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+function polymod(v) { const G = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]; let c = 1; for (const x of v) { const b = c >>> 25; c = ((c & 0x1ffffff) << 5) ^ x; for (let i = 0; i < 5; i++) if ((b >>> i) & 1) c ^= G[i]; } return c >>> 0; }
+function bech32(hrp, version, prog) {
+  const conv = []; let acc = 0, bits = 0; for (const b of prog) { acc = (acc << 8) | b; bits += 8; while (bits >= 5) { bits -= 5; conv.push((acc >>> bits) & 31); } } if (bits) conv.push((acc << (5 - bits)) & 31);
+  const data = [version, ...conv], k = version === 0 ? 1 : 0x2bc830a3;
+  const exp = [...[...hrp].map(c => c.charCodeAt(0) >> 5), 0, ...[...hrp].map(c => c.charCodeAt(0) & 31)];
+  const pm = polymod([...exp, ...data, 0, 0, 0, 0, 0, 0]) ^ k;
+  return hrp + '1' + [...data, ...[0, 1, 2, 3, 4, 5].map(i => (pm >>> (5 * (5 - i))) & 31)].map(x => B32[x]).join('');
+}
+function base58check(payload) {
+  const A = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const b = Buffer.concat([payload, sha(sha(payload)).subarray(0, 4)]); let n = BigInt('0x' + b.toString('hex')), out = '';
+  while (n > 0n) { out = A[Number(n % 58n)] + out; n /= 58n; } for (const x of b) { if (x) break; out = '1' + out; } return out;
+}
+export function scriptAddress(hex, net = NET) {
+  const s = Buffer.from(hex, 'hex'), hrp = net === 'main' ? 'bc' : 'tb';
+  if (s.length === 22 && s[0] === 0 && s[1] === 20) return bech32(hrp, 0, s.subarray(2));
+  if (s.length === 34 && s[0] === 0 && s[1] === 32) return bech32(hrp, 0, s.subarray(2));
+  if (s.length === 34 && s[0] === 0x51 && s[1] === 32) return bech32(hrp, 1, s.subarray(2));
+  if (s.length === 25 && s[0] === 0x76 && s[1] === 0xa9 && s[2] === 20 && s[23] === 0x88 && s[24] === 0xac) return base58check(Buffer.concat([Buffer.of(net === 'main' ? 0 : 0x6f), s.subarray(3, 23)]));
+  if (s.length === 23 && s[0] === 0xa9 && s[1] === 20 && s[22] === 0x87) return base58check(Buffer.concat([Buffer.of(net === 'main' ? 5 : 0xc4), s.subarray(2, 22)]));
+  return null;
+}
 export const confsFor = sats => sats <= 1_000_000 ? 2 : sats <= 10_000_000 ? 3 : sats <= 100_000_000 ? 4 : 6;
 
 async function get(url, json = true) {
@@ -64,9 +94,22 @@ let sent = {};   // offer id + txid -> ZP transaction already sent
 try { sent = JSON.parse(readFileSync(STATE, 'utf8')); } catch { }
 const save = () => { try { writeFileSync(STATE, JSON.stringify(sent)); } catch (e) { log('state not saved:', e.message); } };
 
+let view = { updated: null, offers: [] };
 async function round() {
   const chain = plain(await get(`${NODE}/contract/state?address=${CHAIN}`));
   const swap = plain(await get(`${NODE}/contract/state?address=${SWAP}`));
+  const zpTip = (await get(`${NODE}/blockchain/info`)).blocks;
+  const offers = [];
+  if (swap) for (const [id, o] of Object.entries(swap)) {
+    if (!o || typeof o !== 'object' || o.amount == null || o.sats == null) continue;
+    const until = o.until != null ? Number(o.until) : null, held = until != null && zpTip + 1 <= until;
+    const k = Number(o.k || 0), nextScript = o['s' + k];
+    offers.push({ id, zp: Number(o.amount) / 1e8, sats: Number(o.sats), confs: confsFor(Number(o.sats)),
+      state: held ? 'reserved' : o.cur ? 'expired' : 'open', until, buyer: o.buyer?.PK?.hash || null,
+      address: o.cur ? scriptAddress(o[o.cur]) : null, script: o.cur ? o[o.cur] : null,
+      canReserve: !held && !!nextScript, payment: null });
+  }
+  view = { updated: new Date().toISOString(), chain: CHAIN, swap: SWAP, zpTip, btcNet: NET, offers };
   if (!chain || !swap) return;
   const chainId = (await get(`${NODE}/contract/active`)).find(c => c.address === CHAIN)?.contractId;
   const swapId = (await get(`${NODE}/contract/active`)).find(c => c.address === SWAP)?.contractId;
@@ -80,10 +123,17 @@ async function round() {
     const shash = rev(sha(Buffer.from(script, 'hex')).toString('hex'));        // electrum script hash
     const txs = await get(`${BTC}/scripthash/${shash}/txs`);
     for (const t of txs) {
-      if (!t.status?.confirmed) continue;
+      if (!t.status?.confirmed) {
+        const vo = view.offers.find(x => x.id === id), vv = t.vout.findIndex(x => x.scriptpubkey === script && x.value >= sats);
+        if (vo && vv >= 0 && !vo.payment) vo.payment = { txid: t.txid, value: t.vout[vv].value, block: null, confs: 0, need, proof: null };
+        continue;
+      }
       const vout = t.vout.findIndex(x => x.scriptpubkey === script && x.value >= sats);
-      if (vout < 0 || sent[id + ':' + t.txid]) continue;
+      if (vout < 0) continue;
+      if (sent[id + ':' + t.txid]) { const vo = view.offers.find(x => x.id === id); if (vo) vo.payment = { txid: t.txid, value: t.vout[vout].value, block: t.status.block_height, need, proof: sent[id + ':' + t.txid] }; continue; }
       const slot = slots.find(s => s.hash === t.status.block_hash);
+      const vo = view.offers.find(x => x.id === id);
+      if (vo) vo.payment = { txid: t.txid, value: t.vout[vout].value, block: t.status.block_height, confs: slot ? tipN - slot.n + 1 : null, need, proof: null };
       if (!slot) { log(`offer ${id}: payment ${t.txid} in block ${t.status.block_height}, not in the chain contract's ring yet (or already out of it)`); continue; }
       const confs = tipN - slot.n + 1;
       if (confs < need) { log(`offer ${id}: payment ${t.txid}: ${confs} of ${need} confirmations`); continue; }
@@ -99,14 +149,48 @@ async function round() {
       const r = await fetch(`${NODE}/wallet/contract/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(180000),
         body: JSON.stringify({ address: CHAIN, command: 'pay', messageBody: data({ t: 'Dict', v: e }).toString('hex'), options: { returnAddress: true }, spends: [], password: PW }) });
       const text = (await r.text()).trim();
-      if (/^"[0-9a-f]{64}"$/.test(text)) { sent[id + ':' + t.txid] = JSON.parse(text); save(); log(`offer ${id}: proof of ${t.txid} sent (${confs} confirmations), ZP transaction ${JSON.parse(text)}`); }
+      if (/^"[0-9a-f]{64}"$/.test(text)) { sent[id + ':' + t.txid] = JSON.parse(text); save(); if (vo) vo.payment.proof = JSON.parse(text); log(`offer ${id}: proof of ${t.txid} sent (${confs} confirmations), ZP transaction ${JSON.parse(text)}`); }
       else log(`offer ${id}: proof of ${t.txid} refused: ${text.slice(0, 200)}`);
     }
   }
 }
 
+// ---- the swap page's API ----
+async function reserve(id, buyer) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(id)) throw new Error('bad offer id');
+  if (typeof buyer !== 'string' || !/^t?zn1[0-9a-z]{20,90}$/.test(buyer)) throw new Error('that is not a ZP address');
+  const d = await get(`${NODE}/address/decode?address=${encodeURIComponent(buyer)}`);
+  if (!d.pkHash) throw new Error('that is not a ZP address of a key');
+  const o = view.offers.find(x => x.id === id);
+  if (!o) throw new Error('no such offer'); if (!o.canReserve) throw new Error(o.state === 'reserved' ? 'the offer is reserved' : 'the offer cannot be reserved again');
+  const lock = Buffer.concat([Buffer.of(8), varint(2), varint(32), Buffer.from(d.pkHash, 'hex')]);
+  const body = Buffer.concat([Buffer.of(12), varint(2), bytes(Buffer.from('id')), data({ t: 'String', v: id }), bytes(Buffer.from('buyer')), lock]);
+  const r = await fetch(`${NODE}/wallet/contract/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(180000),
+    body: JSON.stringify({ address: SWAP, command: 'reserve', messageBody: body.toString('hex'), options: { returnAddress: true }, spends: [], password: PW }) });
+  const text = (await r.text()).trim();
+  if (!/^"[0-9a-f]{64}"$/.test(text)) throw new Error('refused: ' + text.slice(0, 160));
+  log(`offer ${id}: reserved for ${buyer}, ZP transaction ${JSON.parse(text)}`);
+  return { tx: JSON.parse(text), pkHash: d.pkHash };
+}
+function serve() {
+  const [host, port] = LISTEN.split(':');
+  const json = (res, code, v) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(v)); };
+  http.createServer(async (req, res) => {
+    try {
+      if (req.method === 'GET' && req.url === '/status') return json(res, 200, view);
+      if (req.method === 'POST' && req.url === '/reserve') {
+        let b = ''; for await (const c of req) { b += c; if (b.length > 2048) throw new Error('too large'); }
+        const { id, buyer } = JSON.parse(b);
+        return json(res, 200, await reserve(id, buyer));
+      }
+      json(res, 404, { error: 'unknown path' });
+    } catch (e) { json(res, 400, { error: String(e.message || e).slice(0, 200) }); }
+  }).listen(Number(port), host, () => log('swap API on', LISTEN));
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
   if (!CHAIN || !SWAP) { console.error('set PROVER_CHAIN and PROVER_SWAP'); process.exit(1); }
+  if (LISTEN) serve();
   log(`BitZen prover: chain ${CHAIN}, swap ${SWAP}, node ${NODE}, Bitcoin ${BTC}`);
   for (;;) { try { await round(); } catch (e) { log('round failed:', e.message); } await sleep(LOOP_MS); }
 }

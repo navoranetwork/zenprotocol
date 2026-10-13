@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZP ⇄ BTC</title>
+<meta name="description" content="Buy ZP with bitcoin straight from a seller: a contract checks the Bitcoin payment and releases the ZP. No middleman holds the money.">
+<link rel="stylesheet" href="/shell/shell.css">
+<style>
+  .zp .small { font-size: 14px; color: var(--s-muted); }
+  .zp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .zp .offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; margin: 14px 0 22px; }
+  .zp .offer { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .zp .offer.mine { border: 2px solid var(--s-accent); }
+  .zp .offer .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .zp .offer .amt { font-size: 22px; font-weight: 700; }
+  .zp .offer .btc { font-family: ui-monospace, monospace; font-size: 16px; color: #B85A00; }
+  .zp .offer .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--s-muted); gap: 10px; }
+  .zp .offer button, .zp .panel button { min-height: 44px; border-radius: 10px; border: 0; background: var(--s-accent); color: var(--s-accent-ink); font: 600 15px system-ui, sans-serif; cursor: pointer; padding: 0 16px; }
+  .zp .offer button[disabled], .zp .panel button[disabled] { opacity: .45; cursor: not-allowed; }
+  .zp .panel { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 18px; margin: 14px 0 22px; display: flex; flex-direction: column; gap: 14px; }
+  .zp .panel h2 { margin: 0; font-size: 19px; }
+  .zp .panel label { font-weight: 600; font-size: 14px; }
+  .zp .panel input { min-height: 44px; box-sizing: border-box; border: 1px solid var(--s-line); border-radius: 10px; padding: 0 12px; font: 500 14px ui-monospace, monospace; width: 100%; background: var(--s-bg); color: var(--s-ink); }
+  .zp .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; }
+  .zp .kv .v { font-family: ui-monospace, monospace; overflow-wrap: anywhere; text-align: right; }
+  .zp .kv.stack { grid-template-columns: minmax(0, 1fr); gap: 4px; } .zp .kv.stack .v { text-align: left; font-size: 15px; } .zp .kv.stack .k { color: var(--s-muted); font-size: 13px; margin-top: 8px; }
+  .zp .copy { min-height: 36px !important; background: none !important; color: var(--s-accent) !important; border: 1px solid var(--s-line) !important; font-size: 13px !important; }
+  .zp .note { border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
+  .zp .note.info { background: rgba(29, 78, 137, .1); } .zp .note.warn { background: rgba(214, 140, 20, .15); } .zp .note.err { background: rgba(196, 48, 48, .12); } .zp .note.ok { background: rgba(31, 154, 85, .13); }
+  .zp .bar { display: grid; gap: 6px; } .zp .bar span { height: 10px; border-radius: 5px; background: var(--s-line); } .zp .bar span.on { background: #C25E00; }
+  .zp ol.steps { margin: 0; padding-left: 20px; } .zp ol.steps li { margin: 6px 0; }
+</style>
+<script src="/shell/shell.js" defer></script>
+</head>
+<body class="zp">
+<main>
+<h1>Buy ZP with bitcoin</h1>
+<p class="lead">Pay from any Bitcoin wallet, straight to the seller. A contract on ZP checks the Bitcoin payment by itself and releases the ZP to you: about 20 minutes for small amounts. Nobody holds the money in between.</p>
+<div id="state" class="note info" hidden></div>
+
+<section id="buy" class="panel" hidden aria-live="polite"></section>
+
+<h2>Offers</h2>
+<div id="offers" class="offers"><p class="small">Loading…</p></div>
+
+<h2>How it works</h2>
+<ol class="steps">
+  <li><b>Reserve.</b> Pick an offer and give your ZP address. The offer is held for you for about 6 hours; nobody else can take it and the seller cannot cancel it.</li>
+  <li><b>Pay.</b> Send the exact amount to the Bitcoin address shown. It is the seller's own address, made for your reservation only.</li>
+  <li><b>Receive.</b> Once the payment has enough confirmations (2 up to 0.01 BTC, 3 up to 0.1, 4 up to 1, 6 above), the proof is sent for you and the contract releases the ZP to your address. You do not need to do anything.</li>
+</ol>
+<p class="small">Selling ZP: an offer locks your ZP in the contract with your price and a few Bitcoin addresses from your wallet (one per reservation). Creating offers comes to the ZP Wallet next. Testnet: ZP coins have no value.</p>
+</main>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const btc = sats => (Number(sats) / 1e8).toFixed(8);
+const zp = v => Number(v).toLocaleString('en-US', { maximumFractionDigits: 8 });
+const BLOCK_MIN = 4;   // ZP block time target, minutes
+const store = { get() { try { return JSON.parse(localStorage.getItem('zp-swap') || 'null'); } catch { return null; } },
+                set(v) { try { localStorage.setItem('zp-swap', JSON.stringify(v)); } catch { } } };
+let V = null, mine = store.get();   // mine: { id, buyer } of the reservation made on this device
+
+function hm(blocks) { const m = Math.max(0, blocks) * BLOCK_MIN; return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; }
+function state(cls, html) { const s = $('state'); s.className = 'note ' + cls; s.innerHTML = html; s.hidden = !html; }
+
+async function load() {
+  try { const r = await fetch('/swap/status', { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); V = await r.json(); }
+  catch { state('err', 'The swap service is not answering right now. Reservations and payments are kept; try again in a minute.'); return; }
+  state('', '');
+  renderOffers(); renderBuy();
+}
+
+function renderOffers() {
+  const list = (V.offers || []).filter(o => o.state !== 'closed');
+  if (!list.length) { $('offers').innerHTML = '<p class="small">No offers right now.</p>'; return; }
+  $('offers').innerHTML = list.map(o => {
+    const per = o.zp ? Math.round(o.sats / o.zp) : 0, own = mine && mine.id === o.id;
+    const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(o.until - V.zpTip)}` : o.state === 'expired' ? 'A reservation expired' : 'Open';
+    return `<article class="offer${own ? ' mine' : ''}">
+      <div class="top"><div class="amt">${zp(o.zp)} ZP</div><div class="btc">${btc(o.sats)} BTC</div></div>
+      <div class="row"><span>${per.toLocaleString('en-US')} sat per ZP</span><span>${o.confs} confirmations</span></div>
+      <div class="row"><span>${esc(status)}</span><span class="mono">${esc(o.id)}</span></div>
+      ${own ? '<button type="button" data-show="1">Your reservation</button>'
+            : `<button type="button" data-buy="${esc(o.id)}" ${o.canReserve ? '' : 'disabled'}>Buy</button>`}
+    </article>`;
+  }).join('');
+}
+
+function renderBuy() {
+  const box = $('buy');
+  if (!mine) { box.hidden = true; return; }
+  const o = (V.offers || []).find(x => x.id === mine.id);
+  box.hidden = false;
+  if (!o) {   // the offer closed: received, or cancelled
+    box.innerHTML = mine.paid
+      ? `<h2>You received the ZP</h2><div class="note ok">The contract checked your Bitcoin payment and released the ZP to <span class="mono">${esc(mine.buyer)}</span>.</div><button type="button" data-done="1">Done</button>`
+      : `<h2>The offer is closed</h2><div class="note info">It is no longer in the market.</div><button type="button" data-done="1">Close</button>`;
+    return;
+  }
+  if (!mine.reserved) {   // step 1: reserve
+    box.innerHTML = `<h2>Buy ${zp(o.zp)} ZP for ${btc(o.sats)} BTC</h2>
+      <label for="buyer">Your ZP address (the ZP is sent there)</label>
+      <input id="buyer" autocomplete="off" spellcheck="false" placeholder="tzn1…" value="${esc(mine.buyer || '')}">
+      <div class="note info">The offer is then held for you for about 6 hours.</div>
+      <div id="msg"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap"><button type="button" data-reserve="1">Reserve</button><button type="button" class="copy" data-done="1">Cancel</button></div>`;
+    return;
+  }
+  const ours = !!(o.buyer && mine.pk && o.buyer.toLowerCase() === mine.pk.toLowerCase());
+  if (o.state === 'reserved' && ours && !mine.held) { mine.held = true; store.set(mine); }
+  if (!mine.held) {   // the reservation is not in a block yet
+    box.innerHTML = `<h2>Reserving…</h2><div class="note info">Waiting for the reservation to be in a ZP block (a few minutes). Do not pay yet: the payment details appear here.</div>`;
+    return;
+  }
+  if (!ours || (o.state !== 'reserved' && !o.payment)) {
+    box.innerHTML = `<h2>Your reservation expired</h2><div class="note warn">Do not pay now. Reserve again if the offer is still open.</div><button type="button" data-done="1">Close</button>`;
+    return;
+  }
+  const p = o.payment, left = o.until - V.zpTip, late = left * BLOCK_MIN < 180;
+  if (!p) {   // step 2: pay
+    const uri = `bitcoin:${o.address}?amount=${btc(o.sats)}`;
+    box.innerHTML = `<h2>Pay ${btc(o.sats)} BTC</h2>
+      <div class="kv stack">
+        <span class="k">Exact amount</span><span class="v">${btc(o.sats)} BTC</span><button type="button" class="copy" data-copy="${btc(o.sats)}">Copy amount</button>
+        <span class="k">To the seller's Bitcoin address</span><span class="v">${esc(o.address || '–')}</span><button type="button" class="copy" data-copy="${esc(o.address || '')}">Copy address</button>
+      </div>
+      <div class="note ${late ? 'warn' : 'info'}">${late
+        ? 'Less than 3 hours are left on your reservation: do not pay now. Wait until it expires and reserve again.'
+        : `Reserved for you for about ${hm(left)}. Pay within the next ${hm(left - 45)}. This address is for your reservation only; the bitcoin goes straight to the seller.`}</div>
+      ${late ? '' : `<a class="btn" href="${esc(uri)}">Open in my Bitcoin wallet</a>`}
+      <p class="small">This page updates by itself when the payment is seen.</p>`;
+    return;
+  }
+  // step 3: confirmations, then the proof
+  const c = Math.max(0, p.confs ?? 0), need = p.need || o.confs;
+  box.innerHTML = `<h2>${p.proof ? 'Releasing your ZP' : 'Payment received'}</h2>
+    <div class="kv"><span>Confirmations</span><span class="v">${Math.min(c, need)} of ${need}</span></div>
+    <div class="bar" style="grid-template-columns: repeat(${need}, 1fr)" aria-hidden="true">${Array.from({ length: need }, (_, i) => `<span class="${i < c ? 'on' : ''}"></span>`).join('')}</div>
+    <div class="note info">${p.proof ? `The proof was sent (ZP transaction <span class="mono">${esc(p.proof.slice(0, 16))}…</span>). The ZP arrives with the next ZP block.`
+      : p.block == null ? 'Your payment is waiting for its first Bitcoin block (about 10 minutes).'
+      : `About ${(need - c) * 10} more minutes: one Bitcoin block every 10 minutes on average. You can close this page.`}</div>
+    <p class="small">Bitcoin transaction <span class="mono">${esc(p.txid)}</span></p>`;
+  if (p.proof) { mine.paid = true; store.set(mine); }
+}
+
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest('button'); if (!t) return;
+  if (t.dataset.buy) { mine = { id: t.dataset.buy, buyer: mine?.buyer || '' }; store.set(mine); renderBuy(); renderOffers(); $('buy').scrollIntoView({ behavior: 'smooth' }); }
+  if (t.dataset.show) $('buy').scrollIntoView({ behavior: 'smooth' });
+  if (t.dataset.done) { mine = null; store.set(null); renderBuy(); renderOffers(); }
+  if (t.dataset.copy != null) { try { await navigator.clipboard.writeText(t.dataset.copy); t.textContent = 'Copied'; setTimeout(load, 1200); } catch { } }
+  if (t.dataset.reserve) {
+    const buyer = $('buyer').value.trim(), msg = $('msg');
+    if (!/^tzn1[0-9a-z]{20,}$/.test(buyer)) { msg.innerHTML = '<div class="note err">That does not look like a ZP testnet address (it starts with tzn1).</div>'; return; }
+    t.disabled = true; msg.innerHTML = '<div class="note info">Reserving… this takes one ZP block (a few minutes).</div>';
+    try {
+      const r = await fetch('/swap/reserve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: mine.id, buyer }) });
+      const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+      mine = { id: mine.id, buyer, reserved: true, tx: j.tx, pk: j.pkHash }; store.set(mine);
+      msg.innerHTML = '<div class="note ok">Reserved. The payment details appear when the reservation is in a block.</div>';
+      waitReserved();
+    } catch (e) { t.disabled = false; msg.innerHTML = `<div class="note err">Not reserved: ${esc(e.message)}</div>`; }
+  }
+});
+// after a reservation, show the payment step once the offer is held (the transaction is in a block)
+async function waitReserved() { for (let i = 0; i < 120; i++) { await load(); const o = V?.offers?.find(x => x.id === mine?.id); if (o && o.state === 'reserved') return; await new Promise(r => setTimeout(r, 10000)); } }
+
+load(); setInterval(load, 15000);
+})();
+</script>
+</body>
+</html>

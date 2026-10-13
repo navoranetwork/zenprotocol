@@ -7,7 +7,7 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 WEB=/var/www/zen-testnet
-NODE=${NODE_PORT:-31567}; EXPLORER=${EXPLORER_PORT:-11581}; ORACLE=${ORACLE_PORT:-8085}; BRIDGE=${BRIDGE_PORT:-8090}; FAUCET=${FAUCET_PORT:-8095}
+NODE=${NODE_PORT:-31567}; EXPLORER=${EXPLORER_PORT:-11581}; ORACLE=${ORACLE_PORT:-8085}; BRIDGE=${BRIDGE_PORT:-8090}; FAUCET=${FAUCET_PORT:-8095}; PROVER=${PROVER_PORT:-8096}
 VOL=$(docker volume inspect "$(basename "$REPO")_stack-data" --format '{{.Mountpoint}}' 2>/dev/null || true)
 
 command -v nginx >/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx; }
@@ -23,7 +23,7 @@ fi
 cat > /etc/cron.d/zen-faucet-topup <<CRON
 17 * * * * root bash $REPO/scripts/faucet-topup.sh >> /var/log/zen-faucet-topup.log 2>&1
 CRON
-for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet bitzen; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
+for f in markets dex oracle explorer assets stats cgp bridge contract guide instruments developers faucet bitzen swap; do cp "$REPO/site/$f.html" "$WEB/$f.html"; done
 cp "$REPO/site/testnet-home.html" "$WEB/index.html"
 rm -rf "$WEB/shell"; cp -r "$REPO/site/shell" "$WEB/shell"
 # Site frame settings. DOMAIN (e.g. testnet.example.org) turns on HTTPS; MAIN_URL links to the mainnet site.
@@ -71,6 +71,9 @@ server {
     location = /faucet/request { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k;
                                  proxy_set_header X-Real-IP \$remote_addr; proxy_pass http://127.0.0.1:$FAUCET/faucet/request; add_header Cache-Control "no-store"; }
     # live events for the bridge page (server-sent events: one long request per open page)
+    # ZP <-> BTC swap page: offers come from the prover (site/bitzen/prover.mjs, PROVER_LISTEN); it signs reservations, so POST is rate-limited
+    location = /swap/status  { limit_except GET  { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$PROVER/status; add_header Cache-Control "no-store"; }
+    location = /swap/reserve { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k; proxy_pass http://127.0.0.1:$PROVER/reserve; proxy_read_timeout 90s; add_header Cache-Control "no-store"; }
     location = /bridge/events { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/events; proxy_http_version 1.1; proxy_set_header Connection ""; proxy_buffering off; proxy_cache off; proxy_read_timeout 3600s; add_header Cache-Control "no-cache"; }
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
     # bridge page actions: look up an EVM address, link it to a ZP address (signed), claim a withdrawal
