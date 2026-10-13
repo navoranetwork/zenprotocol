@@ -1,0 +1,1 @@
+[2026-10-13 05:06] lab testnet on 5e9d8927 lab-testnet-run: publish the token template's DLL built by build-contract.sh; DLL_ONLY=1
