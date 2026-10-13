@@ -47,7 +47,7 @@ recreate() {   # $1: image. The node's compose project, file and service, from t
 
 case $MODE in
 build)
-  : "${GH_TOKEN:?}"; TC_COMMIT=${TC_COMMIT:-944f6d1}; SRC=/opt/zp-pow-image; GH="https://x-access-token:$GH_TOKEN@github.com"
+  : "${GH_TOKEN:?}"; TC_COMMIT=${TC_COMMIT:-aec63af}; SRC=/opt/zp-pow-image; GH="https://x-access-token:$GH_TOKEN@github.com"
   rm -rf "$SRC" && git clone -q -b testnet-v1 "$GH/navoranetwork/zp-pow.git" "$SRC" || exit 1
   [ -d /opt/zp-contracts-v1/.git ] || git clone -q "$GH/navoranetwork/zp-contracts-v1.git" /opt/zp-contracts-v1
   git -C /opt/zp-contracts-v1 fetch -q "$GH/navoranetwork/zp-contracts-v1.git" main || exit 1

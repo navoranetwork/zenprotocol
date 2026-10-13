@@ -185,7 +185,10 @@ type Runner(contract: ZenAbi.IContract, contractId: ContractId) =
     member x.Cost tx context command sender body wallet state : Result<int64, string> =
         try
             let r = x.Run { tx = tx; context = context; command = command; sender = sender; body = body; wallet = wallet; state = state }
-            if r.Cost > ZenAbi.Rules.MaxGasPerCall then Error (sprintf "declared cost %O above the limit" r.Cost)
+            // a contract built without proofs can declare a negative cost (`cast nat` is not
+            // checked): refused here too, whatever its Zulib does (it would lower a block's weight)
+            if r.Cost.Sign < 0 then Error (sprintf "negative declared cost %O" r.Cost)
+            elif r.Cost > ZenAbi.Rules.MaxGasPerCall then Error (sprintf "declared cost %O above the limit" r.Cost)
             elif r.Cost.IsZero && r.OutOfGas then Error "cost function out of gas"
             else Ok (int64 r.Cost)
         with ex -> Exception.toError "V1 costFn" ex
@@ -194,6 +197,10 @@ type Runner(contract: ZenAbi.IContract, contractId: ContractId) =
     member x.Main tx context (_: ContractId) command sender body wallet state =
         try
             let r = x.Run { tx = tx; context = context; command = command; sender = sender; body = body; wallet = wallet; state = state }
+            // gas used must be within [0, declared cost]: anything else means gas was created
+            if r.Cost.Sign < 0 || r.Used.Sign < 0 || r.Used > r.Cost then
+                Error (sprintf "V1 gas accounting out of range (declared %O, used %O)" r.Cost r.Used)
+            else
             match ZenAbi.Rules.Rejection r with
             | null -> Ok (txFrom r.Return.Tx, messageFrom r.Return.Message, stateFrom r.Return.State)
             | e -> Error e

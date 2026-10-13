@@ -141,3 +141,16 @@ there (tests/testnet-56a313ad-20261012-2132).
 - Testnet image for the switch at 2011: zp-pow testnet-v1 3dfd394a + toolchain 944f6d1
   (sha256 of the saved image fa06fada…3403); unit tests Consensus 238/0, Blockchain 80/0; lab testnet,
   T5b and T7 passed on that code.
+
+## G1: gas created by a negative charge in lax builds (found and fixed 2026-10-13, before the testnet fork)
+
+Found by the engine session, confirmed here: `autoInc` is `inc (n - m)` with the refinement `m <= n`,
+which a lax build (option B) does not check. With `m > n`, `incE` ran the work with `g - k`, `k < 0`:
+it *gave* gas. Probe `NegativePadding` built a 2,000,000-element list on a declared cost of 20 and
+succeeded. `cf` could also return a negative value (`cast nat` unchecked), which the node took as the
+call's cost (a negative weight). Fix in zp-contracts-v1 aec63af (Zulib, consensus): `incE` treats
+`k < 0` or `g < 0` as out of gas, `runGas` refuses a negative budget and a gas-left outside
+`[0, budget]`, `Zen.Entry` refuses a negative declared cost. Node (ContractV1.fs): a negative declared
+cost, or gas used outside `[0, declared]`, is refused whatever the contract's Zulib does. Regression:
+`scripts/run-security-test.sh`. Every V1 DLL changed: token template 248da313…332c (was c36acbaf…4dde).
+The testnet image is rebuilt with it before the fork at 2050.

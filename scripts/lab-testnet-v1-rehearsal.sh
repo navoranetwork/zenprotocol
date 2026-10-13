@@ -19,7 +19,7 @@
 set -uo pipefail
 : "${GH_TOKEN:?}"
 DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; TC=/opt/zp-contracts-v1; SRC=/opt/zp-pow
-BRANCH=${BRANCH:-testnet-v1}; TC_COMMIT=${TC_COMMIT:-944f6d1}; SEED=${SEED:-91.98.3.17}
+BRANCH=${BRANCH:-testnet-v1}; TC_COMMIT=${TC_COMMIT:-aec63af}; SEED=${SEED:-91.98.3.17}
 IMAGE=zen-node:testnet-v1; NAME=zp-rehearsal; API=http://127.0.0.1:41567
 GH="https://x-access-token:$GH_TOKEN@github.com"
 RUN="rehearsal-$(date -u +%Y%m%d-%H%M)"
