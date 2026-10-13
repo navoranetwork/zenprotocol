@@ -7,3 +7,5 @@
 [2026-10-13 14:14] lab-testnet-v1.sh: exit 0; [14:14:05] PASSED
 [2026-10-13 14:14] contract DLL SHA-256 248da31312f3dc7ea8f1fce29af428da2bf8de89f3931e2a38819f121905332c (compare with another machine: build-contract.sh of the same source)
 [2026-10-13 14:14] token template DLL (build-contract.sh): 248da31312f3dc7ea8f1fce29af428da2bf8de89f3931e2a38819f121905332c
+[2026-10-13 14:14] T5b (BitZen b44e666 prover: /status lists each offer's seller key, exact): start
+[2026-10-13 14:15] T5b: 14:15:42 RESULT: PASS
