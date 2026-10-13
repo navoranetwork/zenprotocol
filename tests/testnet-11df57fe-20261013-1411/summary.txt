@@ -1,1 +1,9 @@
 [2026-10-13 14:11] lab testnet on 11df57fe Merge branch 'v1-contracts' into testnet-v1
+[2026-10-13 14:11] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-13 14:11] F*: F* 2026.09.27
+[2026-10-13 14:11] toolchain: zp-contracts-v1 aec63af Gas safety in lax builds: a negative charge or budget is out o
+[2026-10-13 14:11] Zulib: all 50 modules verify
+[2026-10-13 14:12] node built (Debug)
+[2026-10-13 14:14] lab-testnet-v1.sh: exit 0; [14:14:05] PASSED
+[2026-10-13 14:14] contract DLL SHA-256 248da31312f3dc7ea8f1fce29af428da2bf8de89f3931e2a38819f121905332c (compare with another machine: build-contract.sh of the same source)
+[2026-10-13 14:14] token template DLL (build-contract.sh): 248da31312f3dc7ea8f1fce29af428da2bf8de89f3931e2a38819f121905332c

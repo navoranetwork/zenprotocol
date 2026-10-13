@@ -1,0 +1,11 @@
+/opt/zp-src-testnet-v1/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-src-testnet-v1/src/Cli/Cli.fsproj]
+/opt/zp-src-testnet-v1/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-src-testnet-v1/src/Node/Node.fsproj]
+
+Build succeeded.
+
+/opt/zp-src-testnet-v1/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-src-testnet-v1/src/Cli/Cli.fsproj]
+/opt/zp-src-testnet-v1/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-src-testnet-v1/src/Node/Node.fsproj]
+    2 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:43.40
