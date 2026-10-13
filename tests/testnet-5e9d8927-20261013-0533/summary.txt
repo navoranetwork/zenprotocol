@@ -1,1 +1,7 @@
 [2026-10-13 05:33] lab testnet on 5e9d8927 lab-testnet-run: publish the token template's DLL built by build-contract.sh; DLL_ONLY=1
+[2026-10-13 05:33] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-13 05:33] F*: F* 2026.09.27
+[2026-10-13 05:33] toolchain: zp-contracts-v1 c9b085d Determinism: contract DLLs carry no F# signature/optimization 
+[2026-10-13 05:34] Zulib: all 50 modules verify
+[2026-10-13 05:34] node built (Debug)
+[2026-10-13 05:34] token template DLL (build-contract.sh): c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
