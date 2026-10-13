@@ -1,1 +1,7 @@
 [2026-10-13 05:06] lab testnet on 5e9d8927 lab-testnet-run: publish the token template's DLL built by build-contract.sh; DLL_ONLY=1
+[2026-10-13 05:06] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-13 05:06] F*: F* 2026.09.27
+[2026-10-13 05:06] toolchain: zp-contracts-v1 acf9df4 V1 spec: decision 1 is option B (nodes type-check without Z3, 
+[2026-10-13 05:06] Zulib: all 50 modules verify
+[2026-10-13 05:07] node built (Debug)
+[2026-10-13 05:07] token template DLL (build-contract.sh): d5e48cb9e56da4fc39e70f41c8d14dc8187f515702d2c31ac30dc221a46ded20
