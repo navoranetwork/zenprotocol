@@ -35,8 +35,11 @@ fail() { say "FAIL: $*"; for n in A B C; do echo "--- $n"; tail -15 "$OUT/$n.log
 [ -f "$BIN/zen-node.dll" ] || dotnet build "$ROOT/src/Node/Node.fsproj" -c Debug --configfile "$ROOT/nuget.mirror.config" -v q
 declare -A PIDS IDX=([A]=0 [B]=1 [C]=2) SEED=([A]="" [B]="" [C]=none)
 api() { echo "http://127.0.0.1:$((20000 + ${IDX[$1]}))"; }
+# nodes with the reorganization limit (zp-pow, default 100 blocks): C mines alone from genesis, so the
+# reorg in step 3 is deeper than that; lift the limit for this test (0 = none)
+REORG=(); grep -q "Max_Reorg_Depth" "$(dirname "$0")/../src/Node/Program.fs" 2>/dev/null && REORG=(--max-reorg-depth 0)
 start() {  # start <node> [--miner 1]
-  local n=$1; shift
+  local n=$1; shift; set -- "${REORG[@]}" "$@"
   (cd "$BIN" && ZP_NODE_V1_ONLY=1 ZP_LOCAL_V1_HEIGHT="$FORK" ZP_LOCAL_SEED="${SEED[$n]}" \
      ZP_V1_TOOLCHAIN="$TC" FSTAR_HOME="$FSTAR_HOME" PATH="$FSTAR_HOME/bin:$PATH" \
      exec dotnet zen-node.dll --local "${IDX[$n]}" "$@" >> "$OUT/$n.log" 2>&1) &
