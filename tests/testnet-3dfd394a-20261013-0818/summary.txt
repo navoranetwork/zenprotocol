@@ -1,1 +1,9 @@
 [2026-10-13 08:18] lab testnet on 3dfd394a Merge branch 'v1-contracts' into testnet-v1
+[2026-10-13 08:18] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-13 08:18] F*: F* 2026.09.27
+[2026-10-13 08:18] toolchain: zp-contracts-v1 944f6d1 build-contract: a stale or missing Zulib cache is the environm
+[2026-10-13 08:18] Zulib: all 50 modules verify
+[2026-10-13 08:19] node built (Debug)
+[2026-10-13 08:20] lab-testnet-v1.sh: exit 0; [08:20:47] PASSED
+[2026-10-13 08:20] contract DLL SHA-256 c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde (compare with another machine: build-contract.sh of the same source)
+[2026-10-13 08:21] token template DLL (build-contract.sh): c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
