@@ -1,0 +1,27 @@
+== node: f81c0e09 Merge branch 'v1-contracts' into testnet-v1; toolchain: 944f6d1 build-contract: a stale or missing Zulib cache is the environment (exit 20), never a refused contract
+== node at block 182 (V1 from 5)
+07:54:53 Bitcoin block 971202 (6507 transactions), transaction 972ba357be6e4dbca44058f960cd6c148efcc296cf86c8d9a1754eed05c6bf45 at position 1, output 0: 23954 sat to 0014a1dcf90ced5008a2fcbb07a193b2680ea2fa8c68
+07:54:53 BitZenChain.fst: activation sent, 000000012381250f80f6501d4d09bde5a7a37720d9bed556e2f0bb21387591682d7b07a8
+07:55:10 BitZenChain.fst: active
+07:55:12 PASS checkpoint at Bitcoin block 971202 
+07:55:14 PASS add block 971203 
+07:55:16 PASS add block 971204 
+07:55:19 PASS add block 971205 
+07:55:21 PASS add block 971206 
+07:55:21 PASS pay at 5 confirmations refused (the block has fewer confirmations than asked)
+07:55:23 PASS add block 971207 
+07:55:25 PASS pay at 6 confirmations accepted in ZP transaction ab017d565e7f4efce78f6c8fa130135be9db7a8be1c9736ff0d8c2d502628217
+07:55:25 PASS amount above the output refused (the output pays less than the amount)
+07:55:25 PASS another script refused (the output pays another script)
+07:55:25 BitZenSwap.fst: activation sent, 00000001e1c6b091bcffdee607f1ef0ba5422b4bbf325f8c070c6166a87085a0544a7726
+07:55:43 BitZenSwap.fst: active
+07:55:45 PASS swap init 
+07:55:47 PASS swap offer o1: 100000 ZP units for 23954 sat 
+07:55:49 PASS swap reserve o1 
+07:55:51 PASS pay with notify = swap, ref o1 in c28a8919125077577d9aba26329fccc08c931d0a06a4948e8e610be419217cb3
+07:55:51 PASS the buyer received 100000 ZP units in the same transaction
+07:55:51 PASS the same payment again (offer closed) refused (paid needs a reserved offer (ref) and the payment)
+07:55:51 RESULT: PASS
+[07:55:41 INF] End building V1 contract 00000001e1c6b091bcffdee607f1ef0ba5422b4bbf325f8c070c6166a87085a0544a7726. Duration: 0ms
+[07:55:41 INF] Begin building V1 contract 00000001e1c6b091bcffdee607f1ef0ba5422b4bbf325f8c070c6166a87085a0544a7726
+[07:55:41 INF] End building V1 contract 00000001e1c6b091bcffdee607f1ef0ba5422b4bbf325f8c070c6166a87085a0544a7726. Duration: 0ms

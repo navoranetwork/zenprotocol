@@ -7,3 +7,5 @@
 [2026-10-13 07:54] lab-testnet-v1.sh: exit 1; [07:54:12] FAIL: after 900 s: all three on one tip
 [2026-10-13 07:54] 
 [2026-10-13 07:54] token template DLL (build-contract.sh): c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
+[2026-10-13 07:54] T5b (BitZen b44e666 prover: /status lists each offer's seller key, exact): start
+[2026-10-13 07:55] T5b: 07:55:51 RESULT: PASS
