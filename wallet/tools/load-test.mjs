@@ -7,7 +7,8 @@
 // passes --max-mempool. Results: <out>/load.csv (one line per transfer), <out>/blocks.csv, <out>/summary.json.
 //
 //   TESTNET_MNEMONIC="..." node tools/load-test.mjs [--node http://127.0.0.1:31567] [--rates 1,5,20,60] [--step-min 30]
-//        [--max-min 150] [--outputs 800] [--unit 0.01] [--max-mempool 5000] [--out ./load-out] [--dry]
+//        [--max-min 150] [--outputs 800] [--unit 0.01] [--max-mempool 5000] [--inflight 32] [--out ./load-out] [--dry]
+// achieved_per_min in summary.json shows when the sender itself could not keep the rate (signing is on one CPU core).
 // Node 20+. On the testnet server (91.98.3.17), from ~/zenprotocol-testnet:
 //   docker run -d --name zp-load --network host -v "$PWD:/r" -v "$HOME/zp-load:/out" -w /r/wallet -e TESTNET_MNEMONIC node:22-alpine \
 //     sh -c "npm ci --no-audit --no-fund >/dev/null && node tools/load-test.mjs --out /out"
@@ -22,9 +23,11 @@ const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ?
 const NODE = arg('node', 'http://127.0.0.1:31567'), NET = arg('net', 'test');
 const RATES = arg('rates', '1,5,20,60').split(',').map(Number), STEP_MS = Number(arg('step-min', '30')) * 60000;
 const MAX_MS = Number(arg('max-min', '150')) * 60000, OUTPUTS = Number(arg('outputs', '800')), UNIT = parseZP(arg('unit', '0.01'));
+const INFLIGHT = Math.max(1, Number(arg('inflight', '32')));
+let inflight = 0; const waiters = [];
 const MAX_MEMPOOL = Number(arg('max-mempool', '5000')), OUT = arg('out', './load-out'), DRY = process.argv.includes('--dry');
 const phrase = process.env.TESTNET_MNEMONIC; if (!phrase) { console.error('Set TESTNET_MNEMONIC'); process.exit(2); }
-if (RATES.some(r => !(r > 0 && r <= 600))) { console.error('--rates: transfers per minute, 1 to 600'); process.exit(2); }
+if (RATES.some(r => !(r > 0 && r <= 60000))) { console.error('--rates: transfers per minute, 1 to 60,000'); process.exit(2); }
 mkdirSync(OUT, { recursive: true });
 const t0 = Date.now(), now = () => new Date().toISOString().slice(11, 19);
 const say = (...a) => { const l = [now(), ...a].join(' '); console.log(l); appendFileSync(`${OUT}/log.txt`, l + '\n'); };
@@ -114,7 +117,7 @@ await measure(null);
 let stopReason = null;
 for (const rate of RATES) {
   if (stopReason) break;
-  const step = { rate, start: new Date().toISOString(), sent: new Set(), ok: 0, failed: 0, latency: [], errors: {}, mempool: [], maxMempool: 0, blocks: [] };
+  const step = { rate, start: new Date().toISOString(), sent: new Set(), attempted: 0, ok: 0, failed: 0, latency: [], errors: {}, mempool: [], maxMempool: 0, blocks: [] };
   steps.push(step);
   say(`--- step: ${rate} transfers a minute for ${STEP_MS / 60000} minutes`);
   const stepEnd = Date.now() + STEP_MS, every = 60000 / rate;
@@ -132,21 +135,26 @@ for (const rate of RATES) {
     if (!u) { step.errors['no free output'] = (step.errors['no free output'] || 0) + 1; await sleep(Math.max(0, next + every - Date.now())); continue; }
     const tx = sign({ tip: lastTip }, [u], [{ lock: { type: 'PK', hash: me }, spend: { asset: ZEN_ASSET, amount: u.spend.amount } }]);
     used.add(op(u));
+    // up to INFLIGHT publishes at once: at high rates one sender waiting for each answer would be the bottleneck
+    while (inflight >= INFLIGHT) await new Promise(r => waiters.push(r));
+    inflight++;
     const s = Date.now();
-    try {
-      await publish(node, tx); const ms = Date.now() - s;
+    step.attempted++;
+    publish(node, tx).then(() => {
+      const ms = Date.now() - s;
       step.ok++; step.latency.push(ms); step.sent.add(tx.hash); pending.set(tx.hash, Date.now()); recent.push(1);
       appendFileSync(`${OUT}/load.csv`, `${now()},${rate},${tx.hash},1,${ms},\n`);
-    } catch (e) {
+    }, e => {
       const ms = Date.now() - s, m = String(e.message).slice(0, 80).replace(/,/g, ';');
       step.failed++; step.errors[m] = (step.errors[m] || 0) + 1; recent.push(0);
       appendFileSync(`${OUT}/load.csv`, `${now()},${rate},${tx.hash},0,${ms},${m}\n`);
-    }
+    }).finally(() => { inflight--; waiters.shift()?.(); });
     recent = recent.slice(-50);
     if (recent.length >= 20 && recent.filter(x => !x).length / recent.length > 0.5) { stopReason = 'more than half of the last transfers refused'; break; }
     const wait = next + every - Date.now();
     if (wait > 0) await sleep(wait);
   }
+  while (inflight) await new Promise(r => waiters.push(r));   // the step's last publishes
   step.end = new Date().toISOString();
   writeSummary();
 }
@@ -159,7 +167,8 @@ function writeSummary() {
   const pct = (a, p) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
   const out = { node: NODE, started: new Date(t0).toISOString(), stopReason, steps: steps.map(s => {
     const secs = s.blocks.map(b => b.secs).filter(Number.isFinite);
-    return { rate_per_min: s.rate, start: s.start, end: s.end || null, sent: s.ok + s.failed, accepted: s.ok, refused: s.failed, errors: s.errors,
+    const mins = s.end ? (Date.parse(s.end) - Date.parse(s.start)) / 60000 : null;
+    return { rate_per_min: s.rate, achieved_per_min: mins ? Math.round(s.attempted / mins) : null, start: s.start, end: s.end || null, sent: s.ok + s.failed, accepted: s.ok, refused: s.failed, errors: s.errors,
       publish_ms: { median: pct(s.latency, 0.5), p95: pct(s.latency, 0.95), max: s.latency.length ? Math.max(...s.latency) : null },
       mempool: { avg: s.mempool.length ? Math.round(s.mempool.reduce((a, b) => a + b, 0) / s.mempool.length) : null, max: s.maxMempool },
       blocks: s.blocks.length, txs_per_block: { avg: s.blocks.length ? +(s.blocks.reduce((a, b) => a + b.txs, 0) / s.blocks.length).toFixed(1) : null, max: s.blocks.length ? Math.max(...s.blocks.map(b => b.txs)) : null },
