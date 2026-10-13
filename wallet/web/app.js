@@ -54,7 +54,13 @@ const voteWeight = () => voters().reduce((s, w) => s + zpOf(w.id), 0n);
 const CONTRACT_ROLE = { CGP: 'Holds the community fund', VCGP: 'Counts CGP votes', FPC: 'Fixed-payout bets', 'DEX-V2': 'Exchange' };
 const EXTEND_WARN = 200000000n; // 2 ZP: ask the user to check the contract once more
 const nameOf = (id, addr) => contractNames[addr] || contractNames[id] || null;
-const rateText = (sats, kalapas) => { const per = Number(sats) * 1e8 / Number(kalapas); return Number.isFinite(per) && per > 0 ? `${per.toLocaleString('en-US', { maximumFractionDigits: per < 10 ? 2 : 0 })} sat per ZP` : '–'; };
+// price of one ZP in an offer: BTC and satoshis, and in dollars when the oracle has a Bitcoin price (ticker BTC, USD)
+const btcUsd = () => { const r = S.markets?.round, i = r?.tickers?.indexOf('BTC') ?? -1; const v = i >= 0 ? Number(r.values[i]) : NaN; return v > 0 ? v : null; };
+const rateText = (sats, kalapas) => {
+  const per = Number(sats) * 1e8 / Number(kalapas); if (!Number.isFinite(per) || per <= 0) return '–';
+  const usd = btcUsd() ? per / 1e8 * btcUsd() : null;
+  return `${(per / 1e8).toFixed(8)} BTC per ZP (${per.toLocaleString('en-US', { maximumFractionDigits: per < 10 ? 2 : 0 })} sat)${usd ? ` ≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: usd < 1 ? 4 : 2 })}` : ''}`;
+};
 const zpStr = v => Number.isFinite(v) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '–';
 
 function go(screen, extra = {}) { freshScreen = true; Object.assign(S, { screen, error: '', modal: null }, extra); if (screen === 'vote') S.cands = null; /* the candidate list belongs to one interval: ask the node again */ render(); if (screen === 'vote') refreshVotes(); window.scrollTo(0, 0); if (screen === 'markets') loadMarkets(); }
@@ -98,6 +104,7 @@ function swapCard() {
   return `<div class="card"><h2>Sell ZP for bitcoin</h2>
     <p class="muted small">Your ZP waits in a contract. A buyer reserves the offer and pays bitcoin straight to your Bitcoin address; the contract checks the payment and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p>
     <div class="list">${mine.length ? mine.map(o => `<div class="item"><div><div>${esc(formatZP(BigInt(o.amount)))} ZP for ${esc(formatBTC(o.sats))} BTC</div>
+        <div class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</div>
         <div class="muted small">${esc(swapState(o))} · ${esc(me.get(o.seller).name)} · ${esc(o.id)}</div><div class="muted small">${o.scripts - o.used} of ${o.scripts} Bitcoin addresses unused</div></div>
         ${o.state !== 'reserved' && !o.payment ? `<button class="btn small" data-act="swap-cancel" data-id="${esc(o.id)}">Take back</button>` : ''}</div>`).join('')
       : '<p class="muted small">You have no offers.</p>'}</div>
@@ -420,7 +427,7 @@ function modalHtml() {
   if (m.type === 'confirm-offer') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm offer</h2>
     <div class="card"><div class="kv"><span class="muted">Sell</span><span class="amt">${formatZP(m.amount)} ZP</span></div>
     <div class="kv"><span class="muted">For</span><span class="amt">${esc(formatBTC(m.sats))} BTC</span></div>
-    <div class="kv"><span class="muted">Rate</span><span>${esc(rateText(m.sats, m.amount))}</span></div>
+    <div class="kv"><span class="muted">Price per ZP</span><span>${esc(rateText(m.sats, m.amount))}</span></div>
     ${m.addrs.map((a, i) => `<div class="kv"><span class="muted">Bitcoin address ${i + 1}</span><span class="mono small" data-s="wrap">${esc(a)}</span></div>`).join('')}
     <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div>
     <div class="kv"><span class="muted">Fee</span><span>1 kalapa</span></div></div>

@@ -81,7 +81,7 @@ function renderOffers() {
     const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(o.until - V.zpTip)}` : o.state === 'expired' ? 'A reservation expired' : 'Open';
     return `<article class="offer${own ? ' mine' : ''}">
       <div class="top"><div class="amt">${zp(o.zp)} ZP</div><div class="btc">${btc(o.sats)} BTC</div></div>
-      <div class="row"><span>${per.toLocaleString('en-US')} sat per ZP</span><span>${o.confs} confirmations</span></div>
+      <div class="row"><span>${(per / 1e8).toFixed(8)} BTC per ZP (${per.toLocaleString('en-US')} sat)</span><span>${o.confs} confirmations</span></div>
       <div class="row"><span>${esc(status)}</span><span class="mono">${esc(o.id)}</span></div>
       ${own ? '<button type="button" data-show="1">Your reservation</button>'
             : `<button type="button" data-buy="${esc(o.id)}" ${o.canReserve ? '' : 'disabled'}>Buy</button>`}
