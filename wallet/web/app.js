@@ -4,7 +4,7 @@ import qrcode from 'qrcode-generator';
 import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress, encodeAddress } from '../src/keys.js';
 import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
-import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock } from '../src/cgp.js';
+import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
@@ -373,13 +373,13 @@ function ballotsCard(c) {
   const cur = alloc(), r = allocationRange(CGP_PARAMS[net()], cur), many = r.max - r.min > 5;
   const pAlloc = priorVote('Allocation', ph.interval, ph.phase), pNom = priorVote('Nomination', ph.interval, ph.phase), pPay = priorVote('Payout', ph.interval, ph.phase);
   // each form says whether it is open now and, when closed, when it opens; a closed form cannot be filled in (disabled fieldset)
-  const p = CGP_PARAMS[net()], snap = snapshotBlock(p, ph.interval), n0 = snap + 1, n1 = snap + p.nomination, v0 = n1 + 1, v1 = ph.interval * p.intervalLength;
+  const p = CGP_PARAMS[net()], snap = snapshotBlock(p, ph.interval), n0 = snap + 1, n1 = snap + phasesOf(p, ph.interval).nomination, v0 = n1 + 1, v1 = ph.interval * p.intervalLength;
   const nextSnap = snapshotBlock(p, ph.interval + 1), num = i => (net() === 'test' ? i : i - 24), blk = b => b.toLocaleString('en-US');
   const left = b => { const k = b - (S.tip || 0); return k > 0 ? ` · ${k} block${k === 1 ? '' : 's'} left` : ''; };
   const openNom = ph.phase === 'Nomination', openVote = ph.phase === 'Vote';
   const status = (open, text) => `<p class="small phase ${open ? 'open' : 'closed'}" role="status">${open ? '● Open now' : '○ Closed'} · ${text}</p>`;
   const nomStatus = openNom ? status(true, `nominations in blocks ${blk(n0)}–${blk(n1)}${left(n1)}`)
-    : status(false, `nominations for interval ${num(ph.interval)} were blocks ${blk(n0)}–${blk(n1)}. Next: blocks ${blk(nextSnap + 1)}–${blk(nextSnap + p.nomination)} (interval ${num(ph.interval + 1)})`);
+    : status(false, `nominations for interval ${num(ph.interval)} were blocks ${blk(n0)}–${blk(n1)}. Next: blocks ${blk(nextSnap + 1)}–${blk(nextSnap + phasesOf(p, ph.interval + 1).nomination)} (interval ${num(ph.interval + 1)})`);
   const voteStatus = openVote ? status(true, `voting until block ${blk(v1)}${left(v1)}`) : status(false, `voting opens at block ${blk(v0)} and runs to ${blk(v1)}`);
   const values = many ? [...new Set([r.min, cur, r.max])] : Array.from({ length: r.max - r.min + 1 }, (_, i) => r.min + i);
   const pct0 = S.draft.pct || String(cur);

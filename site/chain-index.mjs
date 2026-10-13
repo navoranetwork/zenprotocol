@@ -28,7 +28,11 @@ const CGP_CONTRACT = CHAIN.cgp;          // Chain.fs cgpContractId
 const VOTING_CONTRACT = CHAIN.voting;    // Chain.fs votingContractId
 // Repo voting contract: the community vote on protocol upgrades. Its command is the git commit id (40 hex) being voted for.
 const REPO_CONTRACT_MAIN = '00000000e3113f8bf9cf8b764d945d6f99c642bdb069d137bdd5f7e44f1e75947f58a044';
-const INTERVAL = CHAIN.interval, SNAPSHOT = CHAIN.snapshot, NOMINATION = CHAIN.nomination;
+const INTERVAL = CHAIN.interval;
+// snapshot and nomination length by interval (Chain.fs cgpPhaseSchedule): the testnet's change at interval 22
+const PHASES = NET === 'test' ? [{ fromInterval: 22, snapshot: 70, nomination: 10 }] : [];
+const phasesOf = iv => PHASES.filter(x => x.fromInterval <= iv).sort((a, b) => b.fromInterval - a.fromInterval)[0] || { snapshot: CHAIN.snapshot, nomination: CHAIN.nomination };
+const snapOf = iv => (iv - 1) * INTERVAL + phasesOf(iv).snapshot, nomEndOf = iv => snapOf(iv) + phasesOf(iv).nomination;
 // Chain.fs coinbaseMaturity: the payout of interval i is made in block i * INTERVAL + MATURITY (CGP.fs isPayoutBlock)
 const MATURITY = NET === 'test' ? 10 : 100;
 const COMMUNITY_INTERVAL_OFFSET = CHAIN.offset;
@@ -396,7 +400,7 @@ async function weight(iv, pk) {
   const row = wGet.get(iv, pk);
   if (row) return BigInt(row.zp);
   try {
-    const bal = await api('/addressdb/balance', { addresses: [pkAddress(pk)], blockNumber: String((iv - 1) * INTERVAL + SNAPSHOT) }, 120000, 2);
+    const bal = await api('/addressdb/balance', { addresses: [pkAddress(pk)], blockNumber: String(snapOf(iv)) }, 120000, 2);
     const zp = bal.filter(x => x.asset === '00').reduce((s, x) => s + BigInt(x.balance), 0n);
     wPut.run(iv, pk, String(zp)); return zp;
   } catch { return null; }
@@ -406,7 +410,7 @@ async function weight(iv, pk) {
 const alloc = Object.fromEntries(db.prepare('SELECT interval, pct FROM allocation').all().map(r => [r.interval, r.pct]));
 const intervals = new Map();
 for (const v of db.prepare('SELECT tx, block, time, command, pk, ballot FROM votes ORDER BY block, tx').all()) {
-  const iv = Math.floor((v.block - 1) / INTERVAL) + 1, snap = (iv - 1) * INTERVAL + SNAPSHOT, nomEnd = snap + NOMINATION;
+  const iv = Math.floor((v.block - 1) / INTERVAL) + 1, snap = snapOf(iv), nomEnd = nomEndOf(iv);
   const inWindow = v.command === 'Nomination' ? v.block > snap && v.block <= nomEnd : v.block > nomEnd && v.block <= iv * INTERVAL;
   let dec = null; try { dec = v.ballot ? ballot(v.ballot) : null; } catch { /* undecodable */ }
   const it = intervals.get(iv) || { votes: [], seen: new Set() }; intervals.set(iv, it);
@@ -434,7 +438,7 @@ if (complete && tip > last) {
         const entries = w.messageBody.v;
         const bh = entries.find(([k, d]) => k !== 'Signature' && d.t === 'String')?.[1].v ?? null;
         const sigs = entries.find(([k, d]) => k === 'Signature' && d.t === 'Dict')?.[1].v || [];
-        const iv = Math.floor((n - 1) / INTERVAL) + 1, snap = (iv - 1) * INTERVAL + SNAPSHOT, nomEnd = snap + NOMINATION;
+        const iv = Math.floor((n - 1) / INTERVAL) + 1, snap = snapOf(iv), nomEnd = nomEndOf(iv);
         const inWindow = w.command === 'Nomination' ? n > snap && n <= nomEnd : n > nomEnd && n <= iv * INTERVAL;
         let dec = null; try { dec = bh ? ballot(bh) : null; } catch { /* undecodable */ }
         const it = intervals.get(iv) || { votes: [], seen: new Set() }; intervals.set(iv, it);
@@ -467,7 +471,7 @@ for (let iv = first; iv <= current; iv++) {
   const vs = (intervals.get(iv)?.votes || []).map(({ _pk, _iv, ...v }) => v);
   out.push({
     interval: iv, communityInterval: iv - COMMUNITY_INTERVAL_OFFSET,
-    start: (iv - 1) * INTERVAL + 1, snapshot: (iv - 1) * INTERVAL + SNAPSHOT, nominationEnd: (iv - 1) * INTERVAL + SNAPSHOT + NOMINATION, end: iv * INTERVAL,
+    start: (iv - 1) * INTERVAL + 1, snapshot: snapOf(iv), nominationEnd: nomEndOf(iv), end: iv * INTERVAL,
     complete: tip > iv * INTERVAL, allocationInForce: alloc[iv] ?? null, allocationDecided: alloc[iv + 1] ?? null,
     voters: new Set(vs.map(v => v.voter)).size,
     weightVoted: Math.round(vs.filter(v => v.counted).reduce((s, v) => s + (v.weight || 0), 0) * 1e8) / 1e8,

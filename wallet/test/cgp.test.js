@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
-import { allocationRange, CGP_PARAMS as P, allocationBallot, payoutBallot, hashBallot, voteBody, phaseAt, getInterval, isNomineePhase } from '../src/cgp.js';
+import { allocationRange, CGP_PARAMS as P, allocationBallot, payoutBallot, hashBallot, voteBody, phaseAt, getInterval, isNomineePhase, snapshotBlock } from '../src/cgp.js';
 import { Data, Reader, Writer, hex, unhex, ZEN_ASSET } from '../src/serialize.js';
 import { verifyDigest } from '../src/tx.js';
 import { encodeAddress } from '../src/keys.js';
@@ -112,4 +112,16 @@ test('allowed allocation votes: 90% in force allows 89 and 90 only; 0% allows 0 
 test('the contract address sent to /contract/execute holds version and hash (as the node prints it)', async () => {
   const id = '00000000e89738718a802a7d217941882efe8e585e20b20901391bc37af25fac2f22c8ab';
   assert.equal(enc(unhex(id), 'test', true), 'ctzn1qqqqqqq8gjuu8rz5q9f7jz72p3qh0arjctcstyzgp8ydux7hjt7kz7gkg4v5lec88');   // printed by the node when the voting contract was activated
+});
+
+test('testnet phases change at interval 22 (Chain.fs cgpPhaseSchedule): snapshot 70, nominations 71-80, voting 81-100', () => {
+  const t = P.test;
+  assert.deepEqual(phaseAt(t, 2096), { interval: 21, phase: 'Vote', opens: 2096, closes: 2100 });
+  assert.equal(phaseAt(t, 2170).phase, 'before');
+  assert.deepEqual(phaseAt(t, 2171), { interval: 22, phase: 'Nomination', opens: 2171, closes: 2180 });
+  assert.deepEqual(phaseAt(t, 2181), { interval: 22, phase: 'Vote', opens: 2181, closes: 2200 });
+  assert.equal(snapshotBlock(t, 23), 2270);
+  // the ballot hash names the phase the node sees at that block
+  assert.notDeepEqual(hashBallot(t, 2180, '0105'), hashBallot(t, 2181, '0105'));
+  assert.equal(phaseAt(P.main, 1059600).opens, 1059501);   // mainnet unchanged
 });

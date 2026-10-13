@@ -5,7 +5,7 @@ import { NodeClient } from '../src/node.js';
 import { newMnemonic, deriveKey } from '../src/keys.js';
 import { openWallet, prepareVote } from '../src/wallet.js';
 import { ZP } from '../src/tx.js';
-import { CGP_PARAMS, VOTING_CONTRACT, phaseAt, snapshotBlock, allocationRange, allocationBallot, payoutBallot } from '../src/cgp.js';
+import { CGP_PARAMS, VOTING_CONTRACT, phaseAt, snapshotBlock, phasesOf, allocationRange, allocationBallot, payoutBallot } from '../src/cgp.js';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
 const NET = arg('net', 'main'), node = new NodeClient(arg('node', NET === 'main' ? 'http://127.0.0.1:11567' : 'http://127.0.0.1:31567'));
@@ -24,7 +24,7 @@ if (last !== null) {
   ok(`allocation in force ${last}% (CGP) · ${100 - last}% (miners); the next vote may be ${r.min}%-${r.max}% for the CGP`);
 }
 const ph = phaseAt(params, tip + 1), len = params.intervalLength, ivStart = (ph.interval - 1) * len;
-ok(`next block ${tip + 1}: interval ${ph.interval}, phase ${ph.phase}; snapshot ${snapshotBlock(params, ph.interval)}, nominations ${snapshotBlock(params, ph.interval) + 1}-${snapshotBlock(params, ph.interval) + params.nomination}, voting until ${ivStart + len}`);
+ok(`next block ${tip + 1}: interval ${ph.interval}, phase ${ph.phase}; snapshot ${snapshotBlock(params, ph.interval)}, nominations ${snapshotBlock(params, ph.interval) + 1}-${snapshotBlock(params, ph.interval) + phasesOf(params, ph.interval).nomination}, voting until ${ivStart + len}`);
 
 const active = await node.activeContracts().catch(e => (fail('contract/active: ' + e.message), []));
 const row = Array.isArray(active) ? active.find(c => c && c.contractId === voting) : null;

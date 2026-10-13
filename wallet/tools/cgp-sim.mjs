@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import { NodeClient } from '../src/node.js';
 import { newMnemonic, deriveKey, encodeAddress } from '../src/keys.js';
 import { openWallet, discover, readState, prepareVote, prepareSend, publish, receiveAddress } from '../src/wallet.js';
-import { CGP_PARAMS, VOTING_CONTRACT, phaseAt, snapshotBlock, allocationBallot, payoutBallot, candidateBallot } from '../src/cgp.js';
+import { CGP_PARAMS, VOTING_CONTRACT, phaseAt, snapshotBlock, phasesOf, allocationBallot, payoutBallot, candidateBallot } from '../src/cgp.js';
 import { ZP, formatZP, parseZP } from '../src/tx.js';
 
 const argv = process.argv.slice(2), cmd = argv[0];
@@ -52,7 +52,7 @@ const ballotOf = (m, x) => payoutBallot(recipients(m)[x], [{ asset: ZP, amount: 
 
 function plan() {
   const t = Number(opt('tip', 0)), snap = targetSnap(t), i = intervalOfTip(snap), tot = issued(snap), thr = tot * 3n / 100n;
-  say(`target interval ${i}: snapshot ${snap}, nominations ${snap + 1}-${snap + params.nomination}, voting ${snap + params.nomination + 1}-${i * params.intervalLength}`);
+  say(`target interval ${i}: snapshot ${snap}, nominations ${snap + 1}-${snap + phasesOf(params, i).nomination}, voting ${snap + phasesOf(params, i).nomination + 1}-${i * params.intervalLength}`);
   say(`ZP issued at the snapshot ~ ${formatZP(tot)}, threshold 3% = ${formatZP(thr)}`);
   for (const p of PEOPLE) say(`wallet ${p.name}: ${formatZP(share(snap, p.share))} ZP (${p.share}%)  nominates ${p.nominate}  votes ${p.vote}  allocation ${p.alloc}%`);
   const w = n => PEOPLE.filter(p => p.nominate === n).reduce((s, p) => s + p.share, 0);

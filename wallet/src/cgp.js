@@ -6,10 +6,12 @@ import { Writer, Reader, Data, Spend, Asset, VarInt, hex, unhex, assetToString }
 import { decodeAddress } from './keys.js';
 import { signDigest } from './tx.js';
 
-// Chain.fs: mainnet interval 10,000 / snapshot 9,000 / nomination 500; testnet 100 / 90 / 5
+// Chain.fs: mainnet interval 10,000 / snapshot 9,000 / nomination 500; testnet 100 / 90 / 5, and from interval 22
+// (Chain.fs cgpPhaseSchedule, a hard fork at block 2101) snapshot 70 / nomination 10: nominations 71-80, voting 81-100
 export const CGP_PARAMS = {
   main: { intervalLength: 10000, snapshot: 9000, nomination: 500, upperAllocationBound: 90, allocationCorrectionCap: 15 },
-  test: { intervalLength: 100, snapshot: 90, nomination: 5, upperAllocationBound: 90, allocationCorrectionCap: 15 },
+  test: { intervalLength: 100, snapshot: 90, nomination: 5, upperAllocationBound: 90, allocationCorrectionCap: 15,
+          schedule: [{ fromInterval: 22, snapshot: 70, nomination: 10 }] },
 };
 
 // the CGP fund contract of each network (Chain.fs cgpContractId); its outputs are the fund
@@ -25,16 +27,18 @@ export const VOTING_CONTRACT = {
 };
 
 export const getInterval = (p, bn) => bn > 0 ? Math.floor((bn - 1) / p.intervalLength) + 1 : 1;
-export const snapshotBlock = (p, i) => (i - 1) * p.intervalLength + p.snapshot;
+// snapshot (place in the interval) and nomination length for interval i (CGP.fs phasesOf)
+export const phasesOf = (p, i) => (p.schedule || []).filter(x => x.fromInterval <= i).sort((a, b) => b.fromInterval - a.fromInterval)[0] || p;
+export const snapshotBlock = (p, i) => (i - 1) * p.intervalLength + phasesOf(p, i).snapshot;
 export const isNomineePhase = (p, bn) => {
   const s = snapshotBlock(p, getInterval(p, bn));
-  return s < bn && bn <= s + p.nomination;
+  return s < bn && bn <= s + phasesOf(p, getInterval(p, bn)).nomination;
 };
 export const phaseAt = (p, bn) => {
-  const i = getInterval(p, bn), s = snapshotBlock(p, i);
+  const i = getInterval(p, bn), s = snapshotBlock(p, i), nom = phasesOf(p, i).nomination;
   if (bn <= s) return { interval: i, phase: 'before', opens: s + 1, closes: s };
-  if (bn <= s + p.nomination) return { interval: i, phase: 'Nomination', opens: s + 1, closes: s + p.nomination };
-  return { interval: i, phase: 'Vote', opens: s + p.nomination + 1, closes: i * p.intervalLength };
+  if (bn <= s + nom) return { interval: i, phase: 'Nomination', opens: s + 1, closes: s + nom };
+  return { interval: i, phase: 'Vote', opens: s + nom + 1, closes: i * p.intervalLength };
 };
 
 // a candidate from /blockchain/candidates: {recipient: address, spendlist: [{asset: hex, amount}]} -> ballot hex
