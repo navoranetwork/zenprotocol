@@ -327,9 +327,15 @@ export function prepareOffer({ w, state, node, swapContractId, id, amount, sats,
   const swap = contractIdOf(swapContractId);
   return prepareSignedCall({ w, state, node, contractId: swapContractId, command: 'offer', body, amount, signer, exclude,
     expect: added => {
-      const o = added.outputs;
-      if (added.inputs.length || o.length !== 1 || o[0].lock.type !== 'Contract' || o[0].lock.contractId.version !== swap.version
-          || hex(o[0].lock.contractId.hash) !== hex(swap.hash) || assetToString(o[0].spend.asset) !== '00' || o[0].spend.amount !== amount)
+      // the swap also mints 1 of its own token and locks it to itself (its state marker): allowed, nothing else
+      const toSwap = o => o.lock.type === 'Contract' && o.lock.contractId.version === swap.version && hex(o.lock.contractId.hash) === hex(swap.hash);
+      const own = a => a.contract && a.contract.version === swap.version && hex(a.contract.hash) === hex(swap.hash);
+      const zp = added.outputs.filter(o => assetToString(o.spend.asset) === '00');
+      const marks = added.outputs.filter(o => !zp.includes(o));
+      const markIns = added.inputs.filter(i => i.type === 'mint' && own(i.spend.asset) && i.spend.amount === 1n);
+      if (zp.length !== 1 || !toSwap(zp[0]) || zp[0].spend.amount !== amount
+          || markIns.length !== added.inputs.length || marks.length !== markIns.length
+          || !marks.every(o => toSwap(o) && own(o.spend.asset) && o.spend.amount === 1n))
         throw new Error('The contract would not lock exactly your ZP for the offer: not signed');
     } });
 }
