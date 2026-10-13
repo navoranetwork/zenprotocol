@@ -7,6 +7,7 @@
 <meta name="description" content="Buy ZP with bitcoin straight from a seller: a contract checks the Bitcoin payment and releases the ZP. No middleman holds the money.">
 <link rel="stylesheet" href="/shell/shell.css">
 <style>
+  .zp [hidden] { display: none !important; }   /* .panel and .note set display, which would show hidden boxes */
   .zp .small { font-size: 14px; color: var(--s-muted); }
   .zp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .zp .offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; margin: 14px 0 22px; }
@@ -50,7 +51,7 @@
   <li><b>Pay.</b> Send the exact amount to the Bitcoin address shown. It is the seller's own address, made for your reservation only.</li>
   <li><b>Receive.</b> Once the payment has enough confirmations (2 up to 0.01 BTC, 3 up to 0.1, 4 up to 1, 6 above), the proof is sent for you and the contract releases the ZP to your address. You do not need to do anything.</li>
 </ol>
-<p class="small">Selling ZP: an offer locks your ZP in the contract with your price and a few Bitcoin addresses from your wallet (one per reservation). Creating offers comes to the ZP Wallet next. Testnet: ZP coins have no value.</p>
+<p class="small">Selling ZP: an offer locks your ZP in the contract with your price and a few Bitcoin addresses from your wallet (one per reservation). Sellers make and take back offers in the ZP Wallet, on its Markets screen. Testnet: ZP coins have no value.</p>
 </main>
 <script>
 (() => {
@@ -67,8 +68,16 @@ function hm(blocks) { const m = Math.max(0, blocks) * BLOCK_MIN; return m >= 60 
 function state(cls, html) { const s = $('state'); s.className = 'note ' + cls; s.innerHTML = html; s.hidden = !html; }
 
 async function load() {
-  try { const r = await fetch('/swap/status', { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); V = await r.json(); }
-  catch { state('err', 'The swap service is not answering right now. Reservations and payments are kept; try again in a minute.'); return; }
+  let status = 0;
+  try { const r = await fetch('/swap/status', { cache: 'no-store' }); status = r.status; if (!r.ok) throw new Error('HTTP ' + r.status); V = await r.json(); }
+  catch {
+    // 502/404: the swap service is not running on this site (on the testnet it starts with the V1 contracts, from block 2,050)
+    if (!V && (status === 502 || status === 404)) {
+      state('info', 'ZP ⇄ BTC is not open on this network yet. On the testnet it opens with the V1 contracts, after block 2,050.');
+      $('offers').innerHTML = '<p class="small">No offers yet.</p>';
+    } else state('err', 'The swap service is not answering right now. Reservations and payments are kept; try again in a minute.');
+    return;
+  }
   state('', '');
   renderOffers(); renderBuy();
 }
