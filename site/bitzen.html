@@ -86,8 +86,11 @@ function state(cls, text) { const s = $('state'); s.className = 'state ' + cls; 
 
 async function load() {
   let d;
-  try { d = await (await fetch('/bitzen.json', { cache: 'no-store' })).json(); }
-  catch (e) { state('err', 'The status of the contract is not available right now.'); return; }
+  for (let i = 0; i < 3 && !d; i++) {   // a busy moment of the server: try again before saying it is unavailable
+    try { const r = await fetch('/bitzen.json', { cache: 'no-store' }); if (r.ok) d = await r.json(); } catch (e) { }
+    if (!d && i < 2) await new Promise(r => setTimeout(r, 3000));
+  }
+  if (!d) { state('err', 'The status of the contract is not available right now.'); return; }
   await bitcoinTip();
   const btc = bestTip ?? d.bitcoinTip, tip = d.tip?.height;
   $('s-btc').textContent = num(btc); $('s-tip').textContent = num(tip);

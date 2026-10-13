@@ -14,13 +14,14 @@ VOL=$(docker volume inspect "${STACK_PROJECT}_stack-data" --format '{{.Mountpoin
 
 command -v nginx >/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx; }
 mkdir -p "$WEB"
-# the indexer writes its json files inside the docker volume (/var/lib/docker is closed to nginx): copy them out every minute
+# the indexer writes its json files inside the docker volume (/var/lib/docker is closed to nginx): copy them out every minute,
+# through a temporary file and a rename, so a page never reads a half-copied file
 if [ -n "$VOL" ]; then
   cat > /etc/cron.d/zen-testnet-json <<CRON
-* * * * * root for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/\$f.json" ] && cp -f "$VOL/web/\$f.json" "$WEB/\$f.json"; done
+* * * * * root for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/\$f.json" ] && cp -f "$VOL/web/\$f.json" "$WEB/.\$f.json.tmp" && mv -f "$WEB/.\$f.json.tmp" "$WEB/\$f.json"; done
 * * * * * root [ -f /var/lib/zp-stratum/stats.json ] && cp -f /var/lib/zp-stratum/stats.json "$WEB/mining.json"
 CRON
-  for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
+  for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/.$f.json.tmp" && mv -f "$WEB/.$f.json.tmp" "$WEB/$f.json"; done
 fi
 # the mining server's status (zp-stratum --stats-file, scripts/install-mining-server.sh) for the home page
 [ -f /var/lib/zp-stratum/stats.json ] && cp -f /var/lib/zp-stratum/stats.json "$WEB/mining.json"
