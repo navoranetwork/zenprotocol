@@ -67,6 +67,18 @@ with sync_playwright() as p:
     pg.wait_for_selector('[data-go=contracts]'); pg.click('nav >> text=Contracts')
     pg.wait_for_selector('button[data-act=cc-open]', timeout=15000); ok('Back to your last contract' in pg.inner_text('main'), 'after a reload the last contract comes back from its job id')
     pg.click('button[data-act=cc-open]'); pg.wait_for_selector('text=Made and checked'); ok('Escrow with an arbiter' in pg.inner_text('main'), 'it is the escrow, with its family')
+    # the vote family: a choice from the options, the user's own address by default, sends the vote asset, closes at a block
+    pg.click('button[data-act=cc-try-back]') if pg.query_selector('button[data-act=cc-try-back]') else None
+    pg.click('nav >> text=Contracts'); pg.wait_for_selector('button[data-act=cc-family][data-id=vote]'); pg.click('button[data-act=cc-family][data-id=vote]')
+    pg.wait_for_selector('form[data-form=cc-make]'); pg.fill('input[name=p_question]', 'Keep V0 activations?'); pg.fill('input[name=p_options]', 'yes,no,abstain'); pg.fill('input[name=p_close_block]', '5000')
+    pg.click('form[data-form=cc-make] button.primary'); pg.wait_for_selector('button[data-act=cc-try-open]', timeout=15000); pg.click('button[data-act=cc-try-open]'); pg.wait_for_selector('select[name=t_option]')
+    opts = pg.eval_on_selector_all('select[name=t_option] option', 'os => os.map(o => o.textContent)')
+    ok(opts == ['yes', 'no', 'abstain'] and len(pg.input_value('input[name=t_returnAddress]')) == 64 and 'Works only before block 5,000.' in pg.inner_text('main'), 'vote: options as a choice, own address by default, the closing window')
+    pg.select_option('select[name=t_option]', 'no'); pg.fill('input[name=spend]', '2 ZP'); pg.click('form[data-form=cc-try] button.primary'); pg.wait_for_selector('text=this contract gets', timeout=15000)
+    L = last(); ok('this contract gets 2 ZP' in pg.inner_text('main') and L['call']['spend'] == [{'asset': 'zp', 'amount': '200000000'}] and 'roles' not in L, 'vote: 2 ZP locked; no key parameters, so no roles')
+    pg.click('button[data-act=cc-cmd][data-name=redeem]'); pg.wait_for_selector('text=Sends in (its own token)')
+    pg.click('button[data-act=cc-block][data-v="4999"]'); pg.fill('input[name=spend]', '2'); pg.click('form[data-form=cc-try] button.primary'); pg.wait_for_selector('text=redeemed from the closing block', timeout=15000)
+    ok(last()['call']['spend'][0]['asset'] == last()['sourceId'][8:] or len(last()['call']['spend'][0]['asset']) == 64, 'redeem sends the contract\'s own token, refused before the close')
     ok(not errors, 'no page errors ' + '; '.join(errors))
     b.close()
 print('ALL PASS' if not bad else f'FAILED {len(bad)}'); sys.exit(1 if bad else 0)
