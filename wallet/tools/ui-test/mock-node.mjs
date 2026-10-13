@@ -7,6 +7,7 @@ import http from 'node:http';
 import { deriveKey, encodeAddress } from '../../src/keys.js';
 import { openWallet } from '../../src/wallet.js';
 import { VOTING_CONTRACT, CGP_CONTRACT } from '../../src/cgp.js';
+import { v1ContractId } from '../../src/engine.js';
 import { Reader, VarInt, Output, Outpoint, Data, serializeTx, deserializeTx, txHash, hex, unhex } from '../../src/serialize.js';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
@@ -31,6 +32,7 @@ http.createServer((req, res) => {
     const body = raw ? JSON.parse(raw) : {};
     try {
       if (req.method === 'OPTIONS') return send(res, 204, '');
+      if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
         case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'reset') { st.published = []; st.asked = {}; } } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
@@ -41,6 +43,20 @@ http.createServer((req, res) => {
           { recipient: other, spendlist: [{ asset: '00', amount: '200000000' }] },
           { recipient: encodeAddress(unhex(hex(key0.pkHash)), NET), spendlist: [{ asset: '00', amount: '50000000' }] }] : []);
         case '/oracle/rounds/latest': return send(res, 200, { Tickers: ['BTC', 'GOLD'], Values: [100000, 4000], Timestamp: Date.now(), Evidence: '{}' });
+        // the contract engine (zp-contracts-v1 docs/SERVICE.md): a job is running on its first poll, done on the next
+        case '/engine/families': return send(res, 200, [{ id: 'timelock-vault', title: 'Time-locked vault', description: 'Deposits from anyone; withdrawals to the owner only, from a given block.',
+          params: { owner: { type: 'hash', description: "the owner's public key hash", example: 'ab'.repeat(32) }, unlock_block: { type: 'u32', min: 2, description: 'first block of withdrawals', example: 2500 } } }]);
+        case '/engine/make': case '/engine/ask': case '/engine/check': {
+          const id = (Date.now().toString(16) + 'a'.repeat(24)).slice(0, 24), src = body.source || `// ${body.family || 'asked'} ${JSON.stringify(body.params || body.text || '')}\nlet main = 1\n`;
+          const refused = /let rec/.test(src);
+          const check = { network: 'testnet', contractId: v1ContractId(src), bytes: src.length, activation: { v1Height: Number(process.env.V1H || 2050), characters: src.length, minSacrificePerBlock: src.length },
+            verdict: refused ? 'refused' : 'accepted', refusal: refused ? { rule: 'recursion', title: 'a recursive definition', line: 2, code: 'let rec spin n = spin n', why: 'Nodes build contracts without proofs.', fix: 'Use a Zulib loop.' } : null };
+          st.jobs ||= {}; st.jobs[id] = { polls: 0, done: u.pathname === '/engine/check' ? { job: id, kind: 'check', status: 'done', ok: !refused, check }
+            : { job: id, kind: u.pathname.slice(8), status: 'done', ok: true, report: { ok: true, stage: 'done', contractId: v1ContractId(src).slice(8) }, source: src,
+                tests: [{ name: 'withdraw before the block is refused', command: 'withdraw', expect: { ok: false, declaredCost: 120 } }, { name: 'deposit', command: 'deposit', expect: { ok: true, declaredCost: 90 } }],
+                check, ...(u.pathname === '/engine/ask' ? { rounds: [{}, {}] } : {}) } };
+          return send(res, 202, { job: id, status: 'queued' });
+        }
         case '/swap/status': return send(res, 200, { swapId: SWAP, zpTip: st.tip, btcNet: 'main', offers: offers() });
         case '/contract/active': return send(res, 200, [{ contractId: VOTING, address: encodeAddress(unhex(VOTING), NET, true), expire: st.tip + 90000, code: '// voting contract\n'.padEnd(4000, 'x') }]);
         case '/addressdb/outputs': return send(res, 200, body.addresses?.includes(addr0) ? fund() : []);

@@ -5,6 +5,7 @@ import { accountFromMnemonic, deriveKey, encodeAddress, decodeAddress, parsePriv
 import { buildTransaction, maturityFor, MAX_AMOUNT } from './tx.js';
 import { unhex, hex, ZEN_ASSET, Writer, Outpoint, Output, Data, VarInt, ContractId, Str, assetToString, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
 import { offerBody, cancelBody } from './swap.js';
+import { v1SourceBytes, v1ContractId, activationCost } from './engine.js';
 import { sha3_256 } from '@noble/hashes/sha3.js';
 import { signDigest, verifyDigest } from './tx.js';
 import { CGP_PARAMS, phaseAt, voteBody } from './cgp.js';
@@ -351,4 +352,27 @@ export function prepareCancel({ w, state, node, swapContractId, id, amount, excl
           || !rest.every(o => o.lock.type === 'Contract' && hex(o.lock.contractId.hash) === hex(swap.hash)))
         throw new Error('The contract would not return the offer’s ZP to you: not signed');
     } });
+}
+
+// --- activating a V1 contract (TransactionValidation.fs: HighV (1, source)) -----------------------------------
+// The transaction carries the source (canonical UTF-8) and pays source length x blocks kalapas to an
+// ActivationSacrifice output. expectId: the id the engine reported; the wallet computes its own and refuses to sign
+// a different contract.
+export function prepareActivateV1(w, state, source, blocks, expectId) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  if (!Number.isSafeInteger(blocks) || blocks < 1 || blocks > MAX_EXTEND_BLOCKS) throw new Error(`Enter a number of blocks from 1 to ${MAX_EXTEND_BLOCKS.toLocaleString('en-US')}`);
+  const bytes = v1SourceBytes(source), id = v1ContractId(source);
+  if (expectId && expectId.replace(/^00000001/, '') !== id.slice(8)) throw new Error('The contract id does not match the source: not signed');
+  const cost = activationCost(source, blocks);
+  const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
+  const utxos = state.utxos
+    .filter(u => u.spend.asset === '00' && keyFor(u))
+    .map(u => ({ ...u, spend: { asset: ZEN_ASSET, amount: u.spend.amount }, key: keyFor(u) }));
+  const prepared = buildTransaction({
+    utxos, tipBlockNumber: state.tip, maturity: maturityFor(w.network),
+    payments: [{ lock: { type: 'ActivationSacrifice' }, spend: { asset: ZEN_ASSET, amount: cost } }],
+    changeLock: { type: 'PK', hash: decodeAddress(receiveAddress(w)).hash },
+    contract: { version: 1, bytes },
+  });
+  return { ...prepared, cost, blocks, contractId: id, address: encodeAddress(unhex(id), w.network, true) };
 }

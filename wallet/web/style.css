@@ -129,3 +129,7 @@ button.item { background: none; border: 0; border-bottom: 1px solid var(--line2)
 .how { margin-top: 10px; } .how summary { cursor: pointer; font-size: 14px; color: var(--accent); } .how p { margin: 8px 0 0; }
 .pill.soon { font-size: 12px; }
 .chip[disabled] { opacity: .55; cursor: not-allowed; }
+
+pre.src { max-height: 360px; overflow: auto; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 12.5px/1.45 var(--mono); white-space: pre; margin: 10px 0; }
+details > summary { cursor: pointer; list-style: revert; }
+.wrapchips { display: flex; flex-wrap: wrap; gap: 8px; }

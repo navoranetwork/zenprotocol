@@ -50,6 +50,7 @@ fi
 cat > /etc/nginx/sites-available/zen-testnet <<CONF
 limit_req_zone \$binary_remote_addr zone=zentest:10m rate=10r/s;
 limit_req_zone \$binary_remote_addr zone=zenfaucet:10m rate=6r/m;
+limit_req_zone \$binary_remote_addr zone=zenengine:10m rate=30r/m;
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -82,6 +83,8 @@ server {
     # ZP <-> BTC swap page: offers come from the prover (site/bitzen/prover.mjs, PROVER_LISTEN); it signs reservations, so POST is rate-limited
     location = /swap/status  { limit_except GET  { deny all; } limit_req zone=zentest burst=20 nodelay; proxy_pass http://127.0.0.1:$PROVER/status; add_header Cache-Control "no-store"; }
     location = /swap/reserve { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 2k; proxy_pass http://127.0.0.1:$PROVER/reserve; proxy_read_timeout 90s; add_header Cache-Control "no-store"; }
+    # contract engine (zp-contracts-v1 tools/engine/server.py, docs/SERVICE.md) for the wallet's Create a contract; it never signs
+    location /engine/ { limit_req zone=zenengine burst=20 nodelay; client_max_body_size 256k; proxy_pass http://127.0.0.1:${ENGINE_PORT:-11580}; proxy_set_header X-Forwarded-For \$remote_addr; proxy_read_timeout 30s; add_header Cache-Control "no-store"; }
     location = /bridge/events { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/events; proxy_http_version 1.1; proxy_set_header Connection ""; proxy_buffering off; proxy_cache off; proxy_read_timeout 3600s; add_header Cache-Control "no-cache"; }
     location = /bridge/status { limit_except GET { deny all; } proxy_pass http://127.0.0.1:$BRIDGE/status; add_header Cache-Control "no-cache"; }
     # bridge page actions: look up an EVM address, link it to a ZP address (signed), claim a withdrawal

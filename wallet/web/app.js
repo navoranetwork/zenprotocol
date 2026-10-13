@@ -5,8 +5,9 @@ import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress, encodeAddres
 import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
-import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
+import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1 } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
+import { EngineClient, checkParam, v1ContractId, activationCost } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
@@ -63,7 +64,7 @@ const rateText = (sats, kalapas) => {
 };
 const zpStr = v => Number.isFinite(v) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '–';
 
-function go(screen, extra = {}) { freshScreen = true; Object.assign(S, { screen, error: '', modal: null }, extra); if (screen === 'vote') S.cands = null; /* the candidate list belongs to one interval: ask the node again */ render(); if (screen === 'vote') refreshVotes(); window.scrollTo(0, 0); if (screen === 'markets') loadMarkets(); }
+function go(screen, extra = {}) { freshScreen = true; Object.assign(S, { screen, error: '', modal: null }, extra); if (screen === 'vote') S.cands = null; /* the candidate list belongs to one interval: ask the node again */ render(); if (screen === 'vote') refreshVotes(); window.scrollTo(0, 0); if (screen === 'markets') loadMarkets(); if (screen === 'contracts') loadEngine(); }
 // the site that serves this node (oracle, explorer API and index files sit next to /node/)
 const siteBase = () => { try { const u = new URL(S.settings.nodes[net()]); return /\/node$/.test(u.pathname) ? u.origin : ''; } catch { return ''; } };
 async function loadMarkets() {
@@ -111,6 +112,100 @@ function swapCard() {
     <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
       <p class="muted small" data-s="mt10">Buyers reserve and pay on the <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC page</a>.</p>
       <details class="how"><summary>How a sale works</summary><p class="muted small">Your ZP waits in a contract. A buyer reserves the offer for about 6 hours and pays bitcoin to your Bitcoin address; the contract checks the payment on Bitcoin and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p></details></div>`;
+}
+
+// ---------------------------------------------------------------- creating contracts (the V1 contract engine)
+// The site's engine (/engine/, zp-contracts-v1 docs/SERVICE.md) makes and checks a contract; the wallet shows the source
+// and the tests, computes the contract id itself, and signs the activation with the user's key.
+const engine = () => siteBase() ? new EngineClient(siteBase()) : null;
+async function loadEngine() {
+  const e = engine(); if (!e) { S.engine = { error: 'Creating contracts needs the community node, which serves the contract engine.' }; return render(); }
+  try { const f = await e.families(); S.engine = { families: Array.isArray(f) ? f.filter(x => x && typeof x.id === 'string' && x.params && typeof x.params === 'object') : [] }; }
+  catch { S.engine = { error: 'The contract engine is not available on this network yet.' }; }
+  render();
+}
+function createCard() {
+  const E = S.engine;
+  const chips = E?.families ? E.families.map(f => `<button class="chip" data-act="cc-family" data-id="${esc(f.id)}">${esc(f.title || f.id)}</button>`).join('')
+    + '<button class="chip" data-act="cc-ask">Describe it… <span class="muted small">experimental</span></button>' : '';
+  return `<div class="card"><h2>Create a contract</h2>
+    <p class="muted small">Start from a ready template or describe what you need. The contract engine writes the contract and its tests and checks it as a node will; you read it, and you sign the activation yourself.</p>
+    ${!E ? '<p class="muted small">Loading…</p>' : E.error ? `<p class="muted small">${esc(E.error)}</p>` : `<div class="wrapchips" data-s="mt10">${chips}</div>`}
+    ${S.cc && ['job', 'result'].includes(S.cc.step) ? `<button class="btn small" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
+}
+const ccStatus = j => !j ? 'Sending…' : j.status === 'queued' ? `Waiting in line${j.position ? ' (' + j.position + ' ahead)' : ''}…` : j.status === 'running' ? (j.kind === 'ask' ? `Writing and checking the contract${j.rounds?.length ? ' (round ' + j.rounds.length + ')' : ''}…` : 'Building, testing and checking the contract…') : '';
+function createView() {
+  const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family?.title || 'Create a contract'), 'contracts');
+  if (c.step === 'form') {
+    const f = c.family, mine = active() && S.open.get(active().id) && canSpend(S.open.get(active().id)) ? signerOf(S.open.get(active().id)) : null;
+    return `${back}<form data-form="cc-make" class="screen"><p class="muted small">${esc(f.description || '')}</p>
+      ${Object.entries(f.params).map(([n, p]) => `<label class="field">${esc(n)} <span class="muted small">· ${esc(p.type)}${p.default !== undefined ? ' · default ' + esc(p.default) : ''}</span>
+        <input name="p_${esc(n)}" autocomplete="off" autocapitalize="off" spellcheck="false" class="${['hash', 'publickey'].includes(p.type) ? 'mono' : ''}" placeholder="${esc(p.example ?? p.default ?? '')}" value="${esc(c.values?.[n] ?? '')}"></label>
+        ${p.description ? `<p class="muted small" data-s="mt4">${esc(p.description)}</p>` : ''}
+        ${mine && p.type === 'publickey' ? `<div class="row wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.publicKey)}">My key (${esc(active().name)})</button></div>` : ''}
+        ${mine && p.type === 'hash' ? `<div class="row wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.pkHash)}">My address (${esc(active().name)})</button></div>` : ''}`).join('')}
+      ${errBox()}<button class="btn primary big">Make the contract</button></form>${nav('contracts')}`;
+  }
+  if (c.step === 'ask') return `${back}<form data-form="cc-ask" class="screen">
+      <div class="warn">Experimental: an AI model writes the contract and its tests. The engine holds them to the same checks and gas as any contract, but the tests are the model's own: read them before you activate anything.</div>
+      <label class="field">What should the contract do?<textarea name="text" rows="5" placeholder="A vault that pays the owner after block 2500" required>${esc(c.text || '')}</textarea></label>
+      ${errBox()}<button class="btn primary big">Write the contract</button></form>${nav('contracts')}`;
+  if (c.step === 'job') return `${back}<div class="screen"><div class="card"><p><span class="spin"></span> ${esc(ccStatus(c.job))}</p><p class="muted small">This takes up to a minute${c.kind === 'ask' ? ' or a few' : ''}. You can leave this screen; the contract waits for you here for a day.</p></div>${errBox()}</div>${nav('contracts')}`;
+  if (c.step === 'result') return `${back}<div class="screen">${resultHtml(c)}</div>${nav('contracts')}`;
+  return `${back}<div class="screen"><p class="muted">Nothing to show.</p></div>${nav('contracts')}`;
+}
+function resultHtml(c) {
+  const j = c.job || {};
+  if (!j.ok) {
+    const why = j.error || j.report?.error || (j.check?.refusal ? j.check.refusal.title : '') || 'The contract could not be made.';
+    return `<div class="card"><h2 class="bad">Not made</h2><p class="small">${esc(why)}</p>${j.report?.stage ? `<p class="muted small">Stopped at: ${esc(j.report.stage)}</p>` : ''}${j.check ? refusalHtml(j.check) : ''}
+      <button class="btn" data-act="cc-again">Change and try again</button></div>${errBox()}`;
+  }
+  const src = c.source, id = v1ContractId(src), chk = c.check || j.check || {}, v1h = chk.activation?.v1Height, early = v1h && S.tip != null && S.tip + 1 < v1h;
+  const sameAsReport = id.slice(8) === String(j.report?.contractId || '').replace(/^00000001/, '');
+  const checked = !c.edited || (c.check && c.checkedSource === src && c.check.verdict === 'accepted');
+  const tests = Array.isArray(j.tests) ? j.tests : [];
+  return `<div class="card">${c.edited ? `<h2>Your edited version</h2>` : '<h2 class="ok">✓ Made and checked</h2>'}
+      <div class="kv"><span class="muted">Contract id</span><span class="mono small" title="${esc(id)}">${esc(id.slice(0, 14))}…${esc(id.slice(-8))}</span></div>
+      <div class="kv"><span class="muted">Size</span><span>${src.length.toLocaleString('en-US')} characters</span></div>
+      <div class="kv"><span class="muted">A node's check</span><span>${c.edited && !c.check ? 'not checked yet' : chk.verdict === 'accepted' ? '✓ accepted' : chk.verdict === 'refused' ? '✗ refused' : esc(chk.verdict || '–')}</span></div>
+      <div class="kv"><span class="muted">Tests</span><span>${tests.length} ${tests.length === 1 ? 'test passes' : 'tests pass'}${c.edited ? ' <span class="muted small">(engine\'s version)</span>' : ''}</span></div>
+      <div class="kv"><span class="muted">Cost proof</span><span class="small">not needed: gas enforces costs</span></div>
+      ${c.kind === 'ask' ? `<div class="warn" data-s="mt10">Written by an AI model${Array.isArray(j.rounds) ? ` in ${j.rounds.length} round${j.rounds.length === 1 ? '' : 's'}` : ''}. Its tests are its own: read them, and the source, before activating.</div>` : ''}
+      ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}</div>
+    <div class="card"><details><summary><b>Tests</b></summary><div class="list">${tests.map(t => `<div class="item"><div><div>${esc(t.name || t.command || 'test')}</div><div class="muted small">${esc(t.command || '')}${t.expect?.declaredCost != null ? ' · cost ' + esc(t.expect.declaredCost) : ''} · expects ${t.expect?.ok === false ? 'a refusal' : 'success'}</div></div></div>`).join('') || '<p class="muted small">None.</p>'}</div></details></div>
+    <div class="card"><details ${c.editing ? 'open' : ''}><summary><b>Source</b>${c.edited ? ' <span class="pill">edited</span>' : ''}</summary>
+      ${c.editing ? `<form data-form="cc-check" class="screen" data-s="flush"><textarea name="source" rows="16" class="mono" spellcheck="false">${esc(src)}</textarea>
+          <div class="row"><button class="btn">Check my changes</button><button type="button" class="btn" data-act="cc-reset">Undo changes</button></div></form>`
+        : `<pre class="src">${esc(src)}</pre><button class="btn small" data-act="cc-edit">Edit</button>`}
+      ${c.check && c.edited ? (c.check.verdict === 'accepted' ? '<p class="ok small">✓ A node accepts the changed source.</p>' : refusalHtml(c.check)) : ''}</details></div>
+    <div class="card"><h2>Activate</h2>
+      ${early ? `<p class="muted small">V1 contracts open at block ${Number(v1h).toLocaleString('en-US')}; the node is at ${Number(S.tip).toLocaleString('en-US')}.</p>`
+      : !checked ? '<p class="muted small">Check the changed source first.</p>'
+      : `<form data-form="cc-activate" class="screen" data-s="flush">
+        <label class="field">Keep it active for (blocks)<input name="blocks" inputmode="numeric" autocomplete="off" value="${esc(c.blocks || '1000')}" required></label>
+        <p class="muted small">It costs ${src.length.toLocaleString('en-US')} kalapas per block (its length), paid once from ${esc(active()?.name || 'the active wallet')}. You can extend it later.</p>
+        ${errBox()}<button class="btn primary">Review</button></form>`}</div>`;
+}
+function refusalHtml(chk) {
+  if (chk.verdict === 'environment') return '<p class="muted small">The engine could not check it right now (its tools failed, not your contract). Try again later.</p>';
+  const r = chk.refusal; if (!r) return chk.nodeMessage ? `<p class="bad small">${esc(chk.nodeMessage)}</p>` : '';
+  return `<div class="card" data-s="mt10"><p class="bad"><b>A node would refuse it: ${esc(r.title || r.rule || '')}</b>${r.line ? ` · line ${esc(r.line)}` : ''}</p>
+    ${r.code ? `<pre class="src">${esc(r.code)}</pre>` : ''}${r.why ? `<p class="small">${esc(r.why)}</p>` : ''}${r.fix ? `<p class="small"><b>Fix:</b> ${esc(r.fix)}</p>` : ''}${r.hint ? `<p class="muted small">${esc(r.hint)}</p>` : ''}
+    ${r.right ? `<p class="muted small">For example: <code>${esc(r.right)}</code></p>` : ''}</div>`;
+}
+// run a job on the engine and show it here while it runs
+async function ccRun(kind, start) {
+  const e = engine(); if (!e) throw new Error('No contract engine on this network');
+  const res = await start(e);
+  S.cc = { ...S.cc, step: 'job', kind, jobId: res.job, job: null }; S.error = ''; render();
+  const id = res.job;
+  const j = await e.wait(id, x => { if (S.cc?.jobId === id) { S.cc.job = x; if (S.screen === 'create' && S.cc.step === 'job') render(); } }, { stopped: () => S.cc?.jobId !== id });
+  if (!j || S.cc?.jobId !== id) return;
+  if (j.status !== 'done') { S.cc = { ...S.cc, step: 'result', job: { ok: false, error: j.error || (j.status === 'timeout' ? 'The engine took too long.' : 'The engine could not run.') } }; return render(); }
+  S.cc = { ...S.cc, step: 'result', job: j, source: typeof j.source === 'string' ? j.source : '', edited: false, check: null, editing: false };
+  if (j.ok && !S.cc.source) S.cc.job = { ok: false, error: 'The engine returned no source.' };
+  render();
 }
 
 function fail(e) { S.error = e?.message || String(e); S.busy = false; render(); $app.querySelector('.modal .err, .err')?.scrollIntoView?.({ block: 'center' }); }   // the message may sit below the button that was pressed
@@ -270,9 +365,7 @@ const views = {
   contracts: () => {
     const cs = S.contracts, wa = active(), mayExtend = !!(wa && S.open.get(wa.id) && canSpend(S.open.get(wa.id)));
     return `${top()}<div class="screen"><h1>Smart contracts</h1>
-    <div class="card"><div class="row" data-s="between"><h2>Create a contract</h2><span class="pill soon">Coming with V1</span></div>
-      <p class="muted small">Start from a ready template or describe what you need in words. The contract is checked, tested and its cost proven before you can publish it, and you sign the publishing yourself.</p>
-      <div class="tabs3" data-s="mt10"><button class="chip" disabled>Token</button><button class="chip" disabled>Time-locked vault</button><button class="chip" disabled>Describe it…</button></div></div>
+    ${createCard()}
     <div class="card"><h2>Active contracts</h2><div class="list">${!cs ? '<p class="muted small">Loading…</p>' : cs.length === 0 ? '<p class="muted small">None.</p>' : cs.map((k, i) => {
       const left = k.expire - (S.tip || k.expire), cls = left < 300 ? 'lvl-bad' : left < 3000 ? 'lvl-warn' : '';
       return `<div class="item"><div><div>${esc(k.name || 'Unnamed')}</div><div class="muted small mono" title="${esc(k.address)}">${esc(shortAddr(k.address))}</div></div>
@@ -280,6 +373,8 @@ const views = {
     }).join('')}</div></div>
     <div class="card"><p class="muted small">Tokens issued by contracts appear on the Wallet screen. Extending a contract keeps it running past its end block: it costs ZP from the active wallet. Viewing code and running contracts arrive in a later version.</p></div></div>${nav('contracts')}`;
   },
+
+  create: () => createView(),
 
   settings: () => `${top()}<div class="screen"><h1>Settings</h1>
     <div class="card"><h2>Network</h2><div class="tabs" data-s="two mt10">
@@ -528,6 +623,18 @@ function modalHtml() {
     <p>${esc(m.text)}</p><p class="muted small">It shows on the Markets screen when it is in a block (about 4 minutes).</p>
     <div class="card small"><div class="muted">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
+  if (m.type === 'confirm-activate') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Activate the contract</h2>
+    <div class="card"><div class="kv"><span class="muted">Contract</span><span>${esc(m.name)}</span></div>
+    <div class="kv"><span class="muted">Contract id</span><span class="mono small">${esc(m.prepared.contractId.slice(0, 14))}…${esc(m.prepared.contractId.slice(-8))}</span></div>
+    <div class="kv"><span class="muted">Active for</span><span>${m.prepared.blocks.toLocaleString('en-US')} blocks</span></div>
+    <div class="kv"><span class="muted">Cost</span><span class="amt">${formatZP(m.prepared.cost)} ZP</span></div>
+    <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div></div>
+    <p class="muted small">The wallet computed the contract id from the source you saw; it matches the engine's. The ZP is spent for good. Anyone can use the contract once it is active.</p>${errBox()}
+    <div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="confirm-activate" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
+  if (m.type === 'activated') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">✓ Broadcast successfully</h2>
+    <p>The contract becomes active when the transaction is in a block (about 4 minutes), for ${m.blocks.toLocaleString('en-US')} blocks.</p>
+    <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
+    <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
   if (m.type === 'sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
     <p>${formatZP(m.amount)} ZP is on its way. It appears in the next block, about 4 minutes.</p>
     <div class="card small"><div class="muted">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
@@ -838,6 +945,19 @@ $app.addEventListener('click', async e => {
       const m = S.modal, hash = await publish(node(), m.prepared);
       S.busy = false; S.modal = { type: 'extended', hash, name: m.name, blocks: m.blocks }; render(); setTimeout(() => { refreshAll(); }, 5000); return;
     }
+    if (act === 'cc-family') { const f = S.engine?.families?.find(x => x.id === t.dataset.id); if (!f) return; S.cc = { step: 'form', kind: 'make', family: f, values: {} }; return go('create'); }
+    if (act === 'cc-open') return go('create');
+    if (act === 'cc-ask') { S.cc = { step: 'ask', kind: 'ask', text: '' }; return go('create'); }
+    if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) i.value = t.dataset.v; return; }
+    if (act === 'cc-again') { S.cc = { ...S.cc, step: S.cc.kind === 'ask' ? 'ask' : 'form' }; S.error = ''; return render(); }
+    if (act === 'cc-edit') { S.cc.editing = true; return render(); }
+    if (act === 'cc-reset') { S.cc = { ...S.cc, source: S.cc.job.source, edited: false, editing: false, check: null }; return render(); }
+    if (act === 'confirm-activate') {
+      S.busy = true; render();
+      const m = S.modal, hash = await publish(node(), m.prepared);
+      for (const sp of m.prepared.spent || []) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() });
+      S.busy = false; S.modal = { type: 'activated', hash, address: m.prepared.address, blocks: m.prepared.blocks }; render(); setTimeout(() => refreshAll(), 30000); return;
+    }
     if (act === 'swap-new') {
       const a = active(); await refreshWallet(a.id);
       const z = S.data.get(a.id)?.state?.assets.find(x => x.asset === '00');
@@ -979,6 +1099,35 @@ $app.addEventListener('submit', async e => {
         const d = S.data.get(a.id); if (!d?.state || d.error) throw new Error('Could not read the balance from the node');
         const prepared = await waitingFirst(pendingSpent(d), ex => prepareOffer({ w: S.open.get(a.id), state: d.state, node: node(), swapContractId: S.swap.swapId, id: newOfferId(), amount, sats, scripts, exclude: ex }));
         S.modal = { type: 'confirm-offer', prepared, amount, sats, addrs }; S.error = ''; return render();
+      }
+      case 'cc-make': {
+        const c = S.cc, params = {}; c.values = {};
+        for (const [n, p] of Object.entries(c.family.params)) { c.values[n] = v['p_' + n] ?? ''; const x = checkParam(n, p, c.values[n]); if (x !== null) params[n] = x; }
+        return await ccRun('make', e => e.make(c.family.id, params));
+      }
+      case 'cc-ask': {
+        S.cc.text = v.text.trim(); if (S.cc.text.length < 10) throw new Error('Say a little more about what the contract should do');
+        return await ccRun('ask', e => e.ask(S.cc.text));
+      }
+      case 'cc-check': {
+        const src = v.source; if (src === S.cc.source && !S.cc.edited) { S.cc.editing = false; return render(); }
+        v1ContractId(src);   // size and text rules first
+        S.cc = { ...S.cc, source: src, edited: src !== S.cc.job.source, check: null };
+        if (!S.cc.edited) { S.cc.editing = false; return render(); }
+        const e = engine(), res = await e.check(src); S.busy = true; render();
+        const j = await e.wait(res.job, null, { stopped: () => S.screen !== 'create' });
+        S.busy = false; if (!j) return;
+        if (j.status !== 'done' || !j.check) throw new Error(j.error || 'The engine could not check it: try again later');
+        S.cc = { ...S.cc, check: j.check, checkedSource: src, editing: j.check.verdict !== 'accepted' }; S.error = ''; return render();
+      }
+      case 'cc-activate': {
+        const c = S.cc, blocks = Number(String(v.blocks).trim()), a = active(); c.blocks = v.blocks;
+        if (!a || !canSpend(S.open.get(a.id))) throw new Error('Choose a wallet that can sign');
+        await refreshWallet(a.id); const d = S.data.get(a.id); if (!d?.state || d.error) throw new Error('Could not read the balance from the node');
+        // the id the wallet signs for: the engine's report for its own source, the engine's check for an edited one
+        const expect = c.edited ? c.check?.contractId : c.job.report?.contractId;
+        const prepared = prepareActivateV1(S.open.get(a.id), d.state, c.source, blocks, expect);
+        S.modal = { type: 'confirm-activate', prepared, name: c.family?.title || 'Described contract' }; S.error = ''; return render();
       }
       case 'node': {
         const url = v.url.trim().replace(/\/+$/, '');
