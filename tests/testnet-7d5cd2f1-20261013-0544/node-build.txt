@@ -1,0 +1,11 @@
+/opt/zp-lab/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-lab/src/Cli/Cli.fsproj]
+/opt/zp-lab/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-lab/src/Node/Node.fsproj]
+
+Build succeeded.
+
+/opt/zp-lab/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-lab/src/Cli/Cli.fsproj]
+/opt/zp-lab/src/Directory.Build.targets(32,5): warning : contract tool not built: run dotnet build src/ContractTool first [/opt/zp-lab/src/Node/Node.fsproj]
+    2 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:40.77

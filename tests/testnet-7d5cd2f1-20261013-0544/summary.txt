@@ -1,1 +1,7 @@
 [2026-10-13 05:44] lab testnet on 7d5cd2f1 V1 review: byte-identical contract builds on two machines; lab testnet and T5b on zp-lab-1
+[2026-10-13 05:44] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-13 05:44] F*: F* 2026.09.27
+[2026-10-13 05:44] toolchain: zp-contracts-v1 c9b085d Determinism: contract DLLs carry no F# signature/optimization 
+[2026-10-13 05:45] Zulib: all 50 modules verify
+[2026-10-13 05:45] node built (Debug)
+[2026-10-13 05:46] token template DLL (build-contract.sh): c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
