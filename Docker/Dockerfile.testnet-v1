@@ -27,6 +27,17 @@ RUN dotnet restore src/ContractTool/ContractTool.fsproj \
  && cp -rn src/Cli/bin/Release/. /out/ \
  && test -f /out/contract-tool/zen-contract-tool.exe && test -f /out/libsecp256k1.so && test -f /out/librandomx.so && test -x /out/z3-linux
 
+# ---- tests (not part of the image): the node's unit tests with Mono for the V0 contract tool
+#   docker build -f Docker/Dockerfile.testnet-v1 --target tests --progress=plain .
+FROM build AS tests
+RUN apt-get update && apt-get install -y --no-install-recommends mono-devel liblmdb-dev && rm -rf /var/lib/apt/lists/*
+RUN for t in Consensus.Tests Blockchain.Tests; do \
+      dotnet build src/$t/$t.fsproj -c Release -v minimal > /tmp/build-$t.txt 2>&1 || { tail -30 /tmp/build-$t.txt; exit 1; }; \
+      cp -rn src/Node/bin/Release/contract-tool src/$t/bin/Release/ 2>/dev/null; \
+      cp -n /out/librandomx.so src/$t/bin/Release/ 2>/dev/null; \
+      dotnet test src/$t/$t.fsproj -c Release --no-build 2>&1 | tee /tmp/test-$t.txt | grep -E "^\s+Failed |^(Passed|Failed)!"; \
+    done; grep -hE "^(Passed|Failed)!" /tmp/test-*.txt; ! grep -qE "^Failed!|Test Run Aborted" /tmp/test-*.txt
+
 # ---- runtime: .NET 10 + the pinned SDK (V1 builds) + F* (V1) + Mono (V0 contract tool) ----
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 ARG SDK=10.0.112
