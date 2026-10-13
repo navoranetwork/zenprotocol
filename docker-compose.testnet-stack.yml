@@ -7,6 +7,7 @@
 #   bridge    USDC bridge prototype (mock EVM until BRIDGE_EVM is set)   127.0.0.1:8090
 #   faucet    gives test ZP from its own wallet (site/faucet/faucet.mjs)     127.0.0.1:8095
 #   bitzen    BitZen header relayer: Bitcoin headers to the contract BITZEN_CONTRACT (site/bitzen/relayer.mjs); /bitzen.json
+#   prover    BitZen prover: proves payments to reserved swap offers (site/bitzen/prover.mjs; V1 only, profile v1)
 # All use the host network and talk to the node on 127.0.0.1:31567.
 x-tools: &tools
   image: zen-tools
@@ -54,6 +55,14 @@ services:
     working_dir: /r
     command: node /r/site/bitzen/relayer.mjs
     environment: { BITZEN_NODE: "http://127.0.0.1:31567", BITZEN_PASSWORD: "${TESTNET_PASSWORD:-testnet}", BITZEN_STATUS: /data/web/bitzen.json, BITZEN_STATE: /data/bitzen-relayer.json }
+  # BitZen prover (V1 contracts only, after the testnet's V1 fork): proves Bitcoin payments to reserved swap offers by
+  # itself (PROVER_CHAIN, PROVER_SWAP in testnet-stack.env). Not started by a plain `up`: `up -d prover`.
+  prover:
+    <<: *web
+    profiles: ["v1"]
+    working_dir: /r
+    command: node /r/site/bitzen/prover.mjs
+    environment: { PROVER_NODE: "http://127.0.0.1:31567", PROVER_PASSWORD: "${TESTNET_PASSWORD:-testnet}", PROVER_STATE: /data/bitzen-prover.json }
 volumes:
   faucet-data:
   oracle-data:
