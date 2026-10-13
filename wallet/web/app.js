@@ -649,6 +649,19 @@ function rememberVote(v) { (S.myVotes ||= loadVotes()).push({ ...v, net: net(), 
 async function refreshVotes() {
   const n = node(); if (!n || S.screen !== 'vote') return;
   let changed = false;
+  // follow the chain: when a new phase opens (nominations, voting) the forms open without leaving the screen
+  try {
+    const before = S.tip ? phaseAt(CGP_PARAMS[net()], S.tip + 1) : null;
+    const info = checkInfo(await n.info(), net());
+    if (info.blocks !== S.tip) {
+      S.tip = info.blocks; S.nodeOk = true;
+      const after = phaseAt(CGP_PARAMS[net()], S.tip + 1);
+      if (!before || before.phase !== after.phase || before.interval !== after.interval) {
+        S.cgp = await n.cgp().catch(() => S.cgp); S.cands = null;   // candidates belong to one interval: ask again
+        changed = true; phaseTurned = true;
+      } else if (!document.activeElement?.closest?.('form[data-form]') && !S.modal) render();   // block count and "blocks left"
+    }
+  } catch { /* the next round tries again */ }
   for (const v of (S.myVotes ||= loadVotes()).filter(x => x.net === net() && x.state !== 'block')) {
     try {
       const t = await n.request('/blockchain/transaction?hash=' + v.hash), bn = t && (t.blockNumber ?? t.block);
@@ -656,8 +669,10 @@ async function refreshVotes() {
       if (st !== v.state) { v.state = st; if (Number.isSafeInteger(bn)) v.block = bn; changed = true; }
     } catch { /* not known to the node (yet) */ }
   }
-  if (changed) { saveVotes(); if (!S.modal && !document.activeElement?.closest?.('form[data-form]')) render(); }
+  if (changed) { saveVotes(); if (!S.modal && (phaseTurned || !document.activeElement?.closest?.('form[data-form]'))) render(); }
+  phaseTurned = false;
 }
+let phaseTurned = false;
 // A ballot already sent from this browser for the same command, interval and phase by one of the selected wallets.
 // Only the first ballot of each key counts in a phase (Tally_Handler), so a second one would only cost a fee.
 const COMMAND_OF = { 'allocation vote': 'Allocation', 'payout vote': 'Payout', nomination: 'Nomination' };
