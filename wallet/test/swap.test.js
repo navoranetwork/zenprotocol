@@ -1,0 +1,108 @@
+// ZP <-> BTC swap: Bitcoin addresses to scripts, offer and cancel bodies, and the signed contract call
+// (a fake node plays /contract/execute the way TransactionHandler.executeContract builds the transaction).
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { sha3_256 } from '@noble/hashes/sha3.js';
+import { btcScript, parseBTC, offerBody, checkOfferId } from '../src/swap.js';
+import { openWallet, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
+import { deriveKey } from '../src/keys.js';
+import { verifyDigest } from '../src/tx.js';
+import { Reader, Writer, VarInt, Outpoint, Output, Data, ContractId, Str, ZEN_ASSET, deserializeTx, serializeTx, txHash, witnessesHash, hex, unhex } from '../src/serialize.js';
+
+test('Bitcoin addresses become output scripts (BIP173/BIP350 vectors, legacy)', () => {
+  assert.equal(btcScript('BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4'), '0014751e76e8199196d454941c45d1b3a323f1433bd6');
+  assert.equal(btcScript('bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0'), '512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798');
+  assert.equal(btcScript('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'), '76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac');
+  assert.equal(btcScript('3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'), 'a914b472a266d0bd89c13706a4132ccfb16f7c3b9fcb87');
+  assert.equal(btcScript('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx', 'test'), '0014751e76e8199196d454941c45d1b3a323f1433bd6');
+  assert.throws(() => btcScript('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'), /testnet address/);
+  assert.throws(() => btcScript('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5'), /check every character/);   // one character changed
+  assert.throws(() => btcScript('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kV8f3t4'), /Mixed/);
+  assert.throws(() => btcScript('zen1qxyz'), /check every character|Not a/);
+  // bech32 checksum on a v1 program (BIP350: must be bech32m)
+  assert.throws(() => btcScript('bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx'));
+});
+
+test('prices and ids', () => {
+  assert.equal(parseBTC('0.0005'), 50000n); assert.equal(parseBTC('1 BTC'), 100000000n);
+  assert.throws(() => parseBTC('0.000001'), /at least/); assert.throws(() => parseBTC('1,5'), /Enter the price/);
+  assert.throws(() => checkOfferId('chain'), /reserved/); assert.throws(() => checkOfferId('u3')); assert.throws(() => checkOfferId('A b'), /3 to 24/);
+  assert.throws(() => offerBody({ id: 'o-1', sats: 1000n, scripts: ['0014aa', '0014aa'].map(s => s + '00'.repeat(19)), returnHash: new Uint8Array(32) }), /different/);
+});
+
+const SWAP = '00000001' + 'ab'.repeat(32);
+const phrase = Array(23).fill('abandon').concat('art').join(' ');
+function fixture({ tamper, contractAdds } = {}) {
+  const w = openWallet({ id: 'a', name: 'a', network: 'test', kind: 'mnemonic' }, phrase);
+  const k = deriveKey(w.account, 0, 0);
+  const utxos = [3n, 2n].map((z, i) => ({ outpoint: { txHash: new Uint8Array(32).fill(7 + i), index: i }, lock: { type: 'PK', hash: k.pkHash }, spend: { asset: '00', amount: z * 100000000n } }));
+  const calls = [];
+  const node = {
+    executeContract: async b => {
+      calls.push(b);
+      const r = new Reader(unhex(b.tx));
+      const n = VarInt.read(r), inputs = [];
+      for (let i = 0; i < n; i++) { assert.equal(r.u8(), 1); inputs.push({ type: 'outpoint', outpoint: Outpoint.read(r) }); Output.read(r); }
+      const m = VarInt.read(r), outputs = []; for (let i = 0; i < m; i++) outputs.push(Output.read(r));
+      const body = Data.read(new Reader(unhex(b.messageBody)));
+      const add = contractAdds(body);
+      let tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract',
+        contractId: { version: 1, hash: unhex(SWAP.slice(8)) }, command: b.command, messageBody: body, stateCommitment: { type: 'NotCommitted' },
+        beginInputs: inputs.length, beginOutputs: outputs.length, inputsLength: add.inputs.length, outputsLength: add.outputs.length, signature: null, cost: 4156n }] };
+      if (tamper) tx = tamper(tx);
+      return hex(serializeTx(tx));
+    },
+  };
+  return { w, k, state: { tip: 2100, utxos }, node, calls };
+}
+const swapLock = { type: 'Contract', contractId: { version: 1, hash: unhex(SWAP.slice(8)) } };
+const scripts = [btcScript('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'), btcScript('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')];
+const offerAdds = amount => () => ({ inputs: [], outputs: [{ lock: swapLock, spend: { asset: ZEN_ASSET, amount } }] });
+
+// what ContractV0.fs getSender checks: SHA3(txHash ‖ Serialization.Message.serialize {recipient, command, body})
+const senderMsg = (tx, cw) => { const w = new Writer(); ContractId.write(w, cw.contractId); Str.write(w, cw.command); w.u8(1); Data.write(w, cw.messageBody); return sha3_256(Uint8Array.from([...txHash(tx), ...w.out()])); };
+
+test('an offer: ZP for the contract from two inputs, the seller signs the call, the last PK witness covers it', async () => {
+  const amount = 400000000n, f = fixture({ contractAdds: offerAdds(amount) });
+  const out = await prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount, sats: 50000n, scripts });
+  assert.equal(f.calls[0].options.sender, hex(f.k.publicKey));
+  const tx = deserializeTx(unhex(out.hex));
+  assert.equal(tx.inputs.length, 2);
+  assert.deepEqual(tx.witnesses.map(x => x.type + ':' + (x.sigHash || '')), ['PK:TxHash', 'PK:FollowingWitnesses', 'Contract:']);
+  assert.ok(verifyDigest(tx.witnesses[0].signature, txHash(tx), f.k.publicKey));
+  assert.ok(verifyDigest(tx.witnesses[1].signature, sha3_256(Uint8Array.from([...txHash(tx), ...witnessesHash([tx.witnesses[2]])])), f.k.publicKey));
+  const cw = tx.witnesses[2];
+  assert.equal(hex(cw.signature.publicKey), hex(f.k.publicKey));
+  assert.ok(verifyDigest(cw.signature.signature, senderMsg(tx, cw), f.k.publicKey));
+  // change 0.99999999 ZP, fee 1 kalapa, 4 ZP locked in the contract
+  assert.deepEqual(tx.outputs.map(o => [o.lock.type, o.spend.amount]), [['PK', 99999999n], ['Fee', 1n], ['Contract', amount]]);
+  const body = Object.fromEntries(cw.messageBody.v.map(([k, v]) => [k, v]));
+  assert.equal(body.id.v, 'o-test'); assert.equal(body.sats.v, 50000n); assert.equal(body.s0.v, scripts[0]); assert.equal(body.s1.v, scripts[1]); assert.equal(body.s2, undefined);
+  assert.equal(hex(body.returnAddress.v.hash), hex(signerOf(f.w).pkHash));
+});
+
+test('a node or contract that sends the offer’s ZP elsewhere, or changes our part, is refused', async () => {
+  const amount = 400000000n;
+  const thief = { type: 'PK', hash: new Uint8Array(32).fill(9) };
+  const run = (contractAdds, tamper) => { const f = fixture({ contractAdds, tamper });
+    return prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount, sats: 50000n, scripts }); };
+  await assert.rejects(run(() => ({ inputs: [], outputs: [{ lock: thief, spend: { asset: ZEN_ASSET, amount } }] })), /not signed/);
+  await assert.rejects(run(offerAdds(amount - 1n)), /not signed/);
+  await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, outputs: [{ ...tx.outputs[0], lock: thief }, ...tx.outputs.slice(1)] })), /changed the outputs/);
+  await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, witnesses: [{ ...tx.witnesses[0], messageBody: { t: 'Dict', v: [] } }] })), /changed the message/);
+  await assert.rejects(run(offerAdds(amount), tx => ({ ...tx, witnesses: [{ ...tx.witnesses[0], outputsLength: 0 }] })), /unexpected contract witness/);
+  const f = fixture({ contractAdds: offerAdds(amount) });
+  await assert.rejects(prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount: 500000000n, sats: 1n, scripts }), /Not enough/);
+});
+
+test('cancel: only the fee from us, the offer’s ZP back to the signer', async () => {
+  const amount = 400000000n, me = signerOf(openWallet({ id: 'a', name: 'a', network: 'test', kind: 'mnemonic' }, phrase));
+  const back = () => ({ inputs: [{ type: 'outpoint', outpoint: { txHash: new Uint8Array(32).fill(1), index: 0 } }], outputs: [{ lock: { type: 'PK', hash: me.pkHash }, spend: { asset: ZEN_ASSET, amount } }] });
+  const f = fixture({ contractAdds: back });
+  const out = await prepareCancel({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-test', amount });
+  const tx = deserializeTx(unhex(out.hex));
+  assert.equal(tx.inputs.length, 2); assert.equal(tx.witnesses.length, 2);   // one wallet input pays the fee
+  assert.ok(verifyDigest(tx.witnesses[1].signature.signature, senderMsg(tx, tx.witnesses[1]), f.k.publicKey));
+  const g = fixture({ contractAdds: () => ({ inputs: [], outputs: [{ lock: { type: 'PK', hash: new Uint8Array(32).fill(9) }, spend: { asset: ZEN_ASSET, amount } }] }) });
+  await assert.rejects(prepareCancel({ w: g.w, state: g.state, node: g.node, swapContractId: SWAP, id: 'o-test', amount }), /not signed/);
+});

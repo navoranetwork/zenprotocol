@@ -104,15 +104,17 @@ async function round() {
     if (!o || typeof o !== 'object' || o.amount == null || o.sats == null) continue;
     const until = o.until != null ? Number(o.until) : null, held = until != null && zpTip + 1 <= until;
     const k = Number(o.k || 0), nextScript = o['s' + k];
-    offers.push({ id, zp: Number(o.amount) / 1e8, sats: Number(o.sats), confs: confsFor(Number(o.sats)),
+    offers.push({ id, zp: Number(o.amount) / 1e8, amount: String(o.amount), sats: Number(o.sats), confs: confsFor(Number(o.sats)),
+      seller: typeof o.seller === 'string' ? o.seller : null, scripts: [0, 1, 2, 3].map(i => o['s' + i]).filter(Boolean).length, used: k,
       state: held ? 'reserved' : o.cur ? 'expired' : 'open', until, buyer: o.buyer?.PK?.hash || null,
       address: o.cur ? scriptAddress(o[o.cur]) : null, script: o.cur ? o[o.cur] : null,
       canReserve: !held && !!nextScript, payment: null });
   }
-  view = { updated: new Date().toISOString(), chain: CHAIN, swap: SWAP, zpTip, btcNet: NET, offers };
+  const active = await get(`${NODE}/contract/active`);
+  const chainId = active.find(c => c.address === CHAIN)?.contractId;
+  const swapId = active.find(c => c.address === SWAP)?.contractId;
+  view = { updated: new Date().toISOString(), chain: CHAIN, swap: SWAP, swapId: swapId || null, zpTip, btcNet: NET, offers };
   if (!chain || !swap) return;
-  const chainId = (await get(`${NODE}/contract/active`)).find(c => c.address === CHAIN)?.contractId;
-  const swapId = (await get(`${NODE}/contract/active`)).find(c => c.address === SWAP)?.contractId;
   if (!swapId) throw new Error('the swap contract is not active');
   // the chain contract's ring: Bitcoin block hash (as shown) -> slot and height from the checkpoint
   const tipN = Number(chain.height);

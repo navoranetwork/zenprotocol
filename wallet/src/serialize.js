@@ -65,7 +65,7 @@ const Bytes = {
   write(w, b) { VarInt.write(w, b.length); w.bytes(b); },
   read(r) { return r.bytes(VarInt.read(r)); },
 };
-const Str = {
+export const Str = {
   write(w, s) { Bytes.write(w, ascii.encode(s)); },
   read(r) { return unascii.decode(Bytes.read(r)); },
 };

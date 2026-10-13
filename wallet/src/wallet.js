@@ -3,7 +3,8 @@
 // and builds, signs and publishes transfers. Secrets stay in memory only while unlocked.
 import { accountFromMnemonic, deriveKey, encodeAddress, decodeAddress, parsePrivateKey } from './keys.js';
 import { buildTransaction, maturityFor, MAX_AMOUNT } from './tx.js';
-import { unhex, hex, ZEN_ASSET, Writer, Outpoint, Output, Data, VarInt, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
+import { unhex, hex, ZEN_ASSET, Writer, Outpoint, Output, Data, VarInt, ContractId, Str, assetToString, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
+import { offerBody, cancelBody } from './swap.js';
 import { sha3_256 } from '@noble/hashes/sha3.js';
 import { signDigest, verifyDigest } from './tx.js';
 import { CGP_PARAMS, phaseAt, voteBody } from './cgp.js';
@@ -178,7 +179,7 @@ export async function publish(node, prepared) {
 // signs for tip + 1 and refuses when too few blocks are left.
 export const VOTE_MARGIN = 2;
 const contractIdOf = idHex => {
-  if (!/^[0-9a-f]{72}$/.test(idHex)) throw new Error('Invalid voting contract id');
+  if (!/^[0-9a-f]{72}$/.test(idHex)) throw new Error('Invalid contract id');
   return { version: parseInt(idHex.slice(0, 8), 16), hash: unhex(idHex.slice(8)) };
 };
 const skeletonHex = (inputs, outputs) => {            // TxSkeleton (4.11): PointedOutput inputs, then outputs
@@ -248,4 +249,100 @@ export async function prepareVote({ w, state, node, votingContractId, command, b
   if (!verifyDigest(pkw.signature, msg, key.publicKey)) throw new Error('Signing failed');
   const signed = { ...tx, witnesses: [pkw, ...cw] };
   return { hash: hex(digest), hex: hex(serializeTx(signed)), phase: ph, signers: body.signers, spent: hex(fund.outpoint.txHash) + ':' + fund.outpoint.index };
+}
+
+// --- signed contract calls (ZP <-> BTC swap) ---------------------------------------------------------
+// The caller's public key is the contract's sender: the contract witness carries the key and a signature over
+// SHA3(transaction hash ‖ Message{contract, command, body}) (Consensus/InputValidation/ContractV0.fs getSender).
+// amount: ZP (kalapas) the transaction leaves for the contract (an offer locks it); 0 for a call that only pays the fee.
+// expect(added): checks the inputs and outputs the contract added (the node is not trusted with our coins).
+export async function prepareSignedCall({ w, state, node, contractId, command, body, amount = 0n, signer, expect, exclude = [] }) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  if (!signer?.privateKey || !signer?.publicKey) throw new Error('No key to sign the call');
+  const cid = contractIdOf(contractId);
+  const fee = 1n, need = amount + fee;
+  const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
+  const skip = new Set(exclude);
+  const pool = state.utxos.filter(u => u.spend.asset === '00' && u.lock.type === 'PK' && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
+    .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : b.spend.amount < a.spend.amount ? -1 : 0));
+  const fund = []; let sum = 0n;
+  for (const u of pool) { if (sum >= need) break; fund.push(u); sum += u.spend.amount; }
+  if (sum < need) throw new Error(amount ? 'Not enough spendable ZP in this wallet (the offer plus a 1 kalapa fee)' : 'You need a little ZP in a spendable output to pay the 1 kalapa fee');
+  if (fund.length > 50) throw new Error('This needs too many small outputs: send yourself the ZP in one transfer first');
+  const spend = a => ({ asset: ZEN_ASSET, amount: a });
+  const outputs = [];
+  if (sum > need) outputs.push({ lock: { type: 'PK', hash: decodeAddress(receiveAddress(w)).hash }, spend: spend(sum - need) });
+  outputs.push({ lock: { type: 'Fee' }, spend: spend(fee) });
+  const inputs = fund.map(u => ({ outpoint: u.outpoint, lock: u.lock, spend: spend(u.spend.amount) }));
+  const bw = new Writer(); Data.write(bw, body); const bodyHex = hex(bw.out());
+
+  const res = await node.executeContract({
+    address: encodeAddress(unhex(contractId), w.network, true), command, messageBody: bodyHex,
+    options: { sender: hex(signer.publicKey) }, tx: skeletonHex(inputs, outputs),
+  });
+  if (typeof res !== 'string' || !/^([0-9a-f]{2})+$/.test(res)) throw new Error(typeof res === 'string' && res ? 'The contract refused: ' + res.slice(0, 200) : 'The node sent an invalid answer');
+
+  const tx = deserializeTx(unhex(res));
+  const same = (a, b) => { const x = new Writer(), y = new Writer(); Output.write(x, a); Output.write(y, b); return bytesEqual(x.out(), y.out()); };
+  if (tx.version !== 0 || tx.contract) throw new Error('The node changed the transaction');
+  if (tx.inputs.length < fund.length || !fund.every((u, i) => tx.inputs[i].type === 'outpoint' && hex(tx.inputs[i].outpoint.txHash) === hex(u.outpoint.txHash) && tx.inputs[i].outpoint.index === u.outpoint.index))
+    throw new Error('The node changed the inputs');
+  if (tx.outputs.length < outputs.length || !outputs.every((o, i) => same(tx.outputs[i], o))) throw new Error('The node changed the outputs');
+  const cw = tx.witnesses;
+  if (cw.length !== 1 || cw[0].type !== 'Contract' || cw[0].command !== command || cw[0].contractId.version !== cid.version
+      || hex(cw[0].contractId.hash) !== hex(cid.hash) || cw[0].signature
+      || cw[0].beginInputs !== fund.length || cw[0].beginOutputs !== outputs.length
+      || cw[0].inputsLength !== tx.inputs.length - fund.length || cw[0].outputsLength !== tx.outputs.length - outputs.length) throw new Error('The node returned an unexpected contract witness');
+  if (!cw[0].messageBody) throw new Error('The node changed the message');
+  const ew = new Writer(); Data.write(ew, cw[0].messageBody);
+  if (hex(ew.out()) !== bodyHex) throw new Error('The node changed the message');
+  const added = { inputs: tx.inputs.slice(fund.length), outputs: tx.outputs.slice(outputs.length) };
+  if (expect) expect(added, cid);
+
+  const digest = txHash(tx);
+  const mw = new Writer(); ContractId.write(mw, cid); Str.write(mw, command); mw.u8(1); Data.write(mw, cw[0].messageBody);   // Serialization.Message
+  const callMsg = sha3_256(Uint8Array.from([...digest, ...mw.out()]));
+  const csig = signDigest(signer.privateKey, callMsg);
+  if (!verifyDigest(csig, callMsg, signer.publicKey)) throw new Error('Signing failed');
+  const contractWitness = { ...cw[0], signature: { publicKey: signer.publicKey, signature: csig } };
+  // one PK witness per input; the last also covers the contract witness after it (FollowingWitnesses)
+  const pkws = fund.map((u, i) => {
+    const key = keyFor(u), last = i === fund.length - 1;
+    const msg = last ? sha3_256(Uint8Array.from([...digest, ...witnessesHash([contractWitness])])) : digest;
+    const sig = signDigest(key.privateKey, msg);
+    if (!verifyDigest(sig, msg, key.publicKey)) throw new Error('Signing failed');
+    return { type: 'PK', sigHash: last ? 'FollowingWitnesses' : 'TxHash', publicKey: key.publicKey, signature: sig };
+  });
+  const signed = { ...tx, witnesses: [...pkws, contractWitness] };
+  return { hash: hex(digest), hex: hex(serializeTx(signed)), added, spent: fund.map(u => hex(u.outpoint.txHash) + ':' + u.outpoint.index) };
+}
+
+// the key that signs for a wallet: receive address 0 (its PK hash also gets the ZP back)
+export const signerOf = w => w.account ? deriveKey(w.account, 0, 0) : [...w.keys.values()][0] || null;
+
+// ZP <-> BTC: offer `amount` kalapas for `sats`; scripts: the seller's Bitcoin output scripts (hex), one per reservation
+export function prepareOffer({ w, state, node, swapContractId, id, amount, sats, scripts, exclude }) {
+  const signer = signerOf(w);
+  const body = offerBody({ id, sats, scripts, returnHash: signer.pkHash });
+  const swap = contractIdOf(swapContractId);
+  return prepareSignedCall({ w, state, node, contractId: swapContractId, command: 'offer', body, amount, signer, exclude,
+    expect: added => {
+      const o = added.outputs;
+      if (added.inputs.length || o.length !== 1 || o[0].lock.type !== 'Contract' || o[0].lock.contractId.version !== swap.version
+          || hex(o[0].lock.contractId.hash) !== hex(swap.hash) || assetToString(o[0].spend.asset) !== '00' || o[0].spend.amount !== amount)
+        throw new Error('The contract would not lock exactly your ZP for the offer: not signed');
+    } });
+}
+// cancel an offer: amount is the offer's ZP (kalapas), paid back to the signer's address
+export function prepareCancel({ w, state, node, swapContractId, id, amount, exclude }) {
+  const signer = signerOf(w);
+  const swap = contractIdOf(swapContractId);
+  return prepareSignedCall({ w, state, node, contractId: swapContractId, command: 'cancel', body: cancelBody(id), signer, exclude,
+    expect: added => {
+      const toMe = added.outputs.filter(o => o.lock.type === 'PK' && hex(o.lock.hash) === hex(signer.pkHash));
+      const rest = added.outputs.filter(o => !toMe.includes(o));
+      if (toMe.length !== 1 || assetToString(toMe[0].spend.asset) !== '00' || (amount != null && toMe[0].spend.amount !== amount)
+          || !rest.every(o => o.lock.type === 'Contract' && hex(o.lock.contractId.hash) === hex(swap.hash)))
+        throw new Error('The contract would not return the offer’s ZP to you: not signed');
+    } });
 }
