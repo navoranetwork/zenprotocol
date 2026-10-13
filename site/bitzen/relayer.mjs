@@ -9,7 +9,8 @@
 // Writes the status for the site's /bitzen.html to BITZEN_STATUS.
 //
 // env: BITZEN_CONTRACT (ctzn1… contract address; empty: idle), BITZEN_NODE, BITZEN_PASSWORD (node wallet),
-//      BITZEN_BTC_API (default https://mempool.space/api), BITZEN_STATUS, BITZEN_STATE, BITZEN_LOOP_MS, BITZEN_CHECKPOINT_BACK
+//      BITZEN_BTC_API (default https://mempool.space/api), BITZEN_STATUS, BITZEN_STATE, BITZEN_LOOP_MS, BITZEN_CHECKPOINT_BACK,
+//      BITZEN_BATCH (headers per call, 1..6; more than 1 needs the V1 contract BitZenChain)
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -24,6 +25,7 @@ const STATUS = env.BITZEN_STATUS || '/data/web/bitzen.json';
 const STATE = env.BITZEN_STATE || '/data/bitzen-relayer.json';
 const LOOP_MS = Number(env.BITZEN_LOOP_MS || 60000);
 const CHECKPOINT_BACK = Number(env.BITZEN_CHECKPOINT_BACK || 6);
+const BATCH = Math.max(1, Math.min(6, Number(env.BITZEN_BATCH || 1)));   // headers per add: 1 for the V0 contract, up to 6 for V1
 const MAX_CALLS_PER_LOOP = 6;
 const RING = 16, MAX_BRANCH = 6;
 
@@ -112,9 +114,11 @@ async function step(view) {
   const best = tipHeight <= btcTip ? await btc.hashAt(tipHeight).catch(() => null) : null;
   if (best === tipHash) {
     if (btcTip <= tipHeight) return false;   // up to date
-    const header = await btc.headerAt(tipHeight + 1);
-    const tx = await call('add', [['header', S(header)]]);
-    remember({ kind: 'add', height: tipHeight + 1, hash: blockHash(header), tx });
+    // the V1 contract takes up to 6 headers per call (h2..h6): catch up faster when ZP blocks are slow
+    const n = Math.min(BATCH, btcTip - tipHeight), headers = [];
+    for (let i = 1; i <= n; i++) headers.push(await btc.headerAt(tipHeight + i));
+    const tx = await call('add', headers.map((h, i) => [i ? 'h' + (i + 1) : 'header', S(h)]));
+    remember({ kind: 'add', height: tipHeight + n, count: n, hash: blockHash(headers[n - 1]), tx });
     return true;
   }
   if (best === null && tipHeight > btcTip) return false;   // the Bitcoin API is behind the contract: wait
