@@ -115,3 +115,15 @@ and the block, 14 s each, the blockchain actor blocked meanwhile); now built and
 Seen, not changed (V0 behaviour): a transaction a reorg puts back in the mempool is not relayed
 to peers again; only a node that has it can mine it.
 Next: the same script on zp-lab-1 (another machine and CPU: the DLL hash must match).
+
+## Byte-identical contract builds on two machines (2026-10-13)
+
+The token template, built by build-contract.sh on zp-lab-1 (AMD EPYC, Microsoft's .NET SDK
+10.0.112) and on the cloud workspace (Intel Xeon, Ubuntu's .NET SDK 10.0.112): the same DLL,
+SHA-256 c36acbaf...4dde (toolchain c9b085d). Before c9b085d they differed (d5e48cb9 vs 8690181c)
+with identical IL: the F# optimization data embedded in each DLL names the source path of the
+inlined FSharp.Core code, which differs between the two vendors' FSharp.Core builds. Contract
+DLLs no longer carry F# signature or optimization data (nothing compiles against them).
+The three-node lab testnet also passed on zp-lab-1 (tests/testnet-d5a8761d-20261012-2118 on
+branch replay-results), and BitZen's T5b (a real Bitcoin payment proved in a V1 contract) passed
+there (tests/testnet-56a313ad-20261012-2132).
