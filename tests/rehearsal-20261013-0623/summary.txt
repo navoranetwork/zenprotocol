@@ -2,3 +2,8 @@
   Chain.fs:130:        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
   Chain.fs:176:        v1ContractsHeight=2050ul
   Chain.fs:201:        v1ContractsHeight=localV1Height
+[2026-10-13 06:23] toolchain: zp-contracts-v1 c9b085d Determinism: contract DLLs carry no F# signature/optimization 
+[2026-10-13 06:23] image build: start (Zulib verification and the token DLL check run inside)
+[2026-10-13 06:33] image built: sha256:58c76e6da82c; Zulib: 50 of 50 modules verify;token template DLL: c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde;
+[2026-10-13 06:33] node started (seed 91.98.3.17); syncing
+[2026-10-13 06:36] SYNCED at block 1778, tip cbfcff93dfa206d4727d548ea064cf4cb3e5af59c0438db8cd89b8caf49682b8
