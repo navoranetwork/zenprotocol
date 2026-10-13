@@ -106,3 +106,15 @@ test('cancel: only the fee from us, the offer’s ZP back to the signer', async 
   const g = fixture({ contractAdds: () => ({ inputs: [], outputs: [{ lock: { type: 'PK', hash: new Uint8Array(32).fill(9) }, spend: { asset: ZEN_ASSET, amount } }] }) });
   await assert.rejects(prepareCancel({ w: g.w, state: g.state, node: g.node, swapContractId: SWAP, id: 'o-test', amount }), /not signed/);
 });
+
+test('a price per ZP becomes the total in satoshis', async () => {
+  const { totalFromPerZp } = await import('../src/swap.js');
+  const zp80k = 80000n * 100000000n;
+  assert.equal(totalFromPerZp('1250', zp80k, 'sat'), 100000000n);            // 80,000 ZP at 1,250 sat = 1 BTC
+  assert.equal(totalFromPerZp('1', zp80k, 'usd', 80000), 100000000n);         // $1 per ZP with BTC at $80,000 = 1 BTC
+  assert.equal(totalFromPerZp('$1.25', zp80k, 'usd', 100000), 100000000n);
+  assert.equal(totalFromPerZp('0.5', 2000n * 100000000n, 'sat'), 1000n);
+  assert.throws(() => totalFromPerZp('1', zp80k, 'usd', null), /No Bitcoin price/);
+  assert.throws(() => totalFromPerZp('1', 100n, 'sat'), /at least/);
+  assert.throws(() => totalFromPerZp('1,25', zp80k, 'usd', 1), /Enter the price/);
+});

@@ -77,3 +77,22 @@ export function offerBody({ id, sats, scripts, returnHash }) {
   ] };
 }
 export const cancelBody = id => ({ t: 'Dict', v: [['id', { t: 'String', v: checkOfferId(id) }]] });
+
+// The total price (satoshis) of an offer from a price per ZP. kalapas: the ZP sold (BigInt).
+//   unit 'sat': "1250" or "0.5" sat per ZP (exact)
+//   unit 'usd': "1.25" dollars per ZP at btcUsd dollars per bitcoin (the contract keeps the satoshis, not the dollars)
+export function totalFromPerZp(text, kalapas, unit, btcUsd) {
+  const m = String(text).trim().replace(/^\$/, '').match(/^(\d+)(?:\.(\d{1,8}))?$/);
+  if (!m) throw new Error(unit === 'usd' ? 'Enter the price per ZP in dollars, for example 1.25' : 'Enter the price per ZP in satoshis, for example 1250');
+  const scaled = BigInt(m[1]) * 100_000_000n + BigInt((m[2] || '').padEnd(8, '0'));   // per ZP x 1e8
+  if (scaled === 0n) throw new Error('The price must be above zero');
+  let sats;
+  if (unit === 'sat') sats = (scaled * BigInt(kalapas) + 5n * 10n ** 15n) / 10n ** 16n;
+  else if (unit === 'usd') {
+    if (!(btcUsd > 0)) throw new Error('No Bitcoin price from the oracle right now: give the price in BTC or satoshis');
+    sats = BigInt(Math.round(Number(scaled) / 1e8 * Number(kalapas) / 1e8 / btcUsd * 1e8));
+  } else throw new Error('Unknown price unit');
+  if (sats < BigInt(MIN_SATS)) throw new Error(`The total comes to ${sats} satoshis: at least ${MIN_SATS} are needed`);
+  if (sats > MAX_SATS) throw new Error('That is more bitcoin than exists');
+  return sats;
+}

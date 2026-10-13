@@ -6,7 +6,7 @@ import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
-import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS } from '../src/swap.js';
+import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
@@ -419,14 +419,20 @@ function modalHtml() {
     <form data-form="offer" class="screen" data-s="flush">
     <label class="field">ZP to sell<input name="zp" inputmode="decimal" autocomplete="off" value="${esc(m.zp || '')}" required></label>
     <p class="muted small">From ${esc(active().name)}: ${m.balance === null ? '–' : formatZP(m.balance) + ' ZP'} spendable.</p>
-    <label class="field">Price (BTC, for all of it)<input name="btc" inputmode="decimal" autocomplete="off" placeholder="0.0005" value="${esc(m.btc || '')}" required></label>
+    <div class="small">Price</div>
+    <div class="tabs3" role="group" aria-label="How to give the price">${[['total', 'Total in BTC'], ['usd', '$ per ZP'], ['sat', 'sat per ZP']].map(([k, l]) =>
+      `<button type="button" class="chip ${(m.mode || 'total') === k ? 'on' : ''}" data-act="price-mode" data-v="${k}" ${k === 'usd' && !btcUsd() ? 'disabled title="No Bitcoin price from the oracle right now"' : ''}>${l}</button>`).join('')}</div>
+    ${(m.mode || 'total') === 'total'
+      ? `<label class="field">Total price (BTC, for all of it)<input name="btc" inputmode="decimal" autocomplete="off" placeholder="0.0005" value="${esc(m.btc || '')}" required></label>`
+      : `<label class="field">${m.mode === 'usd' ? 'Price per ZP ($)' : 'Price per ZP (satoshis)'}<input name="per" inputmode="decimal" autocomplete="off" placeholder="${m.mode === 'usd' ? '1.25' : '1250'}" value="${esc(m.per || '')}" required></label>`}
     <div class="small muted" id="offer-rate" aria-live="polite"></div>
+    ${m.mode === 'usd' ? `<p class="muted small">At the oracle's Bitcoin price, $${esc(btcUsd()?.toLocaleString('en-US'))}. The offer keeps the total in BTC: if Bitcoin moves, the dollar price per ZP moves with it.</p>` : ''}
     <label class="field">Your Bitcoin addresses, one per line (1 to ${MAX_SCRIPTS})<textarea name="addrs" rows="4" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${S.swap?.btcNet === 'test' ? 'tb1q…' : 'bc1q…'}" required>${esc(m.addrs || '')}</textarea></label>
     <p class="muted small">The buyer pays to one of these: each reservation uses the next one, so a late payment can never be taken by the next buyer. Use new, unused addresses from your own Bitcoin wallet. When all are used, take the offer back and make a new one.</p>
     ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Review</button></div></form></div></div>`;
   if (m.type === 'confirm-offer') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm offer</h2>
     <div class="card"><div class="kv"><span class="muted">Sell</span><span class="amt">${formatZP(m.amount)} ZP</span></div>
-    <div class="kv"><span class="muted">For</span><span class="amt">${esc(formatBTC(m.sats))} BTC</span></div>
+    <div class="kv"><span class="muted">For (total)</span><span class="amt">${esc(formatBTC(m.sats))} BTC${btcUsd() ? ` <span class="muted small">≈ $${(Number(m.sats) / 1e8 * btcUsd()).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div>
     <div class="kv"><span class="muted">Price per ZP</span><span>${esc(rateText(m.sats, m.amount))}</span></div>
     ${m.addrs.map((a, i) => `<div class="kv"><span class="muted">Bitcoin address ${i + 1}</span><span class="mono small" data-s="wrap">${esc(a)}</span></div>`).join('')}
     <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div>
@@ -615,10 +621,18 @@ function syncExtend() {
   note.textContent = !t ? '' : !okn ? `Enter a whole number of blocks, from 1 to ${MAX_EXTEND_BLOCKS.toLocaleString('en-US')}` : short ? 'Not enough ZP in this wallet' : (net() === 'main' ? (n < 365 ? 'Less than a day' : `About ${(n / 365).toLocaleString('en-US', { maximumFractionDigits: 1 })} days`) : '');
   go.disabled = !okn || short;
 }
+// the offer's total in satoshis from the form, whichever way the price is given
+function offerTotal(f, kalapas) {
+  const mode = S.modal?.mode || 'total';
+  return mode === 'total' ? parseBTC(f.btc.value) : totalFromPerZp(f.per.value, kalapas, mode, btcUsd());
+}
 function syncOffer() {
   const f = $app.querySelector('form[data-form=offer]'), note = $app.querySelector('#offer-rate'); if (!f || !note) return;
-  let z = null, b = null; try { z = parseZP(f.zp.value.trim()); } catch { /* not yet */ } try { b = parseBTC(f.btc.value); } catch { /* not yet */ }
-  note.textContent = z && b ? rateText(b, z) + (S.swap ? '' : '') : '';
+  let z = null, b = null, err = ''; try { z = parseZP(f.zp.value.trim()); } catch { /* not yet */ }
+  const typed = (f.btc || f.per)?.value.trim();
+  if (z && z > 0n && typed) { try { b = offerTotal(f, z); } catch (e) { err = e.message; } }
+  note.className = 'small ' + (err ? 'bad' : 'muted');
+  note.textContent = err || (z && b ? ((S.modal?.mode || 'total') === 'total' ? '' : `Total ${formatBTC(b)} BTC · `) + rateText(b, z) : '');
 }
 // outputs spent by a transaction that is not in a block yet still show as unspent: do not use them twice
 function pendingSpent(d) {
@@ -709,6 +723,12 @@ $app.addEventListener('click', async e => {
       S.busy = false; S.modal = { type: 'swap-sent', hash, text: act === 'confirm-offer' ? `Your offer of ${formatZP(m.amount)} ZP for ${formatBTC(m.sats)} BTC was sent.` : 'The offer is being taken back: the ZP returns to your wallet.' };
       render(); setTimeout(() => { loadSwap(); refreshAll(); }, 30000); return;
     }
+    if (act === 'price-mode') {
+      const f = $app.querySelector('form[data-form=offer]'), m = S.modal;
+      Object.assign(m, { zp: f.zp.value, addrs: f.addrs.value, btc: f.btc?.value ?? m.btc, per: f.per?.value ?? m.per, mode: t.dataset.v });
+      if (m.mode !== 'total') m.per = '';   // a number typed in $ is not a number in sat
+      freshScreen = true; render(); return syncOffer();
+    }
     if (act === 'swap-cancel') {
       const o = S.swap?.offers.find(x => x.id === t.dataset.id), w = o && mySellers().get(o.seller); if (!o || !w) return;
       await refreshWallet(w.id);
@@ -752,7 +772,7 @@ $app.addEventListener('input', e => {
   else if (t.name === 'to' && t.closest('[data-form=vote-nom]')) syncTo();
   else if (t.name === 'amount') syncAmt();
   else if (t.name === 'blocks') syncExtend();
-  else if (t.name === 'zp' || t.name === 'btc') syncOffer();
+  else if (t.name === 'zp' || t.name === 'btc' || t.name === 'per') syncOffer();
 });
 
 $app.addEventListener('submit', async e => {
@@ -818,10 +838,10 @@ $app.addEventListener('submit', async e => {
         S.modal = { ...m, type: 'confirm-extend', blocks, prepared }; S.error = ''; return render();
       }
       case 'offer': {
-        const m = S.modal; Object.assign(m, { zp: v.zp, btc: v.btc, addrs: v.addrs });
+        const m = S.modal; Object.assign(m, { zp: v.zp, btc: v.btc, per: v.per, addrs: v.addrs });
         const raw = v.zp.trim(), amount = parseZP(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw);
         if (amount <= 0n) throw new Error('Enter the ZP to sell');
-        const sats = parseBTC(v.btc);
+        const sats = offerTotal(f, amount);
         const addrs = v.addrs.split(/[\s,]+/).map(x => x.trim()).filter(Boolean);
         if (!addrs.length || addrs.length > MAX_SCRIPTS) throw new Error(`Give 1 to ${MAX_SCRIPTS} Bitcoin addresses`);
         const scripts = addrs.map((x, i) => { try { return btcScript(x, S.swap?.btcNet === 'test' ? 'test' : 'main'); } catch (e) { throw new Error(`Bitcoin address ${i + 1}: ${e.message}`); } });
