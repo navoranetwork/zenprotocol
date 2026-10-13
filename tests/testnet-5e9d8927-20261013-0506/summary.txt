@@ -5,3 +5,4 @@
 [2026-10-13 05:06] Zulib: all 50 modules verify
 [2026-10-13 05:07] node built (Debug)
 [2026-10-13 05:07] token template DLL (build-contract.sh): d5e48cb9e56da4fc39e70f41c8d14dc8187f515702d2c31ac30dc221a46ded20
+[2026-10-13 05:07] done (DLL_ONLY)
