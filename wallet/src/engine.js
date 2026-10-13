@@ -79,35 +79,50 @@ export function formatAmount(amount, asset) {
   return (neg ? '-' : '') + whole.toLocaleString('en-US') + (frac ? '.' + frac : '') + ' ZP';
 }
 
-// a family's commands (GET /engine/families "commands"), as a list the form can use
+// a family's commands (GET /engine/families "commands": tools/engine/families/*/family.json), as a list the form can use:
+//   sends: null | "zp" | "self" (the contract's token) | the name of an asset parameter; signedBy: roles ([] = anyone);
+//   from / until / anyoneFrom: names of block-number parameters; body: { field: { type: amount|address|choice, data: u64|lock|string, of? } }
 export function commandsOf(family) {
   const c = family?.commands; if (!c || typeof c !== 'object') return [];
   const list = Array.isArray(c) ? c : Object.entries(c).map(([name, x]) => ({ name, ...x }));
-  return list.filter(x => x && typeof x.name === 'string' && /^[\w-]{1,64}$/.test(x.name)).map(x => {
-    const body = Array.isArray(x.body) ? x.body.filter(f => f && typeof f.name === 'string').map(f => [f.name, f])
-      : x.body && typeof x.body === 'object' ? Object.entries(x.body).map(([n, f]) => [n, typeof f === 'string' ? { type: f } : f || {}]) : [];
-    const signedBy = Array.isArray(x.signedBy) ? x.signedBy.map(String) : typeof x.signedBy === 'string' ? [x.signedBy] : [];
-    return { name: x.name, description: typeof x.description === 'string' ? x.description : '', sends: x.sends, signedBy, body };
-  });
+  const str = v => typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : null;
+  return list.filter(x => x && str(x.name)).map(x => ({
+    name: x.name, description: typeof x.description === 'string' ? x.description : '',
+    sends: str(x.sends), signedBy: Array.isArray(x.signedBy) ? x.signedBy.filter(str) : [],
+    from: str(x.from), until: str(x.until), anyoneFrom: str(x.anyoneFrom),
+    body: x.body && typeof x.body === 'object' && !Array.isArray(x.body) ? Object.entries(x.body).filter(([n, f]) => str(n) && f && typeof f === 'object') : [],
+  }));
 }
-// the message body from form values -> bodyHex (the serialized Data, a Dict in key order), or null for no body
-export function bodyHexOf(fields, values) {
+// the asset a command sends in: "zp", the contract's own token, or the value of an asset parameter from Fill
+export function sendsAsset(cmd, values, family, contractHash) {
+  if (!cmd.sends) return null;
+  if (cmd.sends === 'zp') return 'zp';
+  if (cmd.sends === 'self') return contractHash;
+  return String(values?.[cmd.sends] || family?.params?.[cmd.sends]?.default || 'zp').toLowerCase();
+}
+// the block windows of a command, from the Fill values: [{ kind: 'from'|'until'|'anyoneFrom', block }]
+export function windowsOf(cmd, values) {
+  return ['from', 'until', 'anyoneFrom'].filter(k => cmd[k] && /^\d+$/.test(String(values?.[cmd[k]] ?? ''))).map(k => ({ kind: k, block: Number(values[cmd[k]]) }));
+}
+// the message body from form values -> bodyHex (the serialized Data, a Dict in key order), or null for no body.
+// options: { choices: { field: [allowed strings] } } for "choice" fields
+export function bodyHexOf(fields, values, { choices = {} } = {}) {
   if (!fields.length) return null;
   const entries = fields.map(([name, f]) => {
     const raw = String(values[name] ?? '').trim();
-    if (!raw) { if (f.optional) return null; throw new Error(`${name}: required`); }
-    const t = String(f.type || '').toLowerCase();
-    switch (t) {
-      case 'u64': case 'amount': return [name, { t: 'U64', v: BigInt(kalapasOf(raw, name)) }];
+    if (!raw) throw new Error(`${name}: required`);
+    const data = String(f.data || { amount: 'u64', address: 'lock', choice: 'string' }[f.type] || f.type || '').toLowerCase();
+    if (f.type === 'choice' && Array.isArray(choices[name]) && !choices[name].includes(raw)) throw new Error(`${name}: one of ${choices[name].join(', ')}`);
+    switch (data) {
+      case 'u64': return [name, { t: 'U64', v: BigInt(kalapasOf(raw, name)) }];
       case 'u32': { if (!/^\d+$/.test(raw) || BigInt(raw) > 4294967295n) throw new Error(`${name}: a whole number`); return [name, { t: 'U32', v: Number(raw) }]; }
-      case 'i64': { if (!/^-?\d+$/.test(raw)) throw new Error(`${name}: a whole number`); return [name, { t: 'I64', v: BigInt(raw) }]; }
       case 'string': if (!/^[\x20-\x7e]*$/.test(raw)) throw new Error(`${name}: plain text`); return [name, { t: 'String', v: raw }];
       case 'hash': if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error(`${name}: 64 hex characters`); return [name, { t: 'Hash', v: unhex(raw.toLowerCase()) }];
       case 'publickey': if (!/^0[23][0-9a-f]{64}$/i.test(raw)) throw new Error(`${name}: a public key, 66 hex characters`); return [name, { t: 'PublicKey', v: unhex(raw.toLowerCase()) }];
-      case 'lock': case 'address': if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error(`${name}: a public key hash, 64 hex characters`); return [name, { t: 'Lock', v: { type: 'PK', hash: unhex(raw.toLowerCase()) } }];
-      default: throw new Error(`${name}: the wallet cannot fill a "${t}" yet`);
+      case 'lock': if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error(`${name}: an address as a public key hash, 64 hex characters`); return [name, { t: 'Lock', v: { type: 'PK', hash: unhex(raw.toLowerCase()) } }];
+      default: throw new Error(`${name}: the wallet cannot fill a "${data}" yet`);
     }
-  }).filter(Boolean);
+  });
   const w = new Writer(); Data.write(w, { t: 'Dict', v: entries }); return hex(w.out());
 }
 // what the contract holds, by asset, from a try's next.wallet

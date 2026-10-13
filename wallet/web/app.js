@@ -7,7 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1 } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp } from '../src/swap.js';
-import { EngineClient, checkParam, v1ContractId, activationCost, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings } from '../src/engine.js';
+import { EngineClient, checkParam, v1ContractId, activationCost, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
@@ -185,7 +185,7 @@ function resultHtml(c) {
       <div class="kv"><span class="muted">Size</span><span>${src.length.toLocaleString('en-US')} characters</span></div>
       <div class="kv"><span class="muted">A node's check</span><span>${c.edited && !c.check ? 'not checked yet' : chk.verdict === 'accepted' ? '✓ accepted' : chk.verdict === 'refused' ? '✗ refused' : esc(chk.verdict || '–')}</span></div>
       <div class="kv"><span class="muted">Tests</span><span>${tests.length} ${tests.length === 1 ? 'test passes' : 'tests pass'}${c.edited ? ' <span class="muted small">(engine\'s version)</span>' : ''}</span></div>
-      ${costs.length ? `<div class="kv"><span class="muted">Per call</span><span>${esc(Math.min(...costs) === Math.max(...costs) ? Math.min(...costs).toLocaleString('en-US') : Math.min(...costs).toLocaleString('en-US') + '–' + Math.max(...costs).toLocaleString('en-US'))} gas · fee 1 kalapa</span></div>` : ''}
+      ${costs.length ? `<div class="kv"><span class="muted">Per call</span><span>${esc(Math.min(...costs) === Math.max(...costs) ? Math.min(...costs).toLocaleString('en-US') : Math.min(...costs).toLocaleString('en-US') + '–' + Math.max(...costs).toLocaleString('en-US'))} gas · fee: none required</span></div>` : ''}
       ${c.kind === 'ask' ? `<div class="warn" data-s="mt10">Written by an AI model${Array.isArray(j.rounds) ? ` in ${j.rounds.length} round${j.rounds.length === 1 ? '' : 's'}` : ''}. Its tests are its own: read them, and the source, before activating.</div>` : ''}
       ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}
       ${canTry ? '<button class="btn" data-s="mt10" data-act="cc-try-open">Try it (no real money)</button>' : ''}</div>
@@ -243,37 +243,56 @@ function whoLabel(w) {
   if (w.kind === 'fee') return 'the fee'; if (w.kind === 'destroy') return 'destroyed'; if (w.kind === 'mint') return 'newly minted';
   const h = String(w.hash || ''); return (w.kind === 'contract' ? 'contract ' : 'key ') + (h ? h.slice(0, 8) + '…' : '');
 }
+const ccHash = c => (c.tryId || v1ContractId(c.source)).replace(/^00000001/, '');
+const myKey = () => { const a = active(), w = a && S.open.get(a.id); return w && canSpend(w) ? signerOf(w) : null; };
+const choicesOf = (c, cmd) => Object.fromEntries(cmd.body.filter(([, f]) => f.type === 'choice' && f.of).map(([n, f]) => [n, String(c.values?.[f.of] || '').split(',').map(x => x.trim()).filter(Boolean)]));
+const WINDOW_TEXT = { from: b => `Works from block ${b} on.`, until: b => `Works only before block ${b}.`, anyoneFrom: b => `From block ${b} on, anyone can call it.` };
 function tryView() {
   const c = S.cc, T = c.try, cmds = commandsOf(c.family), cmd = cmds.find(x => x.name === T.cmd) || cmds[0];
-  const roles = keyRoles(c), held = holdings(T.session.wallet), L = T.last;
-  const signers = [...Object.keys(roles).map(r => [r, 'the ' + r + (cmd?.signedBy.includes(r) ? '' : ' (not allowed)')]), ['', 'nobody (unsigned)']];
-  const sel = T.signer ?? (cmd?.signedBy.find(r => r in roles) ?? '');
+  const roles = keyRoles(c), held = holdings(T.session.wallet), L = T.last, me = myKey();
+  const wins = cmd ? windowsOf(cmd, c.values) : [], open = !cmd?.signedBy.length;
+  const signers = [...Object.keys(roles).map(r => [r, 'the ' + r + (open || cmd.signedBy.includes(r) ? '' : wins.some(w => w.kind === 'anyoneFrom') ? ' (only after the timeout)' : ' (not allowed)')]), ['', open ? 'anyone (unsigned)' : 'nobody (unsigned)']];
+  const sel = T.signer ?? (open ? '' : cmd?.signedBy.find(r => r in roles) ?? '');
+  const asset = cmd ? sendsAsset(cmd, c.values, c.family, ccHash(c)) : null, choices = cmd ? choicesOf(c, cmd) : {};
+  const block = T.block ?? (S.tip || 0) + 1;
+  const field = ([n, f]) => {
+    const val = T.values['t_' + n] ?? (f.type === 'address' && me ? hex(me.pkHash) : '');
+    const input = f.type === 'choice' && choices[n]?.length
+      ? `<select name="t_${esc(n)}">${choices[n].map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+      : `<input name="t_${esc(n)}" autocomplete="off" spellcheck="false" class="${f.type === 'address' ? 'mono' : ''}" placeholder="${f.type === 'amount' ? (asset && asset !== 'zp' ? 'units' : '2.5 ZP') : ''}" value="${esc(val)}">`;
+    return `<label class="field">${esc(n)}${input}</label>${f.description ? `<p class="muted small" data-s="mt4">${esc(f.description)}${f.type === 'address' && me ? ' (your address by default)' : ''}</p>` : ''}`;
+  };
   const out = !L ? '' : L.check ? `<div class="card">${refusalHtml(L.check)}</div>` : `<div class="card"><div class="between"><h2>What happens</h2><span class="pill ${L.ok ? 'ok' : 'bad'}">${L.ok ? 'OK' : 'Refused'}</span></div>
       ${L.ok ? (L.moves.length ? `<div class="list">${L.moves.map(m => { const n = BigInt(String(m.change)); return `<div class="item"><div>${esc(whoLabel(m.who))} ${n < 0n ? 'pays' : 'gets'} <b>${esc(formatAmount(n < 0n ? -n : n, m.asset))}</b></div></div>`; }).join('')}</div>` : '<p class="muted small">Nothing moves.</p>')
         : `<p class="bad small">${esc(L.error || 'The contract refused the call.')}</p><p class="muted small">Nothing moves.</p>`}
       <div class="kv"><span class="muted">Gas</span><span>${esc(L.declared ?? '–')} declared · ${esc(L.used ?? '–')} used</span></div>
+      <div class="kv"><span class="muted">At block</span><span>${esc(Number(L.block).toLocaleString('en-US'))}</span></div>
       ${L.ok && (L.inputs.length || L.outputs.length) ? `<details class="how"><summary>Details</summary>
         <p class="muted small"><b>In</b></p>${L.inputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}
         <p class="muted small"><b>Out</b></p>${L.outputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}</details>` : ''}</div>`;
   return `<div class="back"><button class="iconbtn" data-act="cc-try-back" aria-label="Back">${I.back}</button><h1>${esc('Try ' + (c.family?.title || 'the contract'))}</h1></div><div class="screen">
-    <p class="muted small">No real money: the engine runs each call as a node would, at the next block. Calls in a row build on each other.</p>
+    <p class="muted small">No real money: the engine runs each call as a node would. Calls in a row build on each other.</p>
     <div class="wrapchips">${cmds.map(x => `<button class="chip ${x.name === cmd?.name ? 'on' : ''}" aria-pressed="${x.name === cmd?.name}" data-act="cc-cmd" data-name="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
     ${cmd ? `<form data-form="cc-try" class="card">${cmd.description ? `<p class="muted small">${esc(cmd.description)}</p>` : ''}
       <label class="field">Signed by<select name="signer">${signers.map(([v, t]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-      ${cmd.sends ? `<label class="field">Sends in (${esc(assetLabel(ccAsset(c)))})<input name="spend" autocomplete="off" inputmode="decimal" placeholder="${isZpAsset(ccAsset(c)) ? '2.5 ZP' : '100'}" value="${esc(T.values.spend ?? '')}"></label>` : ''}
-      ${cmd.body.map(([n, f]) => `<label class="field">${esc(n)}<input name="t_${esc(n)}" autocomplete="off" spellcheck="false" placeholder="${esc(f.example ?? (['u64', 'amount'].includes(f.type) ? '2.5 ZP' : ''))}" value="${esc(T.values['t_' + n] ?? '')}"></label>${f.description ? `<p class="muted small" data-s="mt4">${esc(f.description)}</p>` : ''}`).join('')}
+      ${asset ? `<label class="field">Sends in (${esc(asset === 'zp' ? 'ZP' : cmd.sends === 'self' ? 'its own token' : assetLabel(asset))})<input name="spend" autocomplete="off" inputmode="decimal" placeholder="${asset === 'zp' ? '2.5 ZP' : 'units'}" value="${esc(T.values.spend ?? '')}"></label>` : ''}
+      ${cmd.body.map(field).join('')}
+      <label class="field">At block<input name="block" inputmode="numeric" autocomplete="off" value="${esc(block)}"></label>
+      ${wins.length ? `<p class="muted small">${wins.map(w => esc(WINDOW_TEXT[w.kind](w.block.toLocaleString('en-US')))).join(' ')}</p>
+        <div class="wrapchips">${wins.flatMap(w => [w.block - 1, w.block]).filter((b, i, a) => b >= 1 && a.indexOf(b) === i).map(b => `<button type="button" class="chip mini ${b === Number(block) ? 'on' : ''}" data-act="cc-block" data-v="${b}">block ${b.toLocaleString('en-US')}</button>`).join('')}<button type="button" class="chip mini" data-act="cc-block" data-v="${(S.tip || 0) + 1}">next block</button></div>` : ''}
       <p class="muted small">${held.length ? 'The contract holds ' + held.map(h => esc(formatAmount(h.amount, h.asset))).join(', ') + ' in this session.' : 'The contract holds nothing yet in this session.'}</p>
       ${errBox()}${T.running ? `<p><span class="spin"></span> Running the call…</p>` : `<div class="row"><button class="btn primary">${L ? 'Run' : 'Run the call'}</button>${T.runs ? '<button type="button" class="btn" data-act="cc-try-reset">Start over</button>' : ''}</div>`}</form>` : '<p class="muted">The engine lists no commands for this contract.</p>'}
     ${out}</div>${nav('contracts')}`;
 }
-const isZpAsset = a => a === 'zp';
 async function ccTry(v) {
-  const c = S.cc, T = c.try, cmd = commandsOf(c.family).find(x => x.name === T.cmd) || commandsOf(c.family)[0], roles = keyRoles(c);
+  const c = S.cc, T = c.try, cmds = commandsOf(c.family), cmd = cmds.find(x => x.name === T.cmd) || cmds[0], roles = keyRoles(c);
   T.values = { ...v }; T.signer = v.signer ?? '';
-  const call = { command: cmd.name, wallet: T.session.wallet, ...(T.session.state != null ? { state: T.session.state } : {}), context: { blockNumber: (S.tip || 0) + 1, timestamp: String(Date.now()) } };
+  const blk = String(v.block ?? '').trim(); if (!/^\d+$/.test(blk) || +blk < 1 || +blk > 4294967295) throw new Error('At block: a block number'); T.block = +blk;
+  const call = { command: cmd.name, wallet: T.session.wallet, ...(T.session.state != null ? { state: T.session.state } : {}), context: { blockNumber: T.block, timestamp: String(Date.now()) } };
   if (T.signer) { if (!roles[T.signer]) throw new Error('Fill in that key first'); call.sender = { publicKey: roles[T.signer] }; }
-  if (cmd.sends && String(v.spend || '').trim()) { const asset = ccAsset(c); call.spend = [{ asset, amount: asset === 'zp' ? kalapasOf(v.spend, 'Sends in') : (/^\d+$/.test(String(v.spend).trim()) ? String(v.spend).trim() : (() => { throw new Error('Sends in: a whole number of tokens'); })()) }]; }
-  const bh = bodyHexOf(cmd.body, Object.fromEntries(cmd.body.map(([n]) => [n, v['t_' + n]]))); if (bh) call.bodyHex = bh;
+  const asset = sendsAsset(cmd, c.values, c.family, ccHash(c)), sp = String(v.spend || '').trim();
+  if (asset && sp) call.spend = [{ asset, amount: asset === 'zp' ? kalapasOf(sp, 'Sends in') : /^\d+$/.test(sp) ? sp : (() => { throw new Error('Sends in: a whole number of units'); })() }];
+  const bh = bodyHexOf(cmd.body, Object.fromEntries(cmd.body.map(([n]) => [n, v['t_' + n]])), { choices: choicesOf(c, cmd) }); if (bh) call.bodyHex = bh;
   const e = engine(), sourceId = c.edited ? c.check?.contractId : (c.tryId || c.job?.report?.contractId);
   T.running = true; S.error = ''; render();
   try {
@@ -284,7 +303,7 @@ async function ccTry(v) {
     if (j.check && !j.try) { T.last = { check: j.check }; T.runs++; return; }
     const t = j.try || {}, r = t.result || {};
     if (typeof t.contract === 'string') c.tryId = t.contract;
-    T.last = { ok: !!r.ok, error: r.error, declared: r.declaredCost, used: r.gasUsed, moves: Array.isArray(t.moves) ? t.moves : [], inputs: Array.isArray(r.inputs) ? r.inputs : [], outputs: Array.isArray(r.outputs) ? r.outputs : [] };
+    T.last = { ok: !!r.ok, error: r.error, declared: r.declaredCost, used: r.gasUsed, block: T.block, moves: Array.isArray(t.moves) ? t.moves : [], inputs: Array.isArray(r.inputs) ? r.inputs : [], outputs: Array.isArray(r.outputs) ? r.outputs : [] };
     if (t.next && typeof t.next === 'object') T.session = { wallet: Array.isArray(t.next.wallet) ? t.next.wallet : [], state: t.next.state ?? null };
     T.runs++;
   } finally { T.running = false; render(); }
@@ -1034,9 +1053,11 @@ $app.addEventListener('click', async e => {
     if (act === 'cc-again') { S.cc = { ...S.cc, step: S.cc.kind === 'ask' ? 'ask' : 'form' }; S.error = ''; return render(); }
     if (act === 'cc-edit') { S.cc.editing = true; return render(); }
     if (act === 'cc-try-open') { const k = S.cc.try; S.cc.try = k && k.source === S.cc.source ? k : { source: S.cc.source, cmd: commandsOf(S.cc.family)[0]?.name, values: {}, signer: null, session: { wallet: [], state: null }, last: null, runs: 0 }; S.cc.step = 'try'; S.error = ''; render(); return window.scrollTo(0, 0); }
+    if (act === 'cc-block') { if (S.cc?.try && !S.cc.try.running) { const f = $app.querySelector('form[data-form=cc-try]'), i = f?.querySelector('input[name=block]'); if (i) i.value = t.dataset.v; S.cc.try.block = Number(t.dataset.v);
+      f?.querySelectorAll('[data-act=cc-block]').forEach(b => b.classList.toggle('on', b === t)); } return; }
     if (act === 'cc-try-back') { if (S.cc) { S.cc.step = 'result'; S.error = ''; render(); window.scrollTo(0, 0); } return; }
     if (act === 'cc-cmd') { if (S.cc?.try && !S.cc.try.running) { S.cc.try.cmd = t.dataset.name; S.cc.try.signer = null; S.cc.try.values = {}; S.error = ''; render(); } return; }
-    if (act === 'cc-try-reset') { if (S.cc?.try && !S.cc.try.running) { Object.assign(S.cc.try, { session: { wallet: [], state: null }, last: null, runs: 0 }); S.error = ''; render(); } return; }
+    if (act === 'cc-try-reset') { if (S.cc?.try && !S.cc.try.running) { Object.assign(S.cc.try, { session: { wallet: [], state: null }, last: null, runs: 0, block: null }); S.error = ''; render(); } return; }
     if (act === 'cc-reset') { S.cc = { ...S.cc, source: S.cc.job.source, edited: false, editing: false, check: null }; return render(); }
     if (act === 'confirm-activate') {
       S.busy = true; render();

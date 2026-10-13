@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient, kalapasOf, formatAmount, bodyHexOf, commandsOf, holdings } from '../src/engine.js';
+import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient, kalapasOf, formatAmount, bodyHexOf, commandsOf, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { openWallet, prepareActivateV1 } from '../src/wallet.js';
 import { deriveKey } from '../src/keys.js';
 import { deserializeTx, txHash, hex, unhex, Writer, Data } from '../src/serialize.js';
@@ -66,14 +66,23 @@ test('try: amounts, body bytes, commands and holdings', () => {
   assert.equal(formatAmount('7', 'ab'.repeat(32)), '7 token abababab…');
   // the escrow body { amount: u64 } as the node signs it: Dict(12), 1 entry, "amount", U64(5) 300
   const w = new Writer(); Data.write(w, { t: 'Dict', v: [['amount', { t: 'U64', v: 300n }]] });
-  assert.equal(bodyHexOf([['amount', { type: 'u64' }]], { amount: '300' }), hex(w.out()));
-  assert.equal(bodyHexOf([['amount', { type: 'u64' }]], { amount: '0.000003 ZP' }), hex(w.out()));
+  assert.equal(bodyHexOf([['amount', { type: 'amount', data: 'u64' }]], { amount: '300' }), hex(w.out()));
+  assert.equal(bodyHexOf([['amount', { type: 'amount', data: 'u64' }]], { amount: '0.000003 ZP' }), hex(w.out()));
   assert.equal(bodyHexOf([], {}), null);
-  assert.throws(() => bodyHexOf([['who', { type: 'publickey' }]], { who: '04' + 'ab'.repeat(32) }), /public key/);
-  assert.throws(() => bodyHexOf([['x', { type: 'mystery' }]], { x: '1' }), /cannot fill/);
-  const cmds = commandsOf({ commands: { release: { description: 'pays the seller', signedBy: ['buyer', 'arbiter'], body: { amount: { type: 'u64' } } }, deposit: { sends: true } } });
-  assert.deepEqual(cmds.map(c => c.name), ['release', 'deposit']); assert.deepEqual(cmds[0].signedBy, ['buyer', 'arbiter']); assert.equal(cmds[0].body[0][0], 'amount');
-  assert.deepEqual(commandsOf({ commands: [{ name: 'refund', body: [{ name: 'amount', type: 'u64' }] }] })[0].body[0][1].type, 'u64');
+  assert.throws(() => bodyHexOf([['to', { type: 'address', data: 'lock' }]], { to: 'zz' }), /public key hash/);
+  assert.throws(() => bodyHexOf([['x', { type: 'mystery', data: 'mystery' }]], { x: '1' }), /cannot fill/);
+  const fam = { params: { asset: { type: 'asset', default: 'zp' }, timeout_block: { type: 'u32' }, options: { type: 'options' } }, commands: {
+    deposit: { description: 'Lock what you send', sends: 'asset', signedBy: [], body: {} },
+    refund: { sends: null, signedBy: ['seller', 'arbiter'], anyoneFrom: 'timeout_block', body: { amount: { type: 'amount', data: 'u64' } } },
+    vote: { sends: 'self', signedBy: [], until: 'timeout_block', body: { choice: { type: 'choice', data: 'string', of: 'options' }, returnAddress: { type: 'address', data: 'lock' } } } } };
+  const cmds = commandsOf(fam);
+  assert.deepEqual(cmds.map(c => c.name), ['deposit', 'refund', 'vote']); assert.deepEqual(cmds[1].signedBy, ['seller', 'arbiter']); assert.equal(cmds[1].body[0][0], 'amount');
+  assert.equal(sendsAsset(cmds[0], { asset: 'AB'.repeat(32) }, fam, 'cc'.repeat(32)), 'ab'.repeat(32)); assert.equal(sendsAsset(cmds[0], {}, fam, 'x'), 'zp');
+  assert.equal(sendsAsset(cmds[2], {}, fam, 'cc'.repeat(32)), 'cc'.repeat(32)); assert.equal(sendsAsset(cmds[1], {}, fam, 'x'), null);
+  assert.deepEqual(windowsOf(cmds[1], { timeout_block: '5000' }), [{ kind: 'anyoneFrom', block: 5000 }]); assert.deepEqual(windowsOf(cmds[1], {}), []);
+  const vb = bodyHexOf(cmds[2].body, { choice: 'yes', returnAddress: 'ab'.repeat(32) }, { choices: { choice: ['yes', 'no'] } });
+  const w2 = new Writer(); Data.write(w2, { t: 'Dict', v: [['choice', { t: 'String', v: 'yes' }], ['returnAddress', { t: 'Lock', v: { type: 'PK', hash: unhex('ab'.repeat(32)) } }]] }); assert.equal(vb, hex(w2.out()));
+  assert.throws(() => bodyHexOf(cmds[2].body, { choice: 'maybe', returnAddress: 'ab'.repeat(32) }, { choices: { choice: ['yes', 'no'] } }), /one of yes, no/);
   assert.deepEqual(holdings([{ asset: 'zp', amount: '200' }, { asset: 'zp', amount: '400' }]).map(h => h.amount), [600n]);
 });
 
