@@ -6,7 +6,7 @@
 //
 //   assets.json       every asset: tokens outstanding, holders, transactions, issuing contract
 //   cgp-history.json  every CGP interval: allocation in force and decided, ballots with voters and
-//                     vote weight, payouts executed
+//                     vote weight, payouts executed; ballots of the last CONFIRM blocks carry `confirmations`
 //
 // Blocks closer than CONFIRM to the tip are not indexed, so a reorg cannot leave stale rows.
 // The first run starts at genesis (a few hours in --budget steps). Run by the zen-index timer:
@@ -29,6 +29,8 @@ const VOTING_CONTRACT = CHAIN.voting;    // Chain.fs votingContractId
 // Repo voting contract: the community vote on protocol upgrades. Its command is the git commit id (40 hex) being voted for.
 const REPO_CONTRACT_MAIN = '00000000e3113f8bf9cf8b764d945d6f99c642bdb069d137bdd5f7e44f1e75947f58a044';
 const INTERVAL = CHAIN.interval, SNAPSHOT = CHAIN.snapshot, NOMINATION = CHAIN.nomination;
+// Chain.fs coinbaseMaturity: the payout of interval i is made in block i * INTERVAL + MATURITY (CGP.fs isPayoutBlock)
+const MATURITY = NET === 'test' ? 10 : 100;
 const COMMUNITY_INTERVAL_OFFSET = CHAIN.offset;
 const CONFIRM = 10, TAKE = 2000;
 
@@ -412,17 +414,51 @@ for (const v of db.prepare('SELECT tx, block, time, command, pk, ballot FROM vot
   if (counted) it.seen.add(key);
   it.votes.push({ tx: v.tx, block: v.block, time: v.time, command: v.command, voter: pkAddress(v.pk), ballot: dec, counted, weight: null, _pk: v.pk, _iv: iv });
 }
+// Ballots in the last CONFIRM blocks: not stored (a reorg could still drop them), but shown at once so that a voter sees the
+// ballot arrive. They are read again on every run and carry `confirmations`; once deeper than CONFIRM they come from the table.
+const tailPayouts = [];
+if (complete && tip > last) {
+  try {
+    const take = Math.min(tip - last, 300);
+    const got = await api(`/blockchain/blocks?blockNumber=${tip}&take=${take}`, undefined, 60000, 1);
+    for (const b of (Array.isArray(got) ? got : []).filter(x => x.blockNumber > last).sort((x, y) => x.blockNumber - y.blockNumber)) {
+      const blk = deserializeBlock(unhex(b.rawBlock), { lenient: true }), n = b.blockNumber;
+      const ts = Number(new DataView(blk.header.buffer, blk.header.byteOffset).getBigUint64(72));
+      for (const { tx } of blk.txs) for (const w of tx.witnesses.filter(x => x.type === 'Contract')) {
+        if (cidStr(w.contractId) === CGP_CONTRACT && w.command === 'Payout') {
+          for (const o of tx.outputs) if ((o.lock.type === 'PK' || o.lock.type === 'Contract') && !(o.lock.type === 'Contract' && cidStr(o.lock.contractId) === CGP_CONTRACT))
+            tailPayouts.push({ tx: hex(txHash(tx)), block: n, time: ts, recipient: addressOf(o.lock), asset: assetStr(o.spend.asset), amount: String(o.spend.amount), confirmations: tip - n + 1 });
+          continue;
+        }
+        if (cidStr(w.contractId) !== VOTING_CONTRACT || !['Allocation', 'Payout', 'Nomination'].includes(w.command) || w.messageBody?.t !== 'Dict') continue;
+        const entries = w.messageBody.v;
+        const bh = entries.find(([k, d]) => k !== 'Signature' && d.t === 'String')?.[1].v ?? null;
+        const sigs = entries.find(([k, d]) => k === 'Signature' && d.t === 'Dict')?.[1].v || [];
+        const iv = Math.floor((n - 1) / INTERVAL) + 1, snap = (iv - 1) * INTERVAL + SNAPSHOT, nomEnd = snap + NOMINATION;
+        const inWindow = w.command === 'Nomination' ? n > snap && n <= nomEnd : n > nomEnd && n <= iv * INTERVAL;
+        let dec = null; try { dec = bh ? ballot(bh) : null; } catch { /* undecodable */ }
+        const it = intervals.get(iv) || { votes: [], seen: new Set() }; intervals.set(iv, it);
+        for (const [pk] of sigs) {
+          const key = w.command + pk, counted = inWindow && !it.seen.has(key);
+          if (counted) it.seen.add(key);
+          it.votes.push({ tx: hex(txHash(tx)), block: n, time: ts, command: w.command, voter: pkAddress(pk), ballot: dec, counted, weight: null,
+                          confirmations: tip - n + 1, _pk: pk, _iv: iv });
+        }
+      }
+    }
+  } catch (e) { console.log(`chain-index: recent ballots: ${e.message} (shown on the next run)`); }
+}
 if (complete) {
   for (const it of intervals.values()) for (const v of it.votes) if (v.counted) {
     const w = await weight(v._iv, v._pk); v.weight = w === null ? null : Number(w) / 1e8;
   }
 }
 const payouts = new Map();
-for (const p of db.prepare('SELECT tx, block, time, recipient, asset, amount FROM payouts ORDER BY block').all()) {
-  const iv = Math.floor((p.block - 2) / INTERVAL) + 1;      // paid at the end of the interval that voted for it
+for (const p of [...db.prepare('SELECT tx, block, time, recipient, asset, amount FROM payouts ORDER BY block').all(), ...tailPayouts]) {
+  const iv = Math.floor((p.block - MATURITY - 1) / INTERVAL) + 1;   // paid at the payout block of the next interval (CGP.fs isPayoutBlock): the interval that voted
   const list = payouts.get(iv) || []; payouts.set(iv, list);
   list.push({ tx: p.tx, block: p.block, time: p.time, recipient: p.recipient, recipientName: contractNames[p.recipient] || null,
-              asset: p.asset, amount: p.asset === '00' ? Number(p.amount) / 1e8 : p.amount });
+              asset: p.asset, amount: p.asset === '00' ? Number(p.amount) / 1e8 : p.amount, ...(p.confirmations ? { confirmations: p.confirmations } : {}) });
 }
 const current = Math.floor((tip - 1) / INTERVAL) + 1;
 const first = Math.min(current, ...intervals.keys(), ...payouts.keys(), ...Object.keys(alloc).map(Number));

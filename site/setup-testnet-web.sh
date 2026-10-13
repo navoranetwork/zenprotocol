@@ -8,7 +8,9 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 WEB=/var/www/zen-testnet
 NODE=${NODE_PORT:-31567}; EXPLORER=${EXPLORER_PORT:-11581}; ORACLE=${ORACLE_PORT:-8085}; BRIDGE=${BRIDGE_PORT:-8090}; FAUCET=${FAUCET_PORT:-8095}; PROVER=${PROVER_PORT:-8096}
-VOL=$(docker volume inspect "$(basename "$REPO")_stack-data" --format '{{.Mountpoint}}' 2>/dev/null || true)
+# the testnet stack's compose project (its folder name); STACK_PROJECT=zenprotocol-testnet when this script runs from another checkout
+STACK_PROJECT=${STACK_PROJECT:-$(basename "$REPO")}
+VOL=$(docker volume inspect "${STACK_PROJECT}_stack-data" --format '{{.Mountpoint}}' 2>/dev/null || true)
 
 command -v nginx >/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx; }
 mkdir -p "$WEB"
@@ -16,9 +18,14 @@ mkdir -p "$WEB"
 if [ -n "$VOL" ]; then
   cat > /etc/cron.d/zen-testnet-json <<CRON
 * * * * * root for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/\$f.json" ] && cp -f "$VOL/web/\$f.json" "$WEB/\$f.json"; done
+* * * * * root [ -f /var/lib/zp-stratum/stats.json ] && cp -f /var/lib/zp-stratum/stats.json "$WEB/mining.json"
 CRON
   for f in stats assets cgp-history community-votes history bitzen; do [ -f "$VOL/web/$f.json" ] && cp -f "$VOL/web/$f.json" "$WEB/$f.json"; done
 fi
+# the mining server's status (zp-stratum --stats-file, scripts/install-mining-server.sh) for the home page
+[ -f /var/lib/zp-stratum/stats.json ] && cp -f /var/lib/zp-stratum/stats.json "$WEB/mining.json"
+[ -n "$VOL" ] && rm -f /etc/cron.d/zen-testnet-mining   # the json cron above copies mining.json too
+[ -n "$VOL" ] || echo "* * * * * root [ -f /var/lib/zp-stratum/stats.json ] && cp -f /var/lib/zp-stratum/stats.json \"$WEB/mining.json\"" > /etc/cron.d/zen-testnet-mining
 # faucet top-up: every hour, the node wallet refills the faucet when it runs low (keeps a reserve; scripts/faucet-topup.sh)
 cat > /etc/cron.d/zen-faucet-topup <<CRON
 17 * * * * root bash $REPO/scripts/faucet-topup.sh >> /var/log/zen-faucet-topup.log 2>&1
@@ -82,7 +89,7 @@ server {
     location = /bridge/withdraw { limit_except POST { deny all; } limit_req zone=zenfaucet burst=3 nodelay; client_max_body_size 4k; proxy_pass http://127.0.0.1:$BRIDGE/withdraw; proxy_read_timeout 120s; add_header Cache-Control "no-store"; }
 
     # files the indexer writes (assets, ...)
-    location ~ ^/(stats|assets|cgp-history|community-votes|history|bitzen)\.json\$ { root $WEB; add_header Cache-Control "no-cache"; }
+    location ~ ^/(stats|assets|cgp-history|community-votes|history|mining|bitzen)\.json\$ { root $WEB; add_header Cache-Control "no-cache"; }
     location / { try_files \$uri \$uri/ =404; }
 }
 CONF

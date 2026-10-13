@@ -27,6 +27,49 @@
   h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 20px 0 8px; font-weight: 600; }
   p.lead { margin: 0 0 22px; color: var(--muted); max-width: 68ch; font-size: 17px; }
   .mono { font-family: var(--mono); font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .tab { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: transparent;
+         border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .tab[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+  .tab .tn { font-size: 11px; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; border: 1px solid currentColor; }
+  .tab .tc { font-size: 12px; font-weight: 500; color: var(--faint); } .tab[aria-selected="true"] .tc { color: var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stage[hidden] { display: none; }
+  .stages { display: grid; gap: 12px; margin-top: 12px; }
+  .stage { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .s-head { display: flex; gap: 12px; align-items: center; }
+  .s-n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-weight: 700; flex: none; }
+  .s-t { font-weight: 700; font-size: 16px; } .s-w { font-size: 12px; color: var(--muted); }
+  .s-d { margin: 8px 0 10px; font-size: 13px; color: var(--muted); }
+  .grp { border-top: 1px solid var(--line); padding: 10px 0 4px; display: grid; gap: 6px; min-width: 0; }
+  .grp.win .g-what { font-weight: 700; } .grp.win .meter i { background: var(--accent); }
+  .g-head { display: flex; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; align-items: baseline; }
+  .g-what { font-weight: 600; overflow-wrap: anywhere; min-width: 0; } .g-what .mono.full { display: inline; font-weight: 400; }
+  .g-num { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .grp .need { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+  .grp .need b.ok { color: var(--accent); } .grp .meter.thr i { background: #c9a227; } .grp .meter.thr.full i { background: var(--accent); }
+  .grp .meter { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; } .grp .meter i { display: block; height: 100%; background: var(--faint); }
+  .vlist { display: grid; gap: 2px; padding-left: 12px; border-left: 2px solid var(--grid); }
+  .vrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 5px 0; align-items: baseline; }
+  .vrow .mono.full { grid-column: 1; } .vrow .vstat { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .vrow .vmeta { grid-column: 1; font-size: 12px; color: var(--muted); }
+  .vrow.nc { opacity: .6; }
+  @media (max-width: 560px) { .vrow { grid-template-columns: 1fr; } .vrow .vstat { grid-column: 1; grid-row: auto; justify-content: flex-start; } }
+  .blist { display: grid; gap: 10px; }
+  .ballot { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; min-width: 0; }
+  .ballot.nc { opacity: .62; }
+  .b-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .b-kind { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .b-kind.k-Nomination { color: #8a6d1f; } .b-kind.k-Payout { color: var(--accent); }
+  .b-status { display: flex; gap: 6px; flex-wrap: wrap; }
+  .b-what { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .b-what .mono.full { display: inline; font-weight: 400; }
+  .b-row { display: grid; grid-template-columns: 56px 1fr; gap: 8px; align-items: baseline; min-width: 0; }
+  .b-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); }
+  .b-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; color: var(--muted); }
+  .pill.no { color: var(--muted); } .pill.wait { color: #8a6d1f; border-color: #e0cf9a; }
+  @media (prefers-color-scheme: dark) { .b-kind.k-Nomination, .pill.wait { color: #d9b866; } .pill.wait { border-color: #6b5a2a; } }
+  .mono.full { display: block; font-size: 12px; word-break: break-all; overflow-wrap: anywhere; } td.wallet { min-width: 200px; width: 300px; max-width: 300px; white-space: normal; } .small { font-size: 12px; }
   .muted { color: var(--muted); }
   section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 18px; min-width: 0; }
   .tnum { font-variant-numeric: tabular-nums; }
@@ -161,7 +204,9 @@ const dur = blocks => {
   return 'about ' + t;
 };
 const spendText = s => s[0] === '00' ? amt(Number(s[1]) / 1e8) + ' ZP' : esc(s[1]) + ' ' + esc(short(s[0]));
-const recip = r => `<span class="mono" title="${esc(r)}">${esc(short(r))}</span>`;
+const addrLink = a => a ? `<a class="mono full" href="/explorer.html?address=${encodeURIComponent(a)}">${esc(a)}</a>` : '–';
+const txLink = t => `<a class="mono" href="/explorer.html?tx=${encodeURIComponent(t)}" title="${esc(t)}">${esc(short(t))}</a>`;
+const recip = r => addrLink(r);
 const ballotText = b => !b ? 'unreadable ballot' : b.allocation != null ? `Fund ${b.allocation}% · miners ${100 - b.allocation}%` :
   `${b.spends.map(spendText).join(', ')} to ${recip(b.recipient)}`;
 const splitHtml = (p, prev) => {
@@ -189,16 +234,115 @@ const allocTally = votes => tallyRows(votes.filter(v => v.command === 'Allocatio
 const candTally = (votes, cmd) => tallyRows(votes.filter(v => v.command === cmd), b => b.allocation == null ? JSON.stringify([b.recipient, b.spends]) : null, ballotText);
 const pending = i => !i.complete && i.votes.some(v => v.counted && v.weight == null);
 
+const CONFIRMS = 10;   // chain-index.mjs CONFIRM: ballots of the last 10 blocks are shown at once, marked until they are final
+// the nomination threshold (Tally_Handler.fs Candidates.get): 3% of the ZP issued at the snapshot block.
+// The node gives the issuance at its tip (/blockchain/totalzp, kalapas); the snapshot's is that minus the rewards since.
+let ZPTOTAL = null;   // { kalapas, tip }
+const rewardAt = n => n < 2 ? 0 : Math.floor(50e8 / 2 ** Math.floor((n - 2) / 800000));
+function issuedAt(b) {
+  if (!ZPTOTAL || b > ZPTOTAL.tip) return null;
+  let k = ZPTOTAL.kalapas; for (let n = ZPTOTAL.tip; n > b; n--) k -= rewardAt(n);
+  return k / 1e8;
+}
+let find = '';        // the "find my ballot" box: part of a wallet address or a transaction id
 const ballotsTable = (i, which) => {
-  const list = i.votes.filter(v => which === 'all' || (which === 'nom' ? v.command === 'Nomination' : v.command !== 'Nomination'));
+  const f = find.trim().toLowerCase();
+  const list = i.votes.filter(v => which === 'all' || (which === 'nom' ? v.command === 'Nomination' : v.command !== 'Nomination'))
+    .filter(v => !f || v.voter.toLowerCase().includes(f) || v.tx.toLowerCase().includes(f));
+  if (f && !list.length) return '<div class="note">No ballot from that wallet or transaction in this interval yet. A ballot appears here as soon as it is in a block (about 4 minutes on mainnet).</div>';
   if (!list.length) return '<div class="note">No ballots of this kind.</div>';
   const kind = { Nomination: 'Nomination', Allocation: 'Split vote', Payout: 'Payout vote' };
-  return '<div class="scroll"><table><tr><th>Wallet</th><th>Ballot</th><th>Voted for</th><th class="r">Weight (ZP)</th><th>Date</th><th>Counted</th></tr>' +
-    list.map(v => `<tr class="${v.counted ? '' : 'nc'}"><td class="mono"><a href="/explorer.html?address=${encodeURIComponent(v.voter)}" title="${esc(v.voter)}">${esc(short(v.voter))}</a></td>
-      <td class="kind">${kind[v.command] || esc(v.command)}</td><td>${ballotText(v.ballot)}</td>
-      <td class="r">${v.weight != null ? zp(v.weight) : '–'}</td><td title="block ${fmt(v.block)}">${day(v.time)}</td>
-      <td>${v.counted ? '<span class="pill ok">yes</span>' : '<span class="pill" title="Sent outside its stage, or a second ballot from the same wallet">no</span>'}</td></tr>`).join('') + '</table></div>';
+  // one card per ballot (no wide table): what was voted, by which wallet, and whether it counts. Works the same on a phone.
+  const status = v => {
+    const conf = v.confirmations && v.confirmations < CONFIRMS ? ` <span class="pill wait" title="In block ${fmt(v.block)}; final after ${CONFIRMS} blocks">${v.confirmations}/${CONFIRMS} confirmations</span>` : '';
+    return (v.counted ? '<span class="pill ok">✓ Counted</span>' : '<span class="pill no" title="Sent outside its stage, or a second ballot from a wallet that already voted (only the first counts)">Not counted</span>') + conf;
+  };
+  return '<div class="blist">' + list.map(v => `<div class="ballot ${v.counted ? '' : 'nc'}">
+      <div class="b-head"><span class="b-kind k-${esc(v.command)}">${kind[v.command] || esc(v.command)}</span><span class="b-status">${status(v)}</span></div>
+      <div class="b-what">${ballotText(v.ballot)}</div>
+      <div class="b-row"><span class="b-lbl">Wallet</span>${addrLink(v.voter)}</div>
+      <div class="b-meta"><span><span class="b-lbl">Weight</span> ${v.weight != null ? zp(v.weight) + ' ZP' : '–'}</span>
+        <span><span class="b-lbl">Block</span> ${fmt(v.block)}</span><span><span class="b-lbl">Date</span> ${day(v.time)}</span>
+        <span><span class="b-lbl">Tx</span> ${txLink(v.tx)}</span></div>
+    </div>`).join('') + '</div>';
 };
+
+// An interval in its four stages, each with its ballots grouped by what they chose:
+//   1 nominations (who the fund could pay), 2 split vote (fund share of the block reward), 3 payout vote, 4 result.
+// Groups are sorted by the weight behind them (or by wallets while weights are not known yet); each lists its wallets.
+// how far a nomination is from becoming a candidate: its weight against 3% of all ZP at the snapshot
+function needHtml(g, i) {
+  const all = issuedAt(i.snapshot); if (!all) return '';
+  const thr = all * 3 / 100, pct = g.weight / all * 100, full = g.weight >= thr, fill = Math.min(100, g.weight / thr * 100);
+  const state = full ? '<b class="ok">✓ enough to become a candidate</b>' : `${zp(thr - g.weight)} ZP more needed`;
+  return `<div class="need"><span>${pct.toFixed(2)}% of all ZP at the snapshot · needs 3% (${zp(thr)} ZP)</span><span>${state}</span></div>
+      <div class="meter thr${full ? ' full' : ''}" title="${fill.toFixed(0)}% of the threshold"><i style="width:${fill.toFixed(1)}%"></i></div>`;
+}
+const stagesHtml = (i, isCur = false) => {
+  const f = isCur ? find.trim().toLowerCase() : '';
+  const match = v => !f || v.voter.toLowerCase().includes(f) || v.tx.toLowerCase().includes(f);
+  const keyOf = b => !b ? null : b.allocation != null ? 'a' + b.allocation : JSON.stringify([b.recipient, b.spends]);
+  const groups = cmd => {
+    const m = new Map();
+    for (const v of i.votes.filter(x => x.command === cmd)) {
+      const k = keyOf(v.ballot) ?? 'x' + v.tx;
+      const g = m.get(k) || { k, b: v.ballot, weight: 0, wallets: 0, known: true, list: [] }; m.set(k, g);
+      g.list.push(v);
+      if (v.counted) { g.wallets++; if (v.weight == null) g.known = false; else g.weight += v.weight; }
+    }
+    const gs = [...m.values()], known = gs.every(g => g.known), by = g => known ? g.weight : g.wallets;
+    gs.sort((a, b) => by(b) - by(a));
+    const total = gs.reduce((s, g) => s + by(g), 0);
+    return { gs, known, by, total, cmd };
+  };
+  const voterRow = v => `<div class="vrow ${v.counted ? '' : 'nc'}">${addrLink(v.voter)}
+      <span class="vmeta">${v.weight != null ? zp(v.weight) + ' ZP' : '–'} · block ${fmt(v.block)} · tx ${txLink(v.tx)}</span>
+      <span class="vstat">${v.counted ? '<span class="pill ok">✓ Counted</span>' : '<span class="pill no" title="Sent outside its stage, or a second ballot from a wallet that already voted (only the first counts)">Not counted</span>'}${v.confirmations && v.confirmations < CONFIRMS ? ` <span class="pill wait" title="Final after ${CONFIRMS} blocks">${v.confirmations}/${CONFIRMS} confirmations</span>` : ''}</span></div>`;
+  const groupHtml = (g, G, tag) => {
+    const list = g.list.filter(match); if (!list.length) return '';
+    const sh = G.total ? G.by(g) / G.total * 100 : 0;
+    return `<div class="grp${tag ? ' win' : ''}"><div class="g-head"><div class="g-what">${ballotText(g.b)}${tag ? `<span class="tag">${tag}</span>` : ''}</div>
+        <div class="g-num">${G.known ? zp(g.weight) + ' ZP · ' + sh.toFixed(1) + '% · ' : ''}${g.wallets} ${g.wallets === 1 ? 'wallet' : 'wallets'}</div></div>
+      <div class="meter"><i style="width:${sh.toFixed(1)}%"></i></div>${G.cmd === 'Nomination' && G.known ? needHtml(g, i) : ''}
+      <div class="vlist">${list.map(voterRow).join('')}</div></div>`;
+  };
+  const N = groups('Nomination'), A = groups('Allocation'), P = groups('Payout');
+  const payKeys = new Set(P.gs.filter(g => g.wallets).map(g => g.k));
+  const paidKey = i.payouts.length ? i.payouts.map(p => p.recipient) : [];
+  const stage = (n, title, when, what, body, empty) => `<div class="s-head"><span class="s-n">${n}</span><div><div class="s-t">${title}</div><div class="s-w">${when}</div></div></div>
+      <p class="s-d">${what}</p>${body || `<div class="note">${empty}</div>`}`;
+  const nomBody = N.gs.map(g => groupHtml(g, N, payKeys.has(g.k) ? 'in the payout vote' : '')).join('');
+  const splitBody = A.gs.map((g, n) => groupHtml(g, A, i.complete ? (i.allocationDecided != null && g.b && g.b.allocation === i.allocationDecided ? 'decided' : '') : n === 0 && A.gs.length > 1 ? 'leading' : '')).join('');
+  const payBody = P.gs.map((g, n) => groupHtml(g, P, i.complete ? (g.b && paidKey.includes(g.b.recipient) ? 'won' : '') : n === 0 && P.gs.length > 1 ? 'leading' : '')).join('');
+  const maturity = i.end - i.start + 1 === 100 ? 10 : 100;
+  const result = i.complete ? `<div class="facts">
+      <div class="fact"><div class="k">Block reward split from the next interval</div>${i.allocationDecided != null ? splitHtml(i.allocationDecided, i.allocationInForce) : '<div class="v muted">–</div>'}</div>
+      <div class="fact"><div class="k">Paid from the fund</div>${i.payouts.length ? i.payouts.map(p => `<div class="v">${amt(p.amount)} ${p.asset === '00' ? 'ZP' : esc(short(p.asset))}</div>
+        <div class="s">to ${p.recipientName ? esc(p.recipientName) + ' ' : ''}${addrLink(p.recipient)}<br>block ${fmt(p.block)} · ${day(p.time)} · tx ${txLink(p.tx)}${p.confirmations && p.confirmations < CONFIRMS ? ` <span class="pill wait">${p.confirmations}/${CONFIRMS} confirmations</span>` : ''}</div>`).join('') : `<div class="v muted">No payout</div><div class="s">Paid at block ${fmt(i.end + maturity)} when a candidate wins.</div>`}</div></div>`
+    : '';
+  const cnt = cmd => i.votes.filter(v => v.command === cmd && match(v)).length;
+  const tabs = [
+    { n: 1, label: 'Nominations', count: cnt('Nomination'), html: stage(1, 'Nominations', `blocks ${fmt(i.snapshot + 1)}–${fmt(i.nominationEnd)}`, 'Proposals for a payout from the fund. A nominee needs 3% of all ZP (at the snapshot) behind it to become a candidate.', nomBody, f ? 'No nomination from that wallet or transaction.' : 'No nominations.') },
+    { n: 2, label: 'Split vote', count: cnt('Allocation'), html: stage(2, 'Split vote', `blocks ${fmt(i.nominationEnd + 1)}–${fmt(i.end)}`, `Share of each block reward that goes to the fund from the next interval (now: fund ${i.allocationInForce ?? '–'}%).`, splitBody, f ? 'No split vote from that wallet or transaction.' : 'No split votes.') },
+    { n: 3, label: 'Payout vote', count: cnt('Payout'), html: stage(3, 'Payout vote', `blocks ${fmt(i.nominationEnd + 1)}–${fmt(i.end)}`, 'Choice between the candidates; the one with the most weight is paid.', payBody, f ? 'No payout vote from that wallet or transaction.' : 'No payout votes.') },
+    ...(i.complete ? [{ n: 4, label: 'Result', count: null, html: stage(4, 'Result', `after block ${fmt(i.end)}`, 'What this interval decided.', result, '') }] : []),
+  ];
+  // one stage open at a time. Default: the result of a finished interval; in the current one the stage that is open now.
+  // While searching, the first stage holding a match. The choice is kept per interval across refreshes.
+  let sel = tabSel.get(i.interval);
+  if (f) { const hit = tabs.find(t => t.count); if (hit && !tabs.find(t => t.n === sel)?.count) sel = hit.n; }
+  if (!tabs.some(t => t.n === sel)) sel = i.complete ? 4 : (D.tip <= i.nominationEnd ? 1 : 2);
+  return `<div class="tabs" role="tablist" aria-label="Stages of interval ${ivNo(i)}">${tabs.map(t => `<button type="button" role="tab" class="tab" data-iv="${i.interval}" data-tab="${t.n}" aria-selected="${t.n === sel}">
+      <span class="tn">${t.n}</span>${t.label}${t.count != null ? ` <span class="tc">${t.count}</span>` : ''}</button>`).join('')}</div>
+    ${tabs.map(t => `<div class="stage" role="tabpanel" data-panel="${t.n}" ${t.n === sel ? '' : 'hidden'}>${t.html}</div>`).join('')}`;
+};
+const tabSel = new Map();   // interval -> open stage
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  const box = b.closest('.stages'), n = +b.dataset.tab; tabSel.set(+b.dataset.iv, n);
+  box.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(+x.dataset.tab === n)));
+  box.querySelectorAll('[data-panel]').forEach(x => { x.hidden = +x.dataset.panel !== n; });
+});
 
 function nowCard(cur, live) {
   const tip = D.tip, len = cur.end - cur.start + 1;
@@ -228,12 +372,11 @@ function nowCard(cur, live) {
   const maturity = len === 100 ? 10 : 100;
   const paid = p && p.recipient ? `<div class="fact"><div class="k">Payout chosen by the last vote</div><div class="v">${(p.spendlist || []).map(x => x.asset === '00' ? amt(Number(x.amount) / 1e8) + ' ZP' : esc(x.amount) + ' ' + esc(short(x.asset))).join(', ')}</div>
       <div class="s">to ${recip(p.recipient)}, paid at block ${fmt(cur.start + maturity - 1)}</div></div>` : '';
-  const at = allocTally(cur.votes), pt = candTally(cur.votes, 'Payout'), nt = candTally(cur.votes, 'Nomination');
-  const live2 = cur.votes.length ? `<div class="results" style="margin-top:6px">
-      ${at.html ? `<div><h3>Split vote so far</h3>${at.html}</div>` : ''}
-      ${pt.html ? `<div><h3>Payout vote so far</h3>${pt.html}</div>` : nt.html ? `<div><h3>Nominations so far</h3>${nt.html}</div>` : ''}
-    </div>${pending(cur) ? '<div class="note">Until the interval ends this counts wallets; vote weights (ZP at the snapshot) are added after it ends.</div>' : ''}` :
-    '<div class="note">No ballots yet in this interval.</div>';
+  const live2 = cur.votes.length ? (pending(cur) ? '<div class="note">Until the interval ends the shares count wallets; vote weights (ZP at the snapshot) are added after it ends.</div>' : '') : '<div class="note">No ballots yet in this interval.</div>';
+  const mine = cur.votes.length ? `<h3>Ballots in this interval</h3>
+    <label class="note" for="find">Find your ballot: paste your wallet address or the transaction id</label>
+    <input id="find" class="mono" autocomplete="off" spellcheck="false" placeholder="${len === 100 ? 'tzn1q…' : 'zen1q…'} or transaction id" value="${esc(find)}" style="width:100%;margin:4px 0 8px">
+    <div id="cur-ballots" class="stages">${stagesHtml(cur, true)}</div>` : '';
   $('now').innerHTML = `
     <div class="now-head"><h2 style="margin:0">Interval ${ivNo(cur)} <span class="badge">in progress</span></h2>
       <div class="when">blocks ${fmt(cur.start)}–${fmt(cur.end)} · now at block ${fmt(tip)}${D.complete ? '' : ' · index still catching up'}</div></div>
@@ -243,15 +386,14 @@ function nowCard(cur, live) {
       <div class="fact"><div class="k">Block reward split now</div>${splitHtml(inForce)}<div class="s">Decided by the previous interval's vote.</div></div>
       ${range}${paid}
     </div>
-    ${live2}`;
+    ${live2}${mine}`;
+  const box = document.getElementById('find');
+  if (box) box.addEventListener('input', () => { find = box.value; document.getElementById('cur-ballots').innerHTML = stagesHtml(cur, true); });
 }
 
 function intervalHtml(i, prevAlloc) {
   const pay = i.payouts.length ? i.payouts.map(p => `<b>${amt(p.amount)} ${p.asset === '00' ? 'ZP' : esc(short(p.asset))}</b> to ${p.recipientName ? esc(p.recipientName) : recip(p.recipient)}`).join('<br>') : '<span class="muted">No payout</span>';
   const end = blockTime(i.end);
-  const at = allocTally(i.votes), pt = candTally(i.votes, 'Payout'), nt = candTally(i.votes, 'Nomination');
-  const counts = { all: i.votes.length, nom: i.votes.filter(v => v.command === 'Nomination').length };
-  counts.vote = counts.all - counts.nom;
   return `<details class="iv" data-iv="${i.interval}"><summary>
       <div><div class="ivn">Interval ${ivNo(i)}</div><div class="k">${end ? 'ended ~' + day(end) : 'blocks ' + fmt(i.start) + '–' + fmt(i.end)}</div></div>
       <div><div class="k">Split decided for next interval</div>${i.allocationDecided != null ? splitHtml(i.allocationDecided, i.allocationInForce) : '<div class="v muted">–</div>'}</div>
@@ -260,19 +402,7 @@ function intervalHtml(i, prevAlloc) {
     </summary>
     <div class="in">
       <div class="note" style="margin:10px 0 0">Blocks ${fmt(i.start)}–${fmt(i.end)} · snapshot at block ${fmt(i.snapshot)} · split during this interval: miners ${i.allocationInForce != null ? 100 - i.allocationInForce : '–'}%, fund ${i.allocationInForce ?? '–'}%</div>
-      ${at.html || pt.html || nt.html ? `<div class="results">
-        ${at.html ? `<div><h3>Split vote</h3>${at.html}</div>` : ''}
-        ${pt.html ? `<div><h3>Payout vote</h3>${pt.html}</div>` : nt.html ? `<div><h3>Nominations</h3>${nt.html}</div>` : ''}
-      </div>` : ''}
-      ${i.payouts.length ? i.payouts.map(p => `<div class="paybox"><span>Paid</span><b>${amt(p.amount)} ${p.asset === '00' ? 'ZP' : esc(short(p.asset))}</b>
-        <span>to <a class="mono" href="/explorer.html?address=${encodeURIComponent(p.recipient)}" title="${esc(p.recipient)}">${esc(p.recipientName ? p.recipientName : short(p.recipient))}</a></span>
-        <span class="muted">block ${fmt(p.block)} · ${day(p.time)} · tx <span class="mono" title="${esc(p.tx)}">${esc(short(p.tx))}</span></span></div>`).join('') : ''}
-      ${i.votes.length ? `<h3>All ballots</h3>
-        <div class="seg" role="group" aria-label="Which ballots">
-          <button type="button" data-w="all" aria-pressed="true">All (${counts.all})</button>
-          <button type="button" data-w="nom" aria-pressed="false">Nominations (${counts.nom})</button>
-          <button type="button" data-w="vote" aria-pressed="false">Votes (${counts.vote})</button></div>
-        <div class="tbl">${ballotsTable(i, 'all')}</div>` : '<div class="note">No ballots in this interval.</div>'}
+      ${i.votes.length || i.payouts.length ? `<div class="stages">${stagesHtml(i)}</div>` : '<div class="note">No ballots in this interval.</div>'}
     </div></details>`;
 }
 
@@ -304,7 +434,25 @@ $('list').addEventListener('click', e => {
 });
 $('showQuiet').addEventListener('change', renderList);
 
-fetch('/cgp-history.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
+const loadTotal = () => Promise.all([fetch('/node/blockchain/totalzp', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null), fetch('/node/blockchain/info', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null)])
+  .then(([t, info]) => { if (Number.isFinite(t) && Number.isSafeInteger(info?.blocks)) ZPTOTAL = { kalapas: t, tip: info.blocks }; }).catch(() => {});
+let LIVE = null;
+// during nominations and voting the page follows the chain: the index is rebuilt every minute
+setInterval(() => {
+  const cur = D && (D.intervals.find(i => !i.complete) || D.intervals[0]);
+  if (!cur || document.hidden || document.activeElement?.id === 'find') return;
+  Promise.all([fetch('/cgp-history.json', { cache: 'no-cache' }).then(r => r.json()), loadTotal(),
+               fetch('/node/blockchain/cgp', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null)])
+    .then(([d, , live]) => {
+      if (!d || d.updated === D.updated && d.tip === D.tip) return;
+      D = d; if (live) LIVE = live;
+      const c = d.intervals.find(i => !i.complete) || d.intervals[0];
+      const open = new Set([...document.querySelectorAll('details.iv[open]')].map(x => x.dataset.iv));
+      nowCard(c, LIVE); renderList();
+      document.querySelectorAll('details.iv').forEach(x => { if (open.has(x.dataset.iv)) x.open = true; });
+    }).catch(() => {});
+}, 60000);
+Promise.all([fetch('/cgp-history.json', { cache: 'no-cache' }).then(r => r.json()), loadTotal()]).then(([d]) => {
   D = d;
   const cur = d.intervals.find(i => !i.complete) || d.intervals[0];
   if (cur && cur.communityInterval !== cur.interval) $('offnote').textContent = ' (the node itself counts ' + (cur.interval - cur.communityInterval) + ' more)';
@@ -312,7 +460,7 @@ fetch('/cgp-history.json', { cache: 'no-cache' }).then(r => r.json()).then(d => 
   if (!cur) { $('now').innerHTML = '<div class="muted">No CGP data indexed yet.</div>'; return; }
   nowCard(cur, null);
   // the node's own CGP state is the live source for the split in force and the payout winner
-  fetch('/node/blockchain/cgp', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null).then(live => { if (live) nowCard(cur, live); });
+  fetch('/node/blockchain/cgp', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null).then(live => { if (live) { LIVE = live; nowCard(cur, live); } });
 }).catch(() => { $('now').innerHTML = '<div class="muted">Not available yet: the index is being built.</div>'; });
 </script>
 <script src="/shell/shell.js" defer></script>
