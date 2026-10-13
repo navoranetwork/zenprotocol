@@ -15,8 +15,18 @@ set -uo pipefail
 DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; TC=/opt/zp-contracts-v1
 FSTAR_VERSION=v2026.09.27
 FSTAR_SHA256=cafbbb8960efeb26f5d30bc447b61ab8a507968948507a2580585afd1397781d
-cd "$DIR"
-git fetch -q origin v1-contracts && git checkout -q -f -B v1-contracts origin/v1-contracts
+# SRC_REPO/BRANCH (e.g. navoranetwork/zp-pow testnet-v1): run on that code instead, in its own
+# checkout (/opt/zp-src-<branch>), so the scripts running from /opt/zp-lab are not changed under them
+if [ -n "${SRC_REPO:-}" ]; then
+  CODE=/opt/zp-src-${BRANCH:?}
+  if [ -d "$CODE/.git" ]; then git -C "$CODE" fetch -q "https://x-access-token:$GH_TOKEN@github.com/$SRC_REPO.git" "$BRANCH" && git -C "$CODE" checkout -q -f FETCH_HEAD
+  else git clone -q -b "$BRANCH" "https://x-access-token:$GH_TOKEN@github.com/$SRC_REPO.git" "$CODE"; fi || { echo "cannot fetch $SRC_REPO $BRANCH"; exit 1; }
+  [ -e "$CODE/packages-mirror" ] || ln -s "$DIR/packages-mirror" "$CODE/packages-mirror"
+  cd "$CODE"
+else
+  CODE=$DIR; cd "$DIR"
+  git fetch -q origin v1-contracts && git checkout -q -f -B v1-contracts origin/v1-contracts
+fi
 RUN="testnet-$(git rev-parse --short HEAD)-$(date -u +%Y%m%d-%H%M)"
 OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"
 export GIT_AUTHOR_NAME=zp-lab GIT_AUTHOR_EMAIL=zp-lab@navora.network GIT_COMMITTER_NAME=zp-lab GIT_COMMITTER_EMAIL=zp-lab@navora.network
@@ -25,9 +35,9 @@ log() { echo "[$(date -u +%F' '%H:%M)] $*" | tee -a "$OUT/summary.txt"; }
 publish() {
   local wt="$DIR/replay-results"
   if [ ! -e "$wt/.git" ]; then
-    rm -rf "$wt"; git worktree prune
-    git fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results:replay-results
-    git worktree add -q "$wt" replay-results
+    rm -rf "$wt"; git -C "$DIR" worktree prune
+    git -C "$DIR" fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results:replay-results
+    git -C "$DIR" worktree add -q "$wt" replay-results
   fi
   git -C "$wt" pull -q --rebase "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" replay-results 2>/dev/null
   mkdir -p "$wt/tests/$RUN" && cp "$OUT"/*.txt "$wt/tests/$RUN/" 2>/dev/null
@@ -107,7 +117,7 @@ B=/opt/bitzen
 if { [ -d "$B/.git" ] && git -C "$B" pull -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/bitzen.git" main 2>/dev/null; } \
    || git clone -q "https://x-access-token:$GH_TOKEN@github.com/navoranetwork/bitzen.git" "$B" 2>/dev/null; then
   log "T5b (BitZen $(git -C "$B" log --oneline -1 | cut -c1-60)): start"
-  (cd "$B" && ZP_V1_TOOLCHAIN="$TC" FSTAR_HOME="$FSTAR_HOME" ZEN="$DIR" timeout 3600 bash scripts/v1-pay-devnet.sh) > "$OUT/t5b.txt" 2>&1
+  (cd "$B" && ZP_V1_TOOLCHAIN="$TC" FSTAR_HOME="$FSTAR_HOME" ZEN="$CODE" timeout 3600 bash scripts/v1-pay-devnet.sh) > "$OUT/t5b.txt" 2>&1
   cp "$B/v1-pay-out/report.txt" "$OUT/t5b-report.txt" 2>/dev/null
   log "T5b: $(grep -h 'RESULT' "$OUT/t5b.txt" | tail -1)"
 else

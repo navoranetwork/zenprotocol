@@ -1,0 +1,69 @@
+# Testnet node with V1 contracts (branch testnet-v1): Dockerfile.net10 (RandomX) plus the pinned V1
+# toolchain (zp-contracts-v1 toolchain.lock: .NET SDK 10.0.112, F* 2026.09.27), which every node needs
+# from the fork height on (testParameters.v1ContractsHeight) to build activated contracts.
+#
+# The toolchain repo is private: copy the pinned commit into the build context first
+#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ c9b085d | tar -x -C .
+#   docker build -f Docker/Dockerfile.testnet-v1 -t zen-node:testnet-v1 .
+# The image build fails unless every Zulib module verifies and the token template builds to the
+# DLL hash recorded in docs/V1-REVIEW.md (the same bytes as on the other machines).
+
+# ---- build ----
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+RUN apt-get update && apt-get install -y --no-install-recommends cmake g++ make git && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY nuget.config ./
+COPY native/randomx/build.sh ./native/randomx/build.sh
+RUN bash native/randomx/build.sh
+COPY src ./src
+RUN dotnet restore src/ContractTool/ContractTool.fsproj \
+ && dotnet restore src/Node/Node.fsproj \
+ && dotnet restore src/Cli/Cli.fsproj \
+ && dotnet build src/ContractTool/ContractTool.fsproj -c Release --no-restore -v minimal \
+ && dotnet build src/Node/Node.fsproj -c Release --no-restore -v minimal \
+ && dotnet build src/Cli/Cli.fsproj -c Release --no-restore -v minimal \
+ && mkdir -p /out \
+ && cp -r src/Node/bin/Release/. /out/ \
+ && cp -rn src/Cli/bin/Release/. /out/ \
+ && test -f /out/contract-tool/zen-contract-tool.exe && test -f /out/libsecp256k1.so && test -f /out/librandomx.so && test -x /out/z3-linux
+
+# ---- runtime: .NET 10 + the pinned SDK (V1 builds) + F* (V1) + Mono (V0 contract tool) ----
+FROM mcr.microsoft.com/dotnet/runtime:10.0
+ARG SDK=10.0.112
+ARG FSTAR_VERSION=v2026.09.27
+ARG FSTAR_SHA256=cafbbb8960efeb26f5d30bc447b61ab8a507968948507a2580585afd1397781d
+ARG TOKEN_DLL_SHA256=c36acbafebbafd5bd91329577f53a80444b4c5bdf65f656e217422cdd8a74dde
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends mono-devel liblmdb-dev libgomp1 libgmp10 python3 curl unzip zip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+ && bash /tmp/dotnet-install.sh --version $SDK --install-dir /usr/share/dotnet > /dev/null && rm /tmp/dotnet-install.sh \
+ && dotnet --list-sdks | grep -q "^$SDK "
+RUN curl -fsSL -o /tmp/fstar.tgz "https://github.com/FStarLang/FStar/releases/download/$FSTAR_VERSION/fstar-$FSTAR_VERSION-Linux-x86_64.tar.gz" \
+ && echo "$FSTAR_SHA256  /tmp/fstar.tgz" | sha256sum -c --quiet - \
+ && tar -xzf /tmp/fstar.tgz -C /opt && rm /tmp/fstar.tgz && /opt/fstar/bin/fstar.exe --version
+ENV FSTAR_HOME=/opt/fstar ZP_V1_TOOLCHAIN=/zp-contracts-v1 DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
+COPY zp-contracts-v1 /zp-contracts-v1
+# gate 1: every Zulib module verifies; gate 2: the token template builds to the recorded bytes
+# (this also builds the elaborator, ZenAbi and ilcheck once, so a node never restores packages)
+RUN cd /zp-contracts-v1 && bash scripts/verify-zulib.sh > /tmp/verify.txt 2>&1; \
+    n_ok=$(grep -c '^ok' verify-report.txt); n_all=$(wc -l < verify-report.txt); \
+    echo "Zulib: $n_ok of $n_all modules verify"; [ "$n_ok" -gt 0 ] && [ "$n_ok" = "$n_all" ]
+RUN W=$(mktemp -d) && /zp-contracts-v1/tools/engine/zp-engine make token --out $W/token > /dev/null \
+ && /zp-contracts-v1/scripts/build-contract.sh --lax $W/token/contract.fst $W/out > $W/build.txt 2>&1 || { cat $W/build.txt; exit 1; }; \
+    h=$(sha256sum $W/out/Z*.dll | cut -c1-64); echo "token template DLL: $h"; [ "$h" = "$TOKEN_DLL_SHA256" ] && rm -rf $W
+
+COPY --from=build /out /zen
+COPY Docker/entrypoint.sh /entrypoint.sh
+COPY Docker/load-snapshot.sh /load-snapshot.sh
+COPY Docker/create-snapshot.sh /create-snapshot.sh
+RUN sed -i "s/\r$//" /entrypoint.sh /load-snapshot.sh /create-snapshot.sh \
+ && chmod +x /entrypoint.sh /load-snapshot.sh /create-snapshot.sh /zen/z3-linux /zen/contract-tool/z3-linux \
+ && (grep -q "navora.network" /zen/main.yaml || sed -i 's|^seeds:\s*$|seeds:\n  - navora.network|' /zen/main.yaml)
+
+WORKDIR /zen
+VOLUME /data
+EXPOSE 9655 11567 29555 31567
+HEALTHCHECK --interval=2m --timeout=10s --start-period=10m \
+  CMD curl -fs http://127.0.0.1:31567/blockchain/info >/dev/null || curl -fs http://127.0.0.1:11567/blockchain/info >/dev/null || exit 1
+ENTRYPOINT ["/entrypoint.sh"]
