@@ -1,26 +1,36 @@
 #!/bin/bash
 # Throughput comparison on zp-lab-1: the ORIGINAL Zen node (A) and ours (B), same machine, same load, one at a time.
-#   A  upstream a0191cbc (the last upstream commit before ours), built from source as upstream's CI did
-#      (Mono, paket, msbuild, Debug), with ONE change: the local chain's block interval 60 s -> 2 s (as ours).
-#   B  ours: zp-pow testnet-v1 (BRANCH_B, default the branch head), Debug devnet image (.NET 10).
-# Both: one node on the `local` chain (Debug builds have it), 1 miner thread, address index on, fresh chain each run,
-# node container pinned to CPUs 0-3, the senders to 4-7. Load: wallet/tools/load-test.mjs (zenprotocol
-# node-upgrade-script) from two senders with their own funded wallets, each at half the total rate, same steps for A
-# and B. Every 10 s: docker stats of the node. Results on the branch replay-results, tests/throughput-<date>/:
-# A-*/ and B-*/ with summary.json + blocks.csv + load.csv per sender, stats.csv, the node log, and the A patch.
+#   A  upstream a0191cbc (the last upstream commit before ours), built from source as upstream's CI did (Mono, paket,
+#      msbuild of the solution).
+#   B  ours: zp-pow testnet-v1 (BRANCH_B, default the branch head), .NET 10.
+# Both get the SAME patches, recorded in <out>/A-patch.diff and B-patch.diff:
+#   - Release build with the local chain: `#if DEBUG` -> `#if DEBUG || LOCALCHAIN` (except the log level, which stays
+#     Info as in Release), built with LOCALCHAIN defined. Only the local chain's availability changes.
+#   - the local chain's block interval = BLOCK_S seconds (default 10; upstream 60, ours 2). At 2 s the local chain's
+#     trivial difficulty let the miner find blocks continuously on a stale template (over 95% of mined blocks went to
+#     forks in the first run, in BOTH nodes), so block times measured the miner, not the node.
+# One node on the local chain, 1 miner thread, address index on, fresh chain each run, node container on CPUs 0-3.
+# Load: wallet/tools/load-test.mjs (zenprotocol node-upgrade-script), two senders with their own funded wallets
+# (CPUs 4-5 and 6-7), each at half the total rate. Schedule: every rate in RATES, RUNS times, in one shuffled order
+# (fixed SEED, the same for A and B), STEP_MIN minutes each; the first minute of each step is warm-up and is not
+# measured (scripts/throughput-report.py). Every 10 s: docker stats of the node.
+# PROFILE=1: instead, ours only at PROFILE_RATE (default 3000/min total) for 5 minutes, with a 60 s dotnet-trace
+# CPU sample of the node at minute 2 (speedscope + the top frames, scripts/speedscope-top.py).
+# Results on the branch replay-results, tests/throughput-<date>/ (or profile-<date>/).
 #
 # On zp-lab-1, as root (/etc/zp-lab.env holds GH_TOKEN):
 #   cd /opt/zp-lab && git pull -q && systemd-run --unit zp-tput --property=EnvironmentFile=/etc/zp-lab.env \
 #     bash /opt/zp-lab/scripts/lab-throughput.sh
-#   journalctl -u zp-tput -f
-# Settings: RATES (total transfers per minute, default 600,1200,3000,6000,12000,30000), STEP_MIN (5), ONLY=A|B.
+# Settings: RATES (total per minute, default 300,600,1500,3000,6000,15000), RUNS (3), STEP_MIN (6), BLOCK_S (10),
+# SEED (1), ONLY=A|B, PROFILE=1.
 set -uo pipefail
 : "${GH_TOKEN:?}"
 DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; GH="https://x-access-token:$GH_TOKEN@github.com"
 UPSTREAM=a0191cbc; BRANCH_B=${BRANCH_B:-testnet-v1}
-RATES=${RATES:-600,1200,3000,6000,12000,30000}; STEP_MIN=${STEP_MIN:-5}
-STAMP=$(date -u +%Y%m%d-%H%M); RUN="throughput-$STAMP"; OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"
-W=/opt/zp-tput; mkdir -p "$W"
+RATES=${RATES:-300,600,1500,3000,6000,15000}; RUNS=${RUNS:-3}; STEP_MIN=${STEP_MIN:-6}; BLOCK_S=${BLOCK_S:-10}; SEED=${SEED:-1}
+PROFILE=${PROFILE:-}; PROFILE_RATE=${PROFILE_RATE:-3000}
+STAMP=$(date -u +%Y%m%d-%H%M); RUN="$([ -n "$PROFILE" ] && echo profile || echo throughput)-$STAMP"
+OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"; W=/opt/zp-tput; mkdir -p "$W"
 M1="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
 M2="letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic bless"
 API=http://127.0.0.1:20000; NODE_C=zp-tput-node
@@ -36,75 +46,123 @@ publish() {
 stop() { log "STOPPED: $*"; docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1; publish "stopped: $*"; exit 1; }
 height() { curl -fs -m 10 $API/blockchain/info | sed -n 's/.*"blocks" *: *\([0-9]*\).*/\1/p'; }
 
+# the same patch for both trees: local chain in Release (LOCALCHAIN), block interval BLOCK_S
+patch_tree() {  # $1: tree, $2: the local chain's blockInterval line pattern (sed regex)
+  local t=$1
+  find "$t/src" -name '*.fs' ! -path '*Tests*' ! -name 'Log.fs' -print0 | xargs -0 sed -i 's/^\(\s*\)#if DEBUG\s*$/\1#if DEBUG || LOCALCHAIN/'
+  sed -i "s/$2/blockInterval=${BLOCK_S}000UL;   \/\/ throughput comparison (lab-throughput.sh)/" "$t/src/Consensus/Chain.fs"
+  grep -q "blockInterval=${BLOCK_S}000UL;   // throughput comparison" "$t/src/Consensus/Chain.fs"
+}
+
 # ---- sources ----
-log "throughput comparison: A = upstream $UPSTREAM (+ block interval 2 s), B = zp-pow $BRANCH_B; rates $RATES /min, $STEP_MIN min each"
+log "$([ -n "$PROFILE" ] && echo "profile of ours at $PROFILE_RATE/min" || echo "throughput comparison: rates $RATES /min x $RUNS runs, shuffled (seed $SEED), $STEP_MIN min steps (1 min warm-up)"); Release + LOCALCHAIN, ${BLOCK_S} s blocks"
 git -C "$DIR" fetch -q origin "$UPSTREAM" 2>/dev/null; git -C "$DIR" cat-file -e "$UPSTREAM^{commit}" || stop "upstream commit $UPSTREAM not in $DIR"
-rm -rf "$W/a" && mkdir -p "$W/a" && git -C "$DIR" archive "$UPSTREAM" | tar -x -C "$W/a" || stop "archive A"
-sed -i 's/blockInterval=1000UL \* 60UL;/blockInterval=2000UL;   \/\/ throughput comparison: 2 s blocks, as our devnet/' "$W/a/src/Consensus/Chain.fs"
-diff -u <(git -C "$DIR" show "$UPSTREAM:src/Consensus/Chain.fs") "$W/a/src/Consensus/Chain.fs" > "$OUT/A-patch.diff"
-grep -q "blockInterval=2000UL" "$W/a/src/Consensus/Chain.fs" || stop "A patch did not apply"
-cp "$DIR/Docker/devnet-entrypoint.sh" "$DIR/Docker/Dockerfile.upstream-devnet" "$W/a/"
-if [ -d "$W/b/.git" ]; then git -C "$W/b" fetch -q "$GH/navoranetwork/zp-pow.git" "$BRANCH_B" && git -C "$W/b" checkout -q -f FETCH_HEAD
-else git clone -q -b "$BRANCH_B" "$GH/navoranetwork/zp-pow.git" "$W/b"; fi || stop "B source"
+rm -rf "$W/a" "$W/a0" && mkdir -p "$W/a" "$W/a0" && git -C "$DIR" archive "$UPSTREAM" | tar -x -C "$W/a" && cp -r "$W/a/src" "$W/a0/" || stop "archive A"
+patch_tree "$W/a" 'blockInterval=1000UL \* 60UL;' || stop "A patch"
+(cd "$W" && diff -ru a0/src a/src) > "$OUT/A-patch.diff"; rm -rf "$W/a0"
+cp "$DIR/Docker/devnet-entrypoint.sh" "$W/a/"
+sed -e 's|msbuild src/zenprotocol.sln /p:Configuration=Debug|msbuild src/zenprotocol.sln /p:Configuration=Release "/p:DefineConstants=TRACE%3BLOCALCHAIN"|' \
+    -e 's|bin/Debug|bin/Release|g' "$DIR/Docker/Dockerfile.upstream-devnet" > "$W/a/Dockerfile.tput"
+if [ -d "$W/b-src/.git" ]; then git -C "$W/b-src" fetch -q "$GH/navoranetwork/zp-pow.git" "$BRANCH_B" && git -C "$W/b-src" checkout -q -f FETCH_HEAD
+else git clone -q -b "$BRANCH_B" "$GH/navoranetwork/zp-pow.git" "$W/b-src"; fi || stop "B source"
+rm -rf "$W/b" "$W/b0" && mkdir -p "$W/b" "$W/b0" && git -C "$W/b-src" archive HEAD | tar -x -C "$W/b" && cp -r "$W/b/src" "$W/b0/" || stop "archive B"
+patch_tree "$W/b" 'blockInterval=2000UL;' || stop "B patch"
+(cd "$W" && diff -ru b0/src b/src) > "$OUT/B-patch.diff"; rm -rf "$W/b0"
+cp "$DIR/Docker/devnet-entrypoint.sh" "$W/b/Docker/"
+sed -e 's|-c Debug|-c Release -p:DefineConstants=LOCALCHAIN|g' -e 's|bin/Debug|bin/Release|g' "$W/b/Docker/Dockerfile.devnet" > "$W/b/Docker/Dockerfile.tput"
 if [ -d "$W/wallet-src/.git" ]; then git -C "$W/wallet-src" fetch -q origin node-upgrade-script && git -C "$W/wallet-src" checkout -q -f FETCH_HEAD
 else git clone -q -b node-upgrade-script "$GH/$REPO.git" "$W/wallet-src"; fi || stop "wallet source"
-log "B: $(git -C "$W/b" log --oneline -1 | cut -c1-70); load tool: zenprotocol $(git -C "$W/wallet-src" log --oneline -1 | cut -c1-50)"
+log "B: $(git -C "$W/b-src" log --oneline -1 | cut -c1-70); load tool: zenprotocol $(git -C "$W/wallet-src" log --oneline -1 | cut -c1-50)"
 docker run --rm -v "$W/wallet-src/wallet:/w" -w /w node:22 sh -c "npm ci --no-audit --no-fund > /dev/null" || stop "npm ci"
 publish "started"
 
 # ---- images ----
-if [ "${ONLY:-}" != B ]; then
-  log "build A (upstream, Mono)"; (cd "$W/a" && docker build -f Dockerfile.upstream-devnet -t zen-tput-a .) > "$OUT/A-build.txt" 2>&1 || stop "A build (A-build.txt)"
+if [ -z "$PROFILE" ] && [ "${ONLY:-}" != B ]; then
+  log "build A (upstream, Mono, Release+LOCALCHAIN)"; (cd "$W/a" && docker build -f Dockerfile.tput -t zen-tput-a .) > "$OUT/A-build.txt" 2>&1 || stop "A build (A-build.txt)"
 fi
 if [ "${ONLY:-}" != A ]; then
-  log "build B (ours, .NET 10)"; (cd "$W/b" && cp "$DIR/Docker/devnet-entrypoint.sh" Docker/ && docker build -f Docker/Dockerfile.devnet -t zen-tput-b .) > "$OUT/B-build.txt" 2>&1 || stop "B build (B-build.txt)"
+  log "build B (ours, .NET 10, Release+LOCALCHAIN)"; (cd "$W/b" && docker build -f Docker/Dockerfile.tput -t zen-tput-b .) > "$OUT/B-build.txt" 2>&1 || stop "B build (B-build.txt)"
 fi
 
-addr_of() {  # the wallet's receive address for a mnemonic (as the load tool derives it)
+addr_of() {
   docker run --rm -v "$W/wallet-src/wallet:/w" -w /w -e M="$1" node:22 node --input-type=module -e \
     "import { openWallet, receiveAddress } from './src/wallet.js'; console.log(receiveAddress(openWallet({id:'x',name:'x',network:'test',kind:'mnemonic'}, process.env.M)))"
 }
 
-run_one() {  # $1: A or B
-  local K=$1 IMG=zen-tput-$(echo $1 | tr AB ab) D="$OUT/$1"; mkdir -p "$D"
-  docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1
-  log "$K: start the node (fresh chain)"
-  docker run -d --name $NODE_C --cpuset-cpus 0-3 -p 127.0.0.1:20000:20000 -e NODES=1 -e MINER_THREADS=1 \
+start_node() {  # $1: A or B, $2: result folder. A fresh chain, mining, sender 2 funded, both wallets with mature coins
+  local K=$1 D=$2 IMG=zen-tput-$(echo $1 | tr AB ab)
+  docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1; rm -rf "$W/diag"; mkdir -p "$W/diag"
+  docker run -d --name $NODE_C --cpuset-cpus 0-3 -p 127.0.0.1:20000:20000 -v "$W/diag:/tmp" -e NODES=1 -e MINER_THREADS=1 \
     -e DEVNET_MNEMONIC="$M1" $IMG > /dev/null || stop "$K: docker run"
-  for i in $(seq 180); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 60 ] && break; done
-  [ -n "$h" ] && [ "$h" -ge 60 ] || { docker logs --tail 50 $NODE_C > "$D/node-start.log" 2>&1; stop "$K: the node does not mine (node-start.log)"; }
-  log "$K: mining, block $h; fund sender 2"
+  local h=""; for i in $(seq 360); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 40 ] && break; done
+  [ -n "$h" ] && [ "$h" -ge 40 ] || { docker logs --tail 50 $NODE_C > "$D/node-start.log" 2>&1; stop "$K: the node does not mine (node-start.log)"; }
   local a2; a2=$(addr_of "$M2") || stop "$K: address of sender 2"
   r=$(curl -s -m 120 -X POST -H 'Content-Type: application/json' $API/wallet/send \
-      -d "{\"outputs\":[{\"address\":\"$a2\",\"asset\":\"00\",\"amount\":\"4000000000\"}],\"password\":\"devnet\"}")
+      -d "{\"outputs\":[{\"address\":\"$a2\",\"asset\":\"00\",\"amount\":\"3000000000\"}],\"password\":\"devnet\"}")
   echo "send to sender 2 ($a2): $r" > "$D/fund.txt"
-  for i in $(seq 120); do sleep 5; h2=$(height); [ "$h2" -ge $((h + 80)) ] && break; done   # sender 1 (the miner's wallet) needs ~20 ZP mature after funding sender 2
-  # docker stats every 10 s
+  # both wallets need >= 20 ZP mature (coinbase maturity 10): wait 40 more blocks
+  for i in $(seq 360); do sleep 5; h2=$(height); [ -n "$h2" ] && [ "$h2" -ge $((h + 40)) ] && break; done
+  log "$K: node up, block $(height), sender 2 funded"
+}
+
+stats_loop() {  # docker stats every 10 s into $1
   ( echo "time,cpu_percent,mem_usage"; while docker inspect $NODE_C > /dev/null 2>&1; do
-      docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}}' $NODE_C 2>/dev/null | sed "s/^/$(date -u +%H:%M:%S),/"; sleep 10; done ) > "$D/stats.csv" &
-  local SP=$!
-  # per-sender rates: half of each total rate
-  local half; half=$(echo "$RATES" | tr ',' '\n' | awk '{printf "%s%d", (NR>1?",":""), $1/2}')
-  log "$K: load, per sender $half /min, $STEP_MIN min each"
+      docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}}' $NODE_C 2>/dev/null | sed "s/^/$(date -u +%H:%M:%S),/"; sleep 10; done ) > "$1" &
+  echo $!
+}
+
+senders() {  # $1: result folder, $2: per-sender rates, $3: step minutes, $4: max minutes
   for s in 1 2; do
     local m; [ $s = 1 ] && m="$M1" || m="$M2"
     local cpus; [ $s = 1 ] && cpus=4-5 || cpus=6-7
-    mkdir -p "$D/s$s"
-    docker run -d --name zp-tput-s$s --cpuset-cpus $cpus --network host -v "$W/wallet-src/wallet:/w" -v "$D/s$s:/out" -w /w \
-      -e TESTNET_MNEMONIC="$m" node:22 node tools/load-test.mjs --node $API --rates "$half" --step-min "$STEP_MIN" \
-      --outputs 20000 --unit 0.001 --max-min 60 --max-mempool 200000 --out /out > /dev/null || stop "$K: sender $s"
+    mkdir -p "$1/s$s"
+    docker run -d --name zp-tput-s$s --cpuset-cpus $cpus --network host -v "$W/wallet-src/wallet:/w" -v "$1/s$s:/out" -w /w \
+      -e TESTNET_MNEMONIC="$m" node:22 node tools/load-test.mjs --node $API --rates "$2" --step-min "$3" \
+      --outputs 20000 --unit 0.001 --max-min "$4" --max-mempool 400000 --out /out > /dev/null || stop "sender $s"
   done
+}
+
+collect() {  # $1: result folder, $2: stats pid
   docker wait zp-tput-s1 zp-tput-s2 > /dev/null
-  for s in 1 2; do docker logs zp-tput-s$s > "$D/s$s/sender.log" 2>&1; done
+  for s in 1 2; do docker logs zp-tput-s$s > "$1/s$s/sender.log" 2>&1; done
   docker rm -f zp-tput-s1 zp-tput-s2 > /dev/null 2>&1
-  docker exec $NODE_C sh -c 'cat /data/logs/node0.log' 2>/dev/null | gzip > "$D/node0.log.gz"
-  kill $SP 2>/dev/null; wait $SP 2>/dev/null
-  log "$K: done at block $(height); $(for s in 1 2; do python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('s$s', {k: d[k] for k in d if k in ('steps','achieved_per_min','stopped','reason')})" "$D/s$s/summary.json" 2>/dev/null; done | tr '\n' ' ')"
+  docker exec $NODE_C sh -c 'cat /data/logs/node0.log' 2>/dev/null | gzip > "$1/node0.log.gz"
+  kill $2 2>/dev/null; wait $2 2>/dev/null
+}
+
+if [ -n "$PROFILE" ]; then
+  D="$OUT/B"; mkdir -p "$D"; start_node B "$D"; SP=$(stats_loop "$D/stats.csv")
+  half=$((PROFILE_RATE / 2)); log "profile: load $PROFILE_RATE/min (two senders), trace 60 s at minute 2"
+  senders "$D" "$half" 5 6
+  sleep 120
+  pid=$(docker exec $NODE_C sh -c 'for p in /proc/[0-9]*; do tr "\0" " " < $p/cmdline 2>/dev/null | grep -q "zen-node.dll" && basename $p; done' | head -1)
+  docker run --rm --pid container:$NODE_C -v "$W/diag:/tmp" -v "$D:/out" mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
+    "dotnet tool install -g dotnet-trace > /dev/null && /root/.dotnet/tools/dotnet-trace collect -p $pid --profile cpu-sampling --duration 00:00:01:00 --format speedscope -o /out/trace.nettrace" \
+    > "$D/trace.txt" 2>&1 || log "profile: dotnet-trace failed (trace.txt)"
+  collect "$D" "$SP"; docker rm -f $NODE_C > /dev/null 2>&1
+  [ -f "$D/trace.speedscope.json" ] && python3 "$DIR/scripts/speedscope-top.py" "$D/trace.speedscope.json" > "$D/profile-top.txt" 2>&1
+  rm -f "$D/trace.nettrace"; gzip -f "$D/trace.speedscope.json" 2>/dev/null
+  log "profile done: $(head -3 "$D/profile-top.txt" 2>/dev/null | tr '\n' ' ')"
+  publish "done"; exit 0
+fi
+
+# the shuffled schedule (the same for A and B): every rate RUNS times; per sender, half of each
+SCHED=$(python3 -c "import random,sys; r=[int(x) for x in sys.argv[1].split(',')]*int(sys.argv[2]); random.Random(int(sys.argv[3])).shuffle(r); print(','.join(map(str,r)))" "$RATES" "$RUNS" "$SEED")
+HALF=$(echo "$SCHED" | tr ',' '\n' | awk '{printf "%s%d", (NR>1?",":""), $1/2}')
+NSTEPS=$(echo "$SCHED" | tr ',' '\n' | wc -l); MAXMIN=$((NSTEPS * STEP_MIN + 15))
+echo "$SCHED" > "$OUT/schedule.txt"; log "schedule (total per minute): $SCHED"
+
+run_one() {
+  local K=$1 D="$OUT/$1"; mkdir -p "$D"
+  start_node $K "$D"; local SP; SP=$(stats_loop "$D/stats.csv")
+  log "$K: load, $NSTEPS steps of $STEP_MIN min"
+  senders "$D" "$HALF" "$STEP_MIN" "$MAXMIN"
+  collect "$D" "$SP"
+  log "$K: done at block $(height)"
   docker rm -f $NODE_C > /dev/null 2>&1
   publish "$K done"
 }
-
 [ "${ONLY:-}" != B ] && run_one A
 [ "${ONLY:-}" != A ] && run_one B
-log "done"
-publish "done"
+python3 "$DIR/scripts/throughput-report.py" "$OUT" > "$OUT/report.txt" 2>&1 || log "report failed (report.txt)"
+log "done"; publish "done"
