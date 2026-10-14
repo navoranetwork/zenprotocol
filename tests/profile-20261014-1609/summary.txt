@@ -1,0 +1,2 @@
+[2026-10-14 16:09] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
+[2026-10-14 16:09] B: fde5f8b1 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 7f667690 V1 crypto probe: a test contract and scri
