@@ -78,7 +78,7 @@ run_one() {  # $1: A or B
   r=$(curl -s -m 120 -X POST -H 'Content-Type: application/json' $API/wallet/send \
       -d "{\"outputs\":[{\"address\":\"$a2\",\"asset\":\"00\",\"amount\":\"4000000000\"}],\"password\":\"devnet\"}")
   echo "send to sender 2 ($a2): $r" > "$D/fund.txt"
-  for i in $(seq 60); do sleep 5; h2=$(height); [ "$h2" -ge $((h + 12)) ] && break; done
+  for i in $(seq 120); do sleep 5; h2=$(height); [ "$h2" -ge $((h + 80)) ] && break; done   # sender 1 (the miner's wallet) needs ~20 ZP mature after funding sender 2
   # docker stats every 10 s
   ( echo "time,cpu_percent,mem_usage"; while docker inspect $NODE_C > /dev/null 2>&1; do
       docker stats --no-stream --format '{{.CPUPerc}},{{.MemUsage}}' $NODE_C 2>/dev/null | sed "s/^/$(date -u +%H:%M:%S),/"; sleep 10; done ) > "$D/stats.csv" &
