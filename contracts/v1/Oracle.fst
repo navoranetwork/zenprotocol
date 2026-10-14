@@ -14,7 +14,8 @@
 //           key and the change to ReturnAddress (default: the sender).
 //           FeeAsset: only "00" (ZP) in V1 (Zen.Asset.parse is not realized in Zulib V1); V0 also took token ids.
 //
-// Differences from V0 (none observable): Zen.PublicKey.compress replaces the local copy (V0's read the key with
+// Differences from V0 (none observable): Zen.Sha3 replaces Zen.Hash.Sha3 (same functions, costs and bytes; the
+// latter has no realization in V1); Zen.PublicKey.compress replaces the local copy (V0's read the key with
 // Zen.Array.item, which V1 does not allow in code that runs; same bytes, same cost 305); no `module` line; tuple
 // type with `&`; `|>` after `>>=` chains in parentheses (V1-SPEC 4.3); `dataAttest'` renamed `dataAttestInner`.
 // Keep every expression's shape as in V0: the `val`s declare V0's exact costs, and a different shape (even a field
@@ -33,7 +34,7 @@ module CR = Zen.ContractResult
 module Dict = Zen.Dictionary
 module OT = Zen.OptionT
 module RT = Zen.ResultT
-module Sha3 = Zen.Hash.Sha3
+module Sha3 = Zen.Sha3
 module TX = Zen.TxSkeleton
 module W = Zen.Wallet
 module U64 = FStar.UInt64
