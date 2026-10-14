@@ -158,6 +158,17 @@ withdrawals only for the current `BRIDGE_ASSET` (entries carry `asset`; the old 
 
 ### 3. Dex
 
+**State 2026-10-14 17:00: ported, waits for the next node image.** The market maker's orders on the V0 Dex are
+cancelled (`MM_CANCEL_ALL=1`, 0 open; Alon had none) and the `marketmaker` service stays stopped. `contracts/v1/Dex.fst`
+(V0 shapes; `takeInner`'s failure pads with `RT.autoFailw`, since V0's `RT.incFailw (W.size w * 256 + 6978)` computes
+`W.size` at run time, refused by rule 4.5) passes a node's checks and type check with V0's costs (Make 3693; Cancel
+4486 and Take 8020, + 256 per coin in the wallet) and stops at extraction: it needs `Zen.Asset.parse` (order assets are
+strings), which Zulib V1 realizes only in the next image. `scripts/v1/check.mjs contracts/v1/Dex.fst` gives the
+verdict. **Both zUSDC and the Dex wait for that image** (secp256k1 resolver and self-test, `Zen.Asset.parse`,
+`Zen.Hash.Sha3`, c86a2c4) on every testnet node; then: zusdc-try.mjs, activate zUSDC, a Dex test script, activate the
+Dex, point the market maker, the Dex page, the explorer and the wallet's Markets tab at the new ids.
+
+
 - Before: cancel the market maker's and Alon's open orders on the V0 Dex (the ZP comes back).
 - Port `src/ContractExamples/Dex.fst` to V1, test, activate; set `ZEN_DEX`, `MM_DEX`, `MM_ASSET` (the new zUSDC);
   restart the market maker; update the Dex page, the explorer's Dex API and the wallet's Markets tab to the new id.
