@@ -1,0 +1,11 @@
+--- /dev/fd/63	2026-10-14 07:49:37.354371156 +0000
++++ /opt/zp-tput/a/src/Consensus/Chain.fs	2026-10-14 07:49:37.354371156 +0000
+@@ -92,7 +92,7 @@
+ let localParameters = {
+     testParameters with
+         proofOfWorkLimit=Difficulty.uncompress 0x20fffffful;
+-        blockInterval=1000UL * 60UL;
++        blockInterval=2000UL;   // throughput comparison: 2 s blocks, as our devnet
+         name="local"
+         genesisHashHash =
+             localGenesisHash

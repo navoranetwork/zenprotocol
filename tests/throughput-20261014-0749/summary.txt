@@ -1,0 +1,2 @@
+[2026-10-14 07:49] throughput comparison: A = upstream a0191cbc (+ block interval 2 s), B = zp-pow testnet-v1; rates 600,1200,3000,6000,12000,30000 /min, 5 min each
+[2026-10-14 07:49] B: 76d99b1f Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 67f17f75 swap: an offer whose take-back waits in t
