@@ -77,6 +77,10 @@ V0 activations after the fork. It is also the rehearsal for moving a live contra
   - 20,000 blocks each. `testnet-stack.env` has `BITZEN_CONTRACT`/`PROVER_CHAIN` (the chain), `BITZEN_BATCH=6`,
     `PROVER_SWAP` (old file `testnet-stack.env.bak-v0`). Relayer reset; first checkpoint Bitcoin block 971,346.
     Prover on 127.0.0.1:8096; `https://testnet.navora.network/swap/status` answers.
+  - 2026-10-14 11:30: BitZenSwap replaced (holds 20/30/60 blocks, 10-block take-back lock; `docs/BITZEN-TESTNET.md`):
+    `000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20`,
+    `ctzn1qqqqqqqq2cgxux4r9lz5ldepy7827fzz29w72pwl6s2ulepmevqe2g44swyqsrfgrk` (`PROVER_SWAP`). The chain contract and
+    relayer were kept. The first swap (`…0544a7726`) still holds a 150 ZP test offer, no longer seen by the wallet.
 - Writing V1 contracts (lessons from BitZen): no list literals (`[]` → `Nil`, cons is fine); `exists` is a keyword;
   qualify `Zen.Prelude.OK/ERR`; annotate equality as `(a = b <: bool)`; the costliest branch first in an `if`, the
   others padded with `autoInc`; the cost function must equal main's elaborated cost (the F* error shows `(N + 19)`);
