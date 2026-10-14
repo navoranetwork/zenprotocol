@@ -58,6 +58,10 @@ log "image build: start (Zulib verification and the token DLL check run inside)"
 (cd "$SRC" && docker build -f Docker/Dockerfile.testnet-v1 -t $IMAGE .) > "$OUT/image-build.txt" 2>&1 || stop "image build (image-build.txt)"
 log "image built: $(docker image inspect $IMAGE --format '{{.Id}}' | cut -c1-19); $(grep -ohE 'Zulib: [0-9]+ of [0-9]+ modules verify|token template DLL: [0-9a-f]{64}' "$OUT/image-build.txt" | tr '\n' ';')"
 
+# the image the testnet nodes will get is this one (testnet-v1-switch.sh upgrade <tar.gz>)
+docker save $IMAGE | gzip > "$DIR/zen-node-testnet-v1.tar.gz" && (cd "$DIR" && sha256sum zen-node-testnet-v1.tar.gz > zen-node-testnet-v1.tar.gz.sha256) \
+  && log "saved: $(cut -c1-64 "$DIR/zen-node-testnet-v1.tar.gz.sha256") ($(du -h "$DIR/zen-node-testnet-v1.tar.gz" | cut -f1))" || stop "docker save"
+
 # 2. a second testnet node, syncing from the public one
 docker rm -f $NAME > /dev/null 2>&1
 docker run -d --name $NAME --restart unless-stopped -p 127.0.0.1:41567:31567 -v zp-rehearsal-data:/data \
@@ -72,6 +76,13 @@ for i in $(seq 1 240); do                           # up to 4 hours
 done
 [ -n "$synced" ] || stop "not synced after 4 hours"
 log "SYNCED at block $synced, tip $(info | field tip)"
+log "$(docker logs $NAME 2>&1 | grep -m1 'V1 libsecp256k1 self-test' || echo 'V1 libsecp256k1 self-test: NO LINE')"
+# the V1 contracts waiting for this image build in it (the testnet migration's Dex: Zen.Asset.parse)
+if git -C "$SRC" fetch -q "$GH/navoranetwork/zp-pow.git" pow-bitzen 2>/dev/null && git -C "$SRC" show FETCH_HEAD:contracts/v1/Dex.fst > "$OUT/Dex.fst"; then
+  docker cp "$OUT/Dex.fst" $NAME:/tmp/Dex.fst
+  docker exec $NAME sh -c '$ZP_V1_TOOLCHAIN/scripts/build-contract.sh --lax /tmp/Dex.fst /tmp/dex-out > /tmp/dex.txt 2>&1; echo "exit $?"; tail -2 /tmp/dex.txt' > "$OUT/dex-build.txt" 2>&1
+  log "Dex build in the image: $(head -1 "$OUT/dex-build.txt") (0 = built)"
+fi
 publish "synced at $synced"
 
 # 3. follow the chain

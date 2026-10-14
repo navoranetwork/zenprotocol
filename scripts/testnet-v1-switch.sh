@@ -12,6 +12,8 @@
 #   smoke    the V1 toolchain inside the running node container: SDK, F*, Zulib stamp, and one real
 #            contract build (token template, pinned hash); install runs it right after the switch
 #   status   height, image, compose project (what install will recreate), last errors
+#   upgrade <tar.gz>  a node already on V1 to a newer V1 image (any height): keeps the running image as
+#            zen-node:testnet-v1-prev (upgrade-rollback goes back to it), recreates, smoke, follows 10 minutes
 #   install-when-ready <tar.gz>  waits (checking every minute) until block 2011, then runs install; run it
 #            under systemd-run so nobody has to be awake for the payout:
 #            systemd-run --unit zp-switch bash /root/testnet-v1-switch.sh install-when-ready /root/zen-node-testnet-v1.tar.gz
@@ -100,6 +102,28 @@ install)
   log "following for 10 minutes"
   sleep 600; log "now at block $(height)"
   docker logs --since 15m "$NAME" 2>&1 | grep -iE "\[(ERR|FTL)|unhandled exception|invalid block" | tail -10 || true   # no matches is success
+  ;;
+upgrade)
+  # a node already on a V1 image (past 2050) to a newer one: the running image is kept as zen-node:testnet-v1-prev
+  TAR=${2:?the image .tar.gz}; PREV=zen-node:testnet-v1-prev
+  (cd "$(dirname "$TAR")" && sha256sum -c "$(basename "$TAR").sha256") || { log "checksum mismatch"; exit 1; }
+  cur=$(docker inspect -f '{{.Image}}' "$NAME") || { log "no container $NAME"; exit 1; }
+  docker exec "$NAME" sh -c 'test -d "$ZP_V1_TOOLCHAIN"' || { log "$NAME does not run a V1 image: use install"; exit 1; }
+  h=$(height); log "node $NAME at block ${h:-?} on $(docker inspect -f '{{.Config.Image}}' "$NAME") (${cur:7:12})"
+  gunzip -c "$TAR" | docker load | tail -1
+  [ "$(docker image inspect -f '{{.Id}}' $NEW)" = "$cur" ] && { log "already on this image"; smoke "$NAME"; exit $?; }
+  docker tag "$cur" $PREV && log "previous image kept: $PREV (${cur:7:12}); back with: $0 upgrade-rollback"
+  log "upgrading to $(docker image inspect -f '{{.Id}}' $NEW) from $(cut -c1-16 "$TAR.sha256")..."
+  recreate $NEW
+  for i in $(seq 1 60); do sleep 10; n=$(height); [ -n "$n" ] && [ "$n" -ge "${h:-0}" ] && break; done
+  log "node on $NEW at block $(height)"
+  smoke "$NAME" || exit 1
+  log "following for 10 minutes"
+  sleep 600; log "now at block $(height)"
+  docker logs --since 15m "$NAME" 2>&1 | grep -iE "\[(ERR|FTL)|unhandled exception|invalid block" | tail -10 || true   # no matches is success
+  ;;
+upgrade-rollback)
+  recreate zen-node:testnet-v1-prev; sleep 60; log "node on zen-node:testnet-v1-prev at block $(height)"
   ;;
 rollback)
   h=$(height); [ -n "$h" ] && [ "$h" -ge 2050 ] && [ -z "${FORCE:-}" ] && { log "past the fork: rolling back means leaving V1 (FORCE=1)"; exit 1; }
