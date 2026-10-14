@@ -129,6 +129,21 @@ call; replace the contract before that. Lessons: keep V0's expression shapes (th
 
 ### 2. USDC bridge (zUSDC)
 
+**State 2026-10-14 16:45: ported, activation on hold.** `contracts/v1/AuthenticatedSupply.fst` (V0 shapes; `val`s use
+`Zen.Prelude.result`, since a bare `result` is F*'s own type in F* 2026 and opening `Zen.Prelude` is not allowed) is
+accepted by a node with V0's costs (Issue 529, Destroy 381). Its calls could not be tried: the engine container
+cannot load `libsecp256k1` for `Zen.Crypto.parsePublicKey` (V1's own DllImport, resolved per assembly). The V1 session
+asked the lab to run parsePublicKey / Crypto.verify / ecdsaVerify through the node's real V1 call path in
+zen-node:testnet-v1 (which file it loads, sha256); the fix (the V1 loader resolves "secp256k1" to the node's own
+library, a start-up self-test, the engine using the node's loader) goes in the next image. **Activate zUSDC only
+after the lab confirms the node runs parsePublicKey from V0's library, or after the fixed image is on every testnet
+node**; then rerun `scripts/v1/zusdc-try.mjs`. Meanwhile: withdraw the 105 old zUSDC to 0 (Alon chose this over
+leaving them): backup bridge-data, `MM_CANCEL_ALL=1` the market maker (it signs with the node wallet, whose address is
+also the bridge's ZP address `tzn1qqfjjy…`), Alon withdraws his 5 through /bridge.html, then the market maker's 100:
+link Alon's funder EVM address to the bridge's ZP address, the node wallet pays the zUSDC to that address, `/withdraw`
+to the funder.
+
+
 - Before: done differently on 2026-10-14 (see "Closed" above): the old bridge is stopped and its 115 USDC went back
   to Alon directly, so the new bridge starts with 0 reserves and 0 outstanding; the old zUSDC is simply abandoned.
   Back up `bridge-data` (links stay valid). Keep the `bridge` service stopped until `BRIDGE_CONTRACT`/`BRIDGE_ASSET`
