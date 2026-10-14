@@ -61,8 +61,22 @@ V0 activations after the fork. It is also the rehearsal for moving a live contra
 - Node image: `zen-node:testnet-v1`, image id `sha256:f59abc5ad731022ab2d6e5719d9d2d5cefcdfcaec291d853233efe15a50f6009`
   (zp-pow `testnet-v1` 11df57fe, zp-contracts-v1 toolchain aec63af with the gas fix). `bash /root/testnet-v1-switch.sh status`
   on 91.98.3.17 shows what runs. **Do not activate any V1 contract on a node without this build.**
-- First V1 contracts on the testnet: BitZenChain and BitZenSwap (bitzen repo, `contracts/v1/`, deployed with
-  `scripts/testnet-v1-deploy.mjs` after 2050).
+- **Done 2026-10-14.** zp-switch installed the image at block 2011 (21:41 UTC); smoke test OK (SDK 10.0.112,
+  F* 2026.09.27, token template 248da313…332c). The fork at 2050 and the CGP-phase change at 2101 passed with no
+  errors; the lab's second node (zp-rehearsal) follows the same tip. zp-switch shows "failed" only because its last
+  log grep found nothing (fixed in the script). Rollback image `zen-node:testnet-pre-v1` is kept.
+- `/root/zenprotocol-testnet/.env` pinned the node to the old image (`zen-node:testnet-randomx-bitzen`); set to
+  `ZEN_TESTNET_IMAGE=zen-node:testnet-v1` (old file `.env.bak`). Any `docker compose up` of the node now keeps V1.
+  The node container `zen-testnet` shows as an "orphan" of the stack project: **never `--remove-orphans`**.
+- The server has no Node.js: run scripts with `docker run --rm --network host -v "$PWD":/b -w /b node:22-alpine node …`.
+- First V1 contracts on the testnet (2026-10-14, `bitzen/scripts/testnet-v1-deploy.mjs`, run as above):
+  - BitZenChain `000000012381250f80f6501d4d09bde5a7a37720d9bed556e2f0bb21387591682d7b07a8`,
+    `ctzn1qqqqqqqfrsyjslq8k2qw56zdaukn6xaeqmxld24hz7zajzwr4j95z67c84qr80uy7`
+  - BitZenSwap `00000001e1c6b091bcffdee607f1ef0ba5422b4bbf325f8c070c6166a87085a0544a7726`,
+    `ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97` (init tx 349a5967…ab1e)
+  - 20,000 blocks each. `testnet-stack.env` has `BITZEN_CONTRACT`/`PROVER_CHAIN` (the chain), `BITZEN_BATCH=6`,
+    `PROVER_SWAP` (old file `testnet-stack.env.bak-v0`). Relayer reset; first checkpoint Bitcoin block 971,346.
+    Prover on 127.0.0.1:8096; `https://testnet.navora.network/swap/status` answers.
 - Writing V1 contracts (lessons from BitZen): no list literals (`[]` → `Nil`, cons is fine); `exists` is a keyword;
   qualify `Zen.Prelude.OK/ERR`; annotate equality as `(a = b <: bool)`; the costliest branch first in an `if`, the
   others padded with `autoInc`; the cost function must equal main's elaborated cost (the F* error shows `(N + 19)`);
