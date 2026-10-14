@@ -13,6 +13,7 @@
 //   MM_EXPLORER (http://127.0.0.1:11581/explorer/api)   MM_ZO (command that runs zen-oracle, for building message bodies)
 //   MM_WAIT (1800 s)  how long a Make/Cancel is assumed to be on its way: the index trails the node by about 10 blocks, so a new order shows up in it only after that
 //   MM_DRY=1    only print what it would do
+//   MM_CANCEL_ALL=1  cancel every open order of this key (each copy), print what was sent and exit; stop the service first
 import { execFileSync } from 'node:child_process';
 
 const env = (k, d) => process.env[k] ?? d;
@@ -95,6 +96,16 @@ async function cycle(pk) {
 if (!DEX || !USDC) { console.error('MM_DEX and MM_ASSET are required'); process.exit(1); }
 const pk = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '').toLowerCase();
 log(`market maker: key ${pk.slice(0, 12)}…, size ${SIZE} ZP, spread ${SPREAD * 1e4} bps${DRY ? ', DRY RUN' : ''}`);
+if (env('MM_CANCEL_ALL', '') === '1') {
+  const open = await myOrders(pk);
+  log(`cancel all: ${open.length} open order(s)` + (open.length ? '' : ' (orders made in the last ~10 blocks are not in the index yet)'));
+  for (const o of open) for (let i = 0; i < o.units; i++) {
+    log('cancel', o.underAsset === '00' ? 'ask' : 'bid', 'at', impliedPrice(o).toFixed(5), `copy ${i + 1}/${o.units}:`, await execute('Cancel', o, []));
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  log('done; run again after a block or two: it should find no open orders');
+  process.exit(0);
+}
 for (;;) {
   try { await cycle(pk); } catch (e) { log('cycle failed:', e.message); }
   await new Promise(r => setTimeout(r, EVERY));
