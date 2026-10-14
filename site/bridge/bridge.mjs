@@ -9,7 +9,7 @@
 //   BRIDGE_PASSWORD  wallet password (testnet)    BRIDGE_SIGN  sign path (m/44'/258'/0'/3/0)
 //   BRIDGE_EVM       rpc URL, or  mock:<file>  (a JSON list of {tx, log, from, to, amount, block} for tests)
 //   BRIDGE_USDC      USDC token address on that chain      BRIDGE_EVM_KEY  private key of the bridge's EVM wallet (for withdrawals)
-//   BRIDGE_LOG_RANGE (450) blocks per log query (public rpc nodes allow ~500)   BRIDGE_CONFIRMATIONS (12)   BRIDGE_DATA (./data)   BRIDGE_LISTEN (127.0.0.1:8090)   BRIDGE_INTERVAL (15 s)
+//   BRIDGE_LOG_RANGE (190) blocks per log query (sepolia.base.org allows 200)   BRIDGE_CONFIRMATIONS (12)   BRIDGE_DATA (./data)   BRIDGE_LISTEN (127.0.0.1:8090)   BRIDGE_INTERVAL (15 s)
 //   BRIDGE_FUNDERS   comma-separated EVM addresses whose USDC transfers top up the reserves: never treated as deposits, no zUSDC issued
 //   BRIDGE_ZO        command that runs zen-oracle (dotnet src/Oracle/bin/Release/zen-oracle.dll)
 //   BRIDGE_EXPLORER  explorer API for reading withdrawal transactions (http://127.0.0.1:11580/explorer/api)
