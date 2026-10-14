@@ -113,7 +113,7 @@ function swapCard() {
     ${S.modal ? '' : errBox()}</div>
     <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
       <p class="muted small" data-s="mt10">Buyers reserve and pay on the <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC page</a>.</p>
-      <details class="how"><summary>How a sale works</summary><p class="muted small">Your ZP waits in a contract. A buyer reserves the offer for about 6 hours and pays bitcoin to your Bitcoin address; the contract checks the payment on Bitcoin and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p></details></div>`;
+      <details class="how"><summary>How a sale works</summary><p class="muted small">Your ZP waits in a contract. A buyer reserves the offer for about 2 hours (4 hours above 0.1 BTC) and pays bitcoin to your Bitcoin address; the contract checks the payment on Bitcoin and releases the ZP to the buyer. You can take an offer back while it is not reserved.</p></details></div>`;
 }
 
 // ---------------------------------------------------------------- creating contracts (the V1 contract engine)

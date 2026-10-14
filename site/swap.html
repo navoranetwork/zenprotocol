@@ -47,7 +47,7 @@
 
 <h2>How it works</h2>
 <ol class="steps">
-  <li><b>Reserve.</b> Pick an offer and give your ZP address. The offer is held for you for about 6 hours; nobody else can take it and the seller cannot cancel it.</li>
+  <li><b>Reserve.</b> Pick an offer and give your ZP address. The offer is held for you for about 2 hours (4 hours above 0.1 BTC); nobody else can take it and the seller cannot cancel it.</li>
   <li><b>Pay.</b> Send the exact amount to the Bitcoin address shown. It is the seller's own address, made for your reservation only.</li>
   <li><b>Receive.</b> Once the payment has enough confirmations (2 up to 0.01 BTC, 3 up to 0.1, 4 up to 1, 6 above), the proof is sent for you and the contract releases the ZP to your address. You do not need to do anything.</li>
 </ol>
@@ -64,6 +64,8 @@ const store = { get() { try { return JSON.parse(localStorage.getItem('zp-swap') 
                 set(v) { try { localStorage.setItem('zp-swap', JSON.stringify(v)); } catch { } } };
 let V = null, mine = store.get();   // mine: { id, buyer } of the reservation made on this device
 
+// the contract holds a reservation 30 ZP blocks up to 0.1 BTC, 60 above; the buyer pays in the first half
+const holdOf = sats => sats <= 10000000 ? 30 : 60;
 function hm(blocks) { const m = Math.max(0, blocks) * BLOCK_MIN; return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; }
 function state(cls, html) { const s = $('state'); s.className = 'note ' + cls; s.innerHTML = html; s.hidden = !html; }
 
@@ -117,7 +119,7 @@ function renderBuy() {
     box.innerHTML = `<h2>Buy ${zp(o.zp)} ZP for ${btc(o.sats)} BTC</h2>
       <label for="buyer">Your ZP address (the ZP is sent there)</label>
       <input id="buyer" autocomplete="off" spellcheck="false" placeholder="tzn1…" value="${esc(mine.buyer || '')}">
-      <div class="note info">The offer is then held for you for about 6 hours.</div>
+      <div class="note info">The offer is then held for you for about ${hm(holdOf(o.sats))}: pay within the first ${hm(holdOf(o.sats) / 2)}.</div>
       <div id="msg"></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap"><button type="button" data-reserve="1">Reserve</button><button type="button" class="copy" data-done="1">Cancel</button></div>`;
     return;
@@ -132,7 +134,7 @@ function renderBuy() {
     box.innerHTML = `<h2>Your reservation expired</h2><div class="note warn">Do not pay now. Reserve again if the offer is still open.</div><button type="button" data-done="1">Close</button>`;
     return;
   }
-  const p = o.payment, left = o.until - V.zpTip, late = left * BLOCK_MIN < 180;
+  const p = o.payment, left = o.until - V.zpTip, half = holdOf(o.sats) / 2, late = left < half;
   if (!p) {   // step 2: pay
     const uri = `bitcoin:${o.address}?amount=${btc(o.sats)}`;
     box.innerHTML = `<h2>Pay ${btc(o.sats)} BTC</h2>
@@ -141,8 +143,8 @@ function renderBuy() {
         <span class="k">To the seller's Bitcoin address</span><span class="v">${esc(o.address || '–')}</span><button type="button" class="copy" data-copy="${esc(o.address || '')}">Copy address</button>
       </div>
       <div class="note ${late ? 'warn' : 'info'}">${late
-        ? 'Less than 3 hours are left on your reservation: do not pay now. Wait until it expires and reserve again.'
-        : `Reserved for you for about ${hm(left)}. Pay within the next ${hm(left - 45)}. This address is for your reservation only; the bitcoin goes straight to the seller.`}</div>
+        ? `Less than ${hm(half)} is left on your reservation: do not pay now. Wait until it expires and reserve again.`
+        : `Reserved for you for about ${hm(left)}. Pay within the next ${hm(left - half)}. This address is for your reservation only; the bitcoin goes straight to the seller.`}</div>
       ${late ? '' : `<a class="btn" href="${esc(uri)}">Open in my Bitcoin wallet</a>`}
       <p class="small">This page updates by itself when the payment is seen.</p>`;
     return;
