@@ -1,2 +1,6 @@
 [2026-10-14 10:15] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
 [2026-10-14 10:15] B: 60efe1b8 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 521a306c ZP Wallet 0.13.0: the contract flow as in
+[2026-10-14 10:15] build A (upstream, Mono, Release+LOCALCHAIN)
+[2026-10-14 10:20] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-14 10:21] schedule (total per minute): 6000,15000,6000,15000,3000,300,3000,1500,3000,300,15000,600,300,600,600,1500,1500,6000
+[2026-10-14 10:51] STOPPED: A: the node does not mine (node-start.log)

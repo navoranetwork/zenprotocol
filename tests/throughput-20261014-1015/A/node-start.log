@@ -1,0 +1,30 @@
+devnet: node 0 did not start
+[10:21:40 INF] Node running... press CTRL+C to exit
+[10:21:40 INF] Z3 check passed
+[10:21:40 INF] Mono check passed
+ERROR: unrecognized argument: '--local'.
+USAGE: zen-node.exe [--help] [--test] [--api <string>] [--bind <string>]
+                    [--ip <string>] [--wipe [<full>]] [--miner [<threads>]]
+                    [--addressdb] [--data-path <string>]
+                    [--service-bus <string>] [--publisher <string>]
+                    [--connectwallet] [--origin [<string>]] [--remote]
+
+OPTIONS:
+
+    --test                use testnet
+    --api <string>        enable api and set bind address
+    --bind <string>       set the address the node should listen on
+    --ip <string>         specify the IP the node should relay to other peers
+    --wipe [<full>]       wipe database, specify full to wipe the wallet's
+                          private key
+    --miner [<threads>]   enable miner and optionally specify number of threads
+    --addressdb           enable the AddressDB module
+    --data-path <string>  set the data folder path
+    --service-bus <string>
+                          expose the service bus over zeromq address
+    --publisher <string>  expose the publisher over zeromq address
+    --connectwallet       connect the new desktop wallet
+    --origin [<string>]   add CORS origin
+    --remote              automatically configure for remote usages
+    --help                display this list of options.
+
