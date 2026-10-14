@@ -1,0 +1,2 @@
+[2026-10-14 10:51] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
+[2026-10-14 10:51] B: 60efe1b8 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 521a306c ZP Wallet 0.13.0: the contract flow as in
