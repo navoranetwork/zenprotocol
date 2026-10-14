@@ -47,6 +47,13 @@ V0 activations after the fork. It is also the rehearsal for moving a live contra
   checks the payer is the linked ZP address, calls `Destroy`, sends USDC. Transfers from `BRIDGE_FUNDERS`
   (Alon's funding address `0xd0c6337e19247373d97a927f50aecc404d51b9db`) top up reserves and issue nothing.
 - Numbers on 2026-10-13: 115 USDC held on Base Sepolia, 105 zUSDC outstanding, 2 links, 2 deposits, 1 withdrawal.
+- **Closed 2026-10-14.** The services `bridge` and `marketmaker` were stopped (`docker compose stop`, not removed),
+  and all 115 test USDC were sent back from the bridge's EVM key to Alon's funding address `0xd0c6…b9db`
+  (Base Sepolia tx `0x4ca5ef3d5f6e2d638d8234ad07ff023a9e66467ae058e8e49525cac3a10cc3ed`). The 105 zUSDC still out
+  (95.1 in the node wallet, the rest elsewhere) are no longer backed: test tokens with no value, left as they are.
+  The V1 bridge starts with empty reserves and its own token; nothing carries over. Do not restart the old `bridge`
+  service (it would accept withdrawals it can no longer pay); the market maker's zUSDC orders on the V0 Dex stay
+  until the Dex moves.
 - Site: `/bridge.html` (live updates over SSE `/bridge/events`), nginx routes `/bridge/status`, `/bridge/lookup`,
   `/bridge/link`, `/bridge/withdraw`, `/bridge/events` (set by `site/setup-testnet-web.sh`). The site is published
   from `~/zp-pow-bitzen` on 91.98.3.17: `cd ~/zp-pow-bitzen && git pull -q && STACK_PROJECT=zenprotocol-testnet bash site/setup-testnet-web.sh`.
