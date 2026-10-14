@@ -61,7 +61,7 @@ rm -rf "$W/a" "$W/a0" && mkdir -p "$W/a" "$W/a0" && git -C "$DIR" archive "$UPST
 patch_tree "$W/a" 'blockInterval=1000UL \* 60UL;' || stop "A patch"
 (cd "$W" && diff -ru a0/src a/src) > "$OUT/A-patch.diff"; rm -rf "$W/a0"
 cp "$DIR/Docker/devnet-entrypoint.sh" "$W/a/"
-sed -e 's|msbuild src/zenprotocol.sln /p:Configuration=Debug|msbuild src/zenprotocol.sln /p:Configuration=Release "/p:DefineConstants=TRACE%3BLOCALCHAIN"|' \
+sed -e 's|msbuild src/zenprotocol.sln /p:Configuration=Debug|msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN|' \
     -e 's|bin/Debug|bin/Release|g' "$DIR/Docker/Dockerfile.upstream-devnet" > "$W/a/Dockerfile.tput"
 if [ -d "$W/b-src/.git" ]; then git -C "$W/b-src" fetch -q "$GH/navoranetwork/zp-pow.git" "$BRANCH_B" && git -C "$W/b-src" checkout -q -f FETCH_HEAD
 else git clone -q -b "$BRANCH_B" "$GH/navoranetwork/zp-pow.git" "$W/b-src"; fi || stop "B source"
@@ -94,7 +94,8 @@ start_node() {  # $1: A or B, $2: result folder. A fresh chain, mining, sender 2
   docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1; rm -rf "$W/diag"; mkdir -p "$W/diag"
   docker run -d --name $NODE_C --cpuset-cpus 0-3 -p 127.0.0.1:20000:20000 -v "$W/diag:/tmp" -e NODES=1 -e MINER_THREADS=1 \
     -e DEVNET_MNEMONIC="$M1" $IMG > /dev/null || stop "$K: docker run"
-  local h=""; for i in $(seq 360); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 40 ] && break; done
+  local h=""; for i in $(seq 360); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 40 ] && break
+    docker inspect -f '{{.State.Running}}' $NODE_C 2>/dev/null | grep -q true || break; done
   [ -n "$h" ] && [ "$h" -ge 40 ] || { docker logs --tail 50 $NODE_C > "$D/node-start.log" 2>&1; stop "$K: the node does not mine (node-start.log)"; }
   local a2; a2=$(addr_of "$M2") || stop "$K: address of sender 2"
   r=$(curl -s -m 120 -X POST -H 'Content-Type: application/json' $API/wallet/send \
@@ -137,7 +138,7 @@ if [ -n "$PROFILE" ]; then
   sleep 120
   pid=$(docker exec $NODE_C sh -c 'for p in /proc/[0-9]*; do tr "\0" " " < $p/cmdline 2>/dev/null | grep -q "zen-node.dll" && basename $p; done' | head -1)
   docker run --rm --pid container:$NODE_C -v "$W/diag:/tmp" -v "$D:/out" mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
-    "dotnet tool install -g dotnet-trace > /dev/null && /root/.dotnet/tools/dotnet-trace collect -p $pid --profile cpu-sampling --duration 00:00:01:00 --format speedscope -o /out/trace.nettrace" \
+    "dotnet tool install -g dotnet-trace > /dev/null && /root/.dotnet/tools/dotnet-trace collect -p $pid --providers Microsoft-DotNETCore-SampleProfiler,Microsoft-Windows-DotNETRuntime:0x1:4 --duration 00:00:01:00 --format speedscope -o /out/trace.nettrace" \
     > "$D/trace.txt" 2>&1 || log "profile: dotnet-trace failed (trace.txt)"
   collect "$D" "$SP"; docker rm -f $NODE_C > /dev/null 2>&1
   [ -f "$D/trace.speedscope.json" ] && python3 "$DIR/scripts/speedscope-top.py" "$D/trace.speedscope.json" > "$D/profile-top.txt" 2>&1
