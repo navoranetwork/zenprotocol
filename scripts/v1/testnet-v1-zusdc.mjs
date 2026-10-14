@@ -21,10 +21,13 @@ const post = async (p, b) => (await (await fetch(API + p, { method: 'POST', head
 
 const tip = (await get('/blockchain/info')).blocks;
 if (tip < FORK) { console.error(`the testnet is at block ${tip}; V1 contracts can be activated from block ${FORK}`); process.exit(1); }
-const st = await (await fetch(BRIDGE + '/status')).json();
-if (st.zusdcOutstanding !== '0' && process.env.FORCE !== '1') {
-  console.error(`the bridge shows ${st.zusdcOutstanding} old zUSDC outstanding: withdraw it first (docs/TESTNET-V1-MIGRATION.md, step 2), or FORCE=1`);
-  process.exit(1);
+if (process.env.FORCE !== '1') {   // FORCE=1: the old bridge was closed and its zUSDC abandoned (2026-10-14), or it is stopped
+  const st = await fetch(BRIDGE + '/status').then(r => r.json()).catch(() => null);
+  if (!st) { console.error(`the bridge (${BRIDGE}) does not answer: start it, or FORCE=1 if it is closed on purpose`); process.exit(1); }
+  if (st.zusdcOutstanding !== '0') {
+    console.error(`the bridge shows ${st.zusdcOutstanding} old zUSDC outstanding: withdraw it first (docs/TESTNET-V1-MIGRATION.md, step 2), or FORCE=1`);
+    process.exit(1);
+  }
 }
 const key = (await post('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '');
 if (!/^0[23][0-9a-f]{64}$/.test(key)) throw new Error('wallet/publickey: ' + key.slice(0, 200));
