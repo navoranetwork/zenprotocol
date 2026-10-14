@@ -41,7 +41,9 @@ every node in seconds (no Z3), so it does not block the node's API as the V0 one
 2. Put them in `~/zenprotocol-testnet/testnet-stack.env` (`BITZEN_CONTRACT` replaces the V0 contract's address;
    `BITZEN_BATCH=6`; `PROVER_CHAIN`, `PROVER_SWAP`), delete the relayer's state so it starts with a new checkpoint
    (`docker compose -f docker-compose.testnet-stack.yml run --rm --entrypoint rm bitzen -f /data/bitzen-relayer.json`),
-   then `docker compose -f docker-compose.testnet-stack.yml up -d bitzen prover` (never `--remove-orphans`).
+   then `docker compose -f docker-compose.testnet-stack.yml up -d bitzen` and
+   `docker compose -f docker-compose.testnet-stack.yml --profile v1 up -d prover` (the prover is in the `v1` profile;
+   never `down -v`, never `--remove-orphans`).
 3. The V0 header chain contract stops getting headers; it expires by itself (about block 21,600).
 4. The prover logs each reserved offer it watches and each proof it sends:
    `docker compose -f docker-compose.testnet-stack.yml logs -f prover`.
