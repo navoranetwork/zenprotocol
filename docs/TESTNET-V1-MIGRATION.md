@@ -204,5 +204,14 @@ path above.
 
 ## Open questions for later
 
+- **CGP and voting contracts to V1 (Alon, 2026-10-15: later).** They are not ordinary contracts: the node names them in
+  its chain parameters (`src/Consensus/Chain.fs`, `cgpContractId` and `votingContractId`, testnet `00000000eac6c58b…9b93`
+  and `00000000e8973871…c8ab`) and pays the CGP from them. Moving them to V1 is a consensus change: new V1 ports
+  (`TestnetCGP.fst`, `TestnetVoting.fst`), the new ids in the chain parameters from a fork height, a node image, and a
+  plan for the funds and votes held by the old ones (the CGP's balance moves at the fork). Testnet first; mainnet by
+  community vote.
+- **FixedPayout (bets) to V1, optional:** needs `Zen.MerkleTree` and `Zen.ContractId.parse`, which Zulib V1 does not
+  realize yet (the V1 session's inventory of interface-only modules).
+
 - Custody: one key holds the reserves and the issuing key. Multi-key custody and a pause switch are listed as "not
   done" in `docs/BRIDGE.md`; a V1 contract is the natural place to add them, but not in this move.
