@@ -64,6 +64,7 @@ async function call(name, c, expect) {
   else ok(`${name}: succeeds`, r.ok === true, `error: ${JSON.stringify(r.error)}`);
   if (expect.declared !== undefined) ok(`${name}: declared cost ${expect.declared}`, String(r.declaredCost) === String(expect.declared), costs[name]);
   if (r.ok) ok(`${name}: gas used = declared`, String(r.gasUsed) === String(r.declaredCost), costs[name]);
+  if (r.ok) ok(`${name}: balanced (no result.unbalanced)`, !(r.unbalanced && r.unbalanced.length), JSON.stringify(r.unbalanced));
   if (r.ok && expect.check) for (const [what, f] of expect.check) ok(`${name}: ${what}`, !!f(r), JSON.stringify(r.outputs).slice(0, 600));
   return s.try;
 }
@@ -96,6 +97,7 @@ await call('Destroy by another key', { command: 'Destroy', sender: { publicKey: 
 await call('Destroy, Amount 0', { command: 'Destroy', sender: { publicKey: B }, bodyHex: dict({ Amount: D.u64(0) }) }, { error: 'Amount cannot be 0' });
 await call('Unknown command', { command: 'Mint', sender: { publicKey: B }, bodyHex: issueBody }, { error: 'Invalid Command', declared: 7 });
 await call('Destroy more than sent (500 sent, 1000 asked)', { command: 'Destroy', sender: { publicKey: B }, spend: [{ asset: contractHash, amount: '500' }], bodyHex: dict({ Amount: D.u64(1000) }) }, { error: 'Destroy Amount is more than was sent', declared: 454 });
+await call('Destroy exactly what was sent (500 sent, 500 asked)', { command: 'Destroy', sender: { publicKey: B }, spend: [{ asset: contractHash, amount: '500' }], bodyHex: dict({ Amount: D.u64(500) }) }, { declared: 454 });
 await call('Destroy with nothing sent', { command: 'Destroy', sender: { publicKey: B }, bodyHex: dict({ Amount: D.u64(1) }) }, { error: 'Destroy Amount is more than was sent' });
 
 console.log(`\ncontract id 00000001${contractHash}\ncosts:`);
