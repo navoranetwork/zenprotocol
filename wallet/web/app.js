@@ -14,6 +14,8 @@ import contractNames from '../../site/contract-names.json';
 
 const LOCK_AFTER_MS = 15 * 60 * 1000;
 const SETTINGS_KEY = 'zp-wallet.settings.v1';
+// the release number from package.json, set by build.mjs (CHANGELOG.md lists what each release changed)
+const WALLET_VERSION = typeof __WALLET_VERSION__ === 'string' ? __WALLET_VERSION__ : 'dev';
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const shortAddr = a => a ? a.slice(0, 10) + '…' + a.slice(-6) : '';
@@ -503,7 +505,7 @@ const views = {
     <div class="card"><h2>Wallets on ${net() === 'main' ? 'mainnet' : 'testnet'}</h2><div class="list">${walletsHere().map(w => `<div class="item"><div><div>${esc(w.name)}</div><div class="muted small">${{ mnemonic: '24 words', key: 'Private key', watch: 'Watch only' }[w.kind]}</div></div>
       <span class="row" data-s="fixed">${w.kind !== 'watch' ? `<button class="btn" data-act="reveal" data-id="${esc(w.id)}">Backup</button>` : ''}<button class="btn danger" data-act="remove" data-id="${esc(w.id)}">Remove</button></span></div>`).join('') || '<p class="muted small">None.</p>'}</div></div>
     <button class="btn big" data-act="lock">Lock now</button>
-    <p class="muted small">ZP Wallet is open source and community-run. Not affiliated with Zen Protocol Ltd.</p></div>${nav('settings')}`,
+    <p class="muted small">ZP Wallet ${esc(WALLET_VERSION)} · open source and community-run. Not affiliated with Zen Protocol Ltd.</p></div>${nav('settings')}`,
 };
 
 const alloc = () => { const a = S.cgp?.allocation; return Number.isInteger(a) && a >= 0 && a <= 100 ? a : 90; };

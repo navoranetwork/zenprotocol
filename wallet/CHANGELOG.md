@@ -1,0 +1,68 @@
+# ZP Wallet changelog
+
+Every change to the wallet is listed here. A change goes under **Unreleased** when it is made; when the wallet is
+published to the site, Unreleased becomes a numbered release with its date, and `version` in `package.json` is set to
+the same number (the wallet shows it in Settings; `test/version.test.js` checks they agree).
+
+Numbers: `MAJOR.MINOR.PATCH`. PATCH for fixes, MINOR for new features, MAJOR for a change that breaks saved wallets or
+settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts after an outside review.
+
+## Unreleased
+
+Nothing yet.
+
+## 0.9.0 — 2026-10-14
+
+The first numbered release. It contains everything the wallet does today, built from 2026-10-06 on.
+
+### Keys, wallets and safety
+- Several wallets in one app: new 24-word phrase, or import an existing phrase, a private key, an xprv, or a
+  watch-only address.
+- Keys and addresses derived as zen-node does (checked against the node for the test phrase).
+- An encrypted vault in the browser, unlocked with a password; it locks by itself after inactivity. Show/Hide on
+  password fields.
+- Transactions serialized and signed in the browser, checked byte for byte against 202 mainnet transactions.
+- Every answer from the node is checked before signing: a node that changes the transaction, or answers with a
+  different hash, is refused.
+- Mainnet and testnet; any node (https, or http on this computer); a default node from the site (`config.json`). A busy
+  node is asked up to 3 times before "Node offline".
+
+### Wallet
+- Balance as soon as it is read; both address branches discovered in parallel; mining rewards shown as maturing until
+  they can be spent.
+- Send ZP; activity with "Send back".
+
+### Vote (Common Goods Pool)
+- Allocation votes (only the allowed range around the value in force), payout nominations and payout votes, from one or
+  several wallets; one ballot per wallet and phase.
+- The vote screen follows the chain: every 20 s it reads the tip and opens the forms when nominations or voting start.
+- CGP phases by interval, including the testnet's longer phases from interval 22 (snapshot 70, nominations 71–80,
+  voting 81–100).
+- The CGP fund and the per-block amount read from the node.
+
+### Contracts
+- Active contracts with their end date and an expiry warning; names by full address (CGP, VCGP, FPC, DEX-V2).
+- Extend a contract: blocks, cost, what the contract does, a warning for a large payment.
+- Create a contract with the contract engine: ready families (token, time-locked vault, fixed-rate swap, escrow,
+  holders' vote) or "Describe it" (experimental, with a daily limit). The engine checks the contract as a node will;
+  the wallet computes the contract id itself and refuses to sign when it differs.
+- Read and edit the source; an edited source is checked again before it can be activated.
+- Try a contract's calls without real money (signer, money sent in, body fields, block windows), with the net effect
+  per recipient and the raw transaction behind Details; calls in a row build on each other.
+- Activate a V1 contract, signed in the wallet; the job being made survives a reload.
+
+### Markets
+- Three tabs, the chosen one remembered: Oracle (prices with source agreement), Dex (open orders), ZP ⇄ BTC.
+- ZP ⇄ BTC (BitZen): sell ZP for bitcoin. Offers with the price as a total in BTC, dollars per ZP (the oracle's Bitcoin
+  price, the default when there is one) or satoshis per ZP; the price per ZP shown in BTC, sat and dollars.
+- Each offer's Bitcoin addresses must be new: refused when used in an earlier offer here, by any offer in the market,
+  or when they already received bitcoin (asked from mempool.space).
+- A sent offer shows at once as waiting for its block; a take-back shows as "Taking back"; no take-back while an offer
+  is reserved and for 10 blocks after (as the contract).
+- The tab refreshes the market every 30 s while it is open.
+- Contract calls (offers, take-backs, votes) can spend mature mining rewards.
+
+### Build
+- One bundled page; style and script linked with a version from their content, so an update is never hidden by the
+  browser's cache.
+- Tests: unit tests (`npm test`) and browser tests against a mock node (`tools/ui-test/`).

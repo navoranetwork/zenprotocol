@@ -4,9 +4,10 @@ import { mkdirSync, copyFileSync, rmSync, readFileSync, writeFileSync } from 'no
 import { createHash } from 'node:crypto';
 rmSync('dist', { recursive: true, force: true });
 mkdirSync('dist');
-await build({ entryPoints: ['web/app.js'], bundle: true, minify: true, format: 'esm', target: 'es2022', outfile: 'dist/app.js', legalComments: 'eof' });
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'));   // the release number (CHANGELOG.md), shown in Settings
+await build({ entryPoints: ['web/app.js'], bundle: true, minify: true, format: 'esm', target: 'es2022', outfile: 'dist/app.js', legalComments: 'eof', define: { __WALLET_VERSION__: JSON.stringify(version) } });
 copyFileSync('web/style.css', 'dist/style.css');
 // the page links its files with a version taken from their content, so a browser that cached an old build fetches the new one
 const ver = f => createHash('sha1').update(readFileSync(`dist/${f}`)).digest('hex').slice(0, 8);
 writeFileSync('dist/index.html', readFileSync('web/index.html', 'utf8').replace('href="style.css"', `href="style.css?v=${ver('style.css')}"`).replace('src="app.js"', `src="app.js?v=${ver('app.js')}"`));
-console.log('dist/ ready');
+console.log(`dist/ ready (ZP Wallet ${version})`);
