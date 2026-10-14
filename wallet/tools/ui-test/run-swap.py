@@ -67,6 +67,10 @@ with sync_playwright() as p:
     pg.click('button[data-act=confirm-offer]'); pg.wait_for_selector('h2:has-text("Broadcast successfully")')
     pub = published(); ok(len(pub) == 1, 'one transaction published')
     ok(len(pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.btc-scripts.v1'))")) == 2, 'the two addresses are remembered')
+    pg.click('button[data-act=close]'); pg.wait_for_timeout(300)
+    card = pg.inner_text('.card:has(h2:has-text("Your offers"))')
+    ok('4 ZP for 0.00080000 BTC' in card and 'waiting for the next block' in card, 'the sent offer shows at once, waiting for its block')
+    pg.screenshot(path=f'{OUT}/s2b-waiting.png')
     # check the published transaction with the wallet's own reader (node), outside the browser
     import subprocess
     chk = subprocess.run(['node', '-e', '''
@@ -77,7 +81,6 @@ with sync_playwright() as p:
       });''', pub[0]], capture_output=True, text=True, cwd=os.path.join(os.path.dirname(__file__), '..', '..'))
     info = json.loads(chk.stdout or '{}'); print('   ', info)
     ok(info.get('cmd') == 'offer' and info.get('signed') and info.get('locked') == '400000000', 'the offer transaction locks 4 ZP and carries the seller\'s signature')
-    pg.click('button[data-act=close]')
     # take back
     pg.click('button[data-act=swap-cancel][data-id=o-mine1]'); pg.wait_for_timeout(1200)
     ok('still waiting for its block' in pg.inner_text('main'), 'the output spent by the offer is not used again before its block')
@@ -100,6 +103,9 @@ with sync_playwright() as p:
     ok(pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.settings.v1')).mtab") == 'swap', 'and saved for the next visit')
     pg.click('nav >> text=Contracts'); pg.wait_for_timeout(500); ok('Create a contract' in pg.inner_text('main'), 'Contracts has a place for creating contracts (V1 engine)')
     pg.screenshot(path=f'{OUT}/c1-contracts.png', full_page=True)
+    pg.reload(); pg.wait_for_selector('form[data-form=unlock]'); pg.fill('input[name=p]', 'password123'); pg.click('form[data-form=unlock] button.primary')
+    pg.wait_for_selector('[data-go=contracts]'); pg.click('nav >> text=Markets'); pg.click('[data-mtab=swap]'); pg.wait_for_timeout(1500)
+    ok('waiting for the next block' in pg.inner_text('main'), 'and still after a reload')
     ok(pg.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'no horizontal scroll at 390px')
     ok(not errors, 'no page errors ' + '; '.join(errors))
     b.close()
