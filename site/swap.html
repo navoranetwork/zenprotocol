@@ -87,7 +87,7 @@ function renderOffers() {
   if (!list.length) { $('offers').innerHTML = '<p class="small">No offers right now.</p>'; return; }
   $('offers').innerHTML = list.map(o => {
     const per = o.zp ? Math.round(o.sats / o.zp) : 0, own = mine && mine.id === o.id;
-    const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(o.until - V.zpTip)}` : o.state === 'expired' ? 'A reservation expired' : 'Open';
+    const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(o.until - V.zpTip)}` : o.state === 'expired' ? 'A reservation expired' : o.state === 'closing' ? 'Closing: the seller is taking it back' : 'Open';
     return `<article class="offer${own ? ' mine' : ''}">
       <div class="top"><div class="amt">${zp(o.zp)} ZP</div><div class="btc">${btc(o.sats)} BTC</div></div>
       <div class="row"><span>${(per / 1e8).toFixed(8)} BTC per ZP (${per.toLocaleString('en-US')} sat)</span><span>${o.confs} confirmations</span></div>
@@ -107,6 +107,10 @@ function renderBuy() {
     box.innerHTML = mine.paid
       ? `<h2>You received the ZP</h2><div class="note ok">The contract checked your Bitcoin payment and released the ZP to <span class="mono">${esc(mine.buyer)}</span>.</div><button type="button" data-done="1">Done</button>`
       : `<h2>The offer is closed</h2><div class="note info">It is no longer in the market.</div><button type="button" data-done="1">Close</button>`;
+    return;
+  }
+  if (!mine.reserved && o.state === 'closing') {   // the seller's take-back waits for its block: no reservation
+    box.innerHTML = `<h2>Buy ${zp(o.zp)} ZP for ${btc(o.sats)} BTC</h2><div class="note info">The seller is taking this offer back. It leaves the market with the next block.</div><button type="button" data-done="1">Close</button>`;
     return;
   }
   if (!mine.reserved) {   // step 1: reserve

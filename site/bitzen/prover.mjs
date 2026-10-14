@@ -94,11 +94,28 @@ let sent = {};   // offer id + txid -> ZP transaction already sent
 try { sent = JSON.parse(readFileSync(STATE, 'utf8')); } catch { }
 const save = () => { try { writeFileSync(STATE, JSON.stringify(sent)); } catch (e) { log('state not saved:', e.message); } };
 
+// offers whose seller's "cancel" waits in the mempool (GET /blockchain/mempool: [{hash: tx}], contract witnesses as JSON):
+// shown as closing and not reserved, so a buyer does not race the seller's take-back
+export function cancelsIn(mempool, swapId) {
+  const ids = new Set();
+  for (const e of Array.isArray(mempool) ? mempool : []) for (const tx of Object.values(e || {}))
+    for (const w of Array.isArray(tx?.witness) ? tx.witness : []) {
+      const cw = w?.ContractWitness;
+      if (cw && cw.contractId === swapId && cw.command === 'cancel') { const id = plain(cw.messageBody)?.id; if (typeof id === 'string') ids.add(id); }
+    }
+  return ids;
+}
+const pendingCancels = async swapId => swapId ? cancelsIn(await get(`${NODE}/blockchain/mempool`).catch(() => []), swapId) : new Set();
+
 let view = { updated: null, offers: [] };
 async function round() {
   const chain = plain(await get(`${NODE}/contract/state?address=${CHAIN}`));
   const swap = plain(await get(`${NODE}/contract/state?address=${SWAP}`));
   const zpTip = (await get(`${NODE}/blockchain/info`)).blocks;
+  const active = await get(`${NODE}/contract/active`);
+  const chainId = active.find(c => c.address === CHAIN)?.contractId;
+  const swapId = active.find(c => c.address === SWAP)?.contractId;
+  const closing = await pendingCancels(swapId);
   const offers = [];
   if (swap) for (const [id, o] of Object.entries(swap)) {
     if (!o || typeof o !== 'object' || o.amount == null || o.sats == null) continue;
@@ -106,13 +123,10 @@ async function round() {
     const k = Number(o.k || 0), nextScript = o['s' + k];
     offers.push({ id, zp: Number(o.amount) / 1e8, amount: String(o.amount), sats: Number(o.sats), confs: confsFor(Number(o.sats)),
       seller: typeof o.seller === 'string' ? o.seller : null, scripts: [0, 1, 2, 3].map(i => o['s' + i]).filter(Boolean).length, used: k,
-      state: held ? 'reserved' : o.cur ? 'expired' : 'open', until, buyer: o.buyer?.PK?.hash || null,
+      state: held ? 'reserved' : closing.has(id) ? 'closing' : o.cur ? 'expired' : 'open', until, buyer: o.buyer?.PK?.hash || null,
       address: o.cur ? scriptAddress(o[o.cur]) : null, script: o.cur ? o[o.cur] : null,
-      canReserve: !held && !!nextScript, payment: null });
+      canReserve: !held && !closing.has(id) && !!nextScript, payment: null });
   }
-  const active = await get(`${NODE}/contract/active`);
-  const chainId = active.find(c => c.address === CHAIN)?.contractId;
-  const swapId = active.find(c => c.address === SWAP)?.contractId;
   view = { updated: new Date().toISOString(), chain: CHAIN, swap: SWAP, swapId: swapId || null, zpTip, btcNet: NET, offers };
   if (!chain || !swap) return;
   if (!swapId) throw new Error('the swap contract is not active');
@@ -164,7 +178,8 @@ async function reserve(id, buyer) {
   const d = await get(`${NODE}/address/decode?address=${encodeURIComponent(buyer)}`);
   if (!d.pkHash) throw new Error('that is not a ZP address of a key');
   const o = view.offers.find(x => x.id === id);
-  if (!o) throw new Error('no such offer'); if (!o.canReserve) throw new Error(o.state === 'reserved' ? 'the offer is reserved' : 'the offer cannot be reserved again');
+  if (!o) throw new Error('no such offer'); if (!o.canReserve) throw new Error(o.state === 'reserved' ? 'the offer is reserved' : o.state === 'closing' ? 'the seller is taking this offer back' : 'the offer cannot be reserved again');
+  if ((await pendingCancels(view.swapId)).has(id)) throw new Error('the seller is taking this offer back');   // since the last round
   const lock = Buffer.concat([Buffer.of(8), varint(2), varint(32), Buffer.from(d.pkHash, 'hex')]);
   const body = Buffer.concat([Buffer.of(12), varint(2), bytes(Buffer.from('id')), data({ t: 'String', v: id }), bytes(Buffer.from('buyer')), lock]);
   const r = await fetch(`${NODE}/wallet/contract/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(180000),

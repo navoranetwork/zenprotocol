@@ -96,7 +96,9 @@ async function loadSwap() {
 }
 // public keys of this device's wallets that can sign (an offer's seller is one of them)
 const mySellers = () => new Map(walletsHere().map(w => [w, S.open.get(w.id)]).filter(([, o]) => o && canSpend(o)).map(([w, o]) => [hex(signerOf(o).publicKey), w]));
-const swapState = o => o.payment?.proof ? 'Paid: the ZP went to the buyer' : o.payment ? `Buyer paid, ${o.payment.confs ?? 0} of ${o.payment.need} confirmations` : o.state === 'reserved' ? `Reserved until block ${Number(o.until).toLocaleString('en-US')}` : o.state === 'expired' ? 'A reservation expired: open again' : 'Open';
+// an offer whose take-back was sent from here, or whose cancel the prover sees in the mempool, waits for its block
+const takingBack = o => o.state === 'closing' || (S.takingBack?.[o.id] && Date.now() - S.takingBack[o.id] < 30 * 60e3);
+const swapState = o => takingBack(o) ? 'Taking back: waits for its block (about 4 minutes)' : o.payment?.proof ? 'Paid: the ZP went to the buyer' : o.payment ? `Buyer paid, ${o.payment.confs ?? 0} of ${o.payment.need} confirmations` : o.state === 'reserved' ? `Reserved until block ${Number(o.until).toLocaleString('en-US')}` : o.state === 'expired' ? 'A reservation expired: open again' : 'Open';
 function swapCard() {
   if (!siteBase()) return '<div class="card"><p class="muted small">ZP ⇄ BTC needs the community node, which serves the swap next to it.</p></div>';
   const sw = S.swap;
@@ -106,7 +108,7 @@ function swapCard() {
     <div class="list">${mine.length ? mine.map(o => `<div class="item"><div><div>${esc(formatZP(BigInt(o.amount)))} ZP for ${esc(formatBTC(o.sats))} BTC</div>
         <div class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</div>
         <div class="muted small">${esc(swapState(o))} · ${esc(me.get(o.seller).name)}</div><div class="muted small">${o.scripts - o.used} of ${o.scripts} Bitcoin addresses unused</div></div>
-        ${o.state !== 'reserved' && !o.payment ? `<button class="btn small" data-act="swap-cancel" data-id="${esc(o.id)}">Take back</button>` : ''}</div>`).join('')
+        ${o.state !== 'reserved' && !o.payment && !takingBack(o) ? `<button class="btn small" data-act="swap-cancel" data-id="${esc(o.id)}">Take back</button>` : ''}</div>`).join('')
       : '<p class="muted small">You have no offers. Sell ZP for bitcoin: the buyer pays straight to your Bitcoin address.</p>'}</div>
     ${S.modal ? '' : errBox()}</div>
     <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
@@ -1075,6 +1077,7 @@ $app.addEventListener('click', async e => {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
       for (const sp of m.prepared.spent) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() });
+      if (act === 'confirm-cancel' && m.id) (S.takingBack ||= {})[m.id] = Date.now();
       S.busy = false; S.modal = { type: 'swap-sent', hash, text: act === 'confirm-offer' ? `Your offer of ${formatZP(m.amount)} ZP for ${formatBTC(m.sats)} BTC was sent.` : 'The offer is being taken back: the ZP returns to your wallet.' };
       render(); setTimeout(() => { loadSwap(); refreshAll(); }, 30000); return;
     }
@@ -1089,7 +1092,7 @@ $app.addEventListener('click', async e => {
       await refreshWallet(w.id);
       const d = S.data.get(w.id); if (!d?.state) throw new Error('Could not read the balance from the node');
       const prepared = await waitingFirst(pendingSpent(d), ex => prepareCancel({ w: S.open.get(w.id), state: d.state, node: node(), swapContractId: S.swap.swapId, id: o.id, amount: BigInt(o.amount), exclude: ex }));
-      S.modal = { type: 'confirm-cancel', prepared, amount: BigInt(o.amount), sats: o.sats, wallet: w.name }; S.error = ''; return render();
+      S.modal = { type: 'confirm-cancel', id: o.id, prepared, amount: BigInt(o.amount), sats: o.sats, wallet: w.name }; S.error = ''; return render();
     }
     if (act === 'close') { S.modal = null; S.error = ''; return render(); }
     if (act === 'lock') return lock();
@@ -1260,6 +1263,8 @@ $app.addEventListener('submit', async e => {
 setInterval(() => { if (S.key && Date.now() - S.lastActivity > LOCK_AFTER_MS) lock(); }, 30000);
 setInterval(() => { if (S.key && S.screen === 'home' && !S.modal) refreshAll(); }, 120000);
 setInterval(() => { if (S.key && S.screen === 'vote' && !S.modal) refreshVotes(); }, 20000);
+// while an offer is being taken back, follow the swap until it leaves the market
+setInterval(() => { if (S.key && S.screen === 'markets' && !S.modal && S.swap?.offers.some(takingBack)) loadSwap(); }, 45000);
 ['keydown', 'pointerdown'].forEach(ev => addEventListener(ev, () => { S.lastActivity = Date.now(); }, { passive: true }));
 
 (async () => {
