@@ -1,0 +1,31 @@
+# The ORIGINAL Zen node (upstream, before our changes) as a one-container devnet on the `local` chain, for the
+# throughput comparison (scripts/lab-throughput.sh). Built from source the way upstream's own CI did
+# (.gitlab-ci.yml: mono image, fsharp, paket restore, msbuild; Debug, which has the local chain).
+# The build context is an export of the upstream commit (git archive) plus our devnet entrypoint, with ONE line
+# changed: the local chain's blockInterval (60 s upstream -> 2 s, like our devnet), recorded by the script.
+#
+#   docker build -f Dockerfile.upstream-devnet -t zen-upstream-devnet <context>
+
+FROM mono:6.12
+# mono:6.12 is Debian buster (archived): apt from archive.debian.org. The image already has msbuild and fsharp.
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g; s|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g; /buster-updates/d' /etc/apt/sources.list \
+ && apt-get -o Acquire::Check-Valid-Until=false update \
+ && apt-get install -y --no-install-recommends libgomp1 libstdc++6 liblmdb0 curl unzip \
+ && rm -rf /var/lib/apt/lists/* \
+ && command -v msbuild && command -v fsharpc
+WORKDIR /src
+COPY src ./src
+COPY .paket ./.paket
+COPY paket.dependencies paket.lock ./
+RUN mono .paket/paket.exe restore \
+ && chmod +x packages/zen_z3_linux/output/z3-linux \
+ && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal \
+ && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/ \
+ && test -f src/Node/bin/Debug/zen-node.exe \
+ && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/
+COPY devnet-entrypoint.sh /entrypoint.sh
+RUN sed -i "s/\r$//" /entrypoint.sh && chmod +x /entrypoint.sh
+WORKDIR /zen
+VOLUME /data
+EXPOSE 20000-20009
+ENTRYPOINT ["/entrypoint.sh"]
