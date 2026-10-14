@@ -6,7 +6,8 @@
 // realization; same functions, bytes and costs); Zen.PublicKey.compress instead of a local copy (V0's read the key with
 // Zen.Array.item, not allowed in V1 code that runs; same bytes, same cost 305); Zen.Prelude.result and
 // Zen.Prelude.length written out (a bare `result` is F*'s own type in F* 2026, and opening Zen.Prelude is not allowed);
-// take' renamed takeInner. Every expression keeps V0's shape: the `val`s declare V0's exact costs.
+// take' renamed takeInner; its "Incorrect requestedPayout" pads with RT.autoFailw (V0 computed W.size at run time,
+// rule 4.5; same cost). Every other expression keeps V0's shape: the `val`s declare V0's exact costs.
 // Needs Zen.Asset.parse (order assets are strings), which Zulib V1 realizes only in the node image after aec63af.
 //
 // Cost: Make 3693; Cancel 4486 + 256 per coin in the contract's wallet; Take 8020 + 256 per coin; other commands 9.
@@ -373,7 +374,7 @@ let takeInner tx contractID w requestedPayout providedAmount returnAddress order
     if paymentAmountOK then
         takeTx tx contractID w providedAmount requestedPayout order returnAddress // W.size w * 256 + 6978
     else
-        RT.incFailw (W.size w * 256 + 6978) "Incorrect requestedPayout"
+        RT.autoFailw "Incorrect requestedPayout" // V0: RT.incFailw (W.size w * 256 + 6978), which computes W.size at run time (V1 rule 4.5); same cost
     end <: CR.t `cost` (W.size w * 256 + 7149)
 
 val take:
