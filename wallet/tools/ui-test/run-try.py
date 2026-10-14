@@ -27,8 +27,8 @@ with sync_playwright() as p:
     pg.click('button[data-act=cc-family][data-id=escrow]'); pg.wait_for_selector('form[data-form=cc-make]')
     pg.click('button[data-act=cc-fill][data-name=buyer]'); buyer = pg.input_value('input[name=p_buyer]')
     pg.fill('input[name=p_seller]', SELLER); pg.fill('input[name=p_arbiter]', ARBITER); pg.fill('input[name=p_timeout_block]', '5000')
-    pg.click('form[data-form=cc-make] button.primary'); pg.wait_for_selector('text=Made and checked', timeout=15000)
-    t = pg.inner_text('main'); ok('gas · fee: none required' in t, 'result: gas per call, no fee required')
+    pg.click('form[data-form=cc-make] button.primary'); pg.wait_for_selector('text=a node accepts it', timeout=15000)
+    t = pg.inner_text('main'); ok('gas · no fee required' in t, 'result: gas per call, no fee required')
     pg.click('button[data-act=cc-try-open]'); pg.wait_for_selector('form[data-form=cc-try]')
     ok('holds nothing yet' in pg.inner_text('main') and 'Sends in (ZP)' in pg.inner_text('main') and pg.input_value('select[name=signer]') == '', 'try starts empty; deposit sends the escrow asset (ZP), anyone may call it')
     # deposit 6 ZP, unsigned
@@ -61,12 +61,12 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/t3-refund.png', full_page=True)
     pg.click('button[data-act=cc-try-reset]'); ok('holds nothing yet' in pg.inner_text('main'), 'Start over empties the session')
     ok(pg.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'no horizontal scroll at 390px')
-    pg.click('button[data-act=cc-try-back]'); ok('Made and checked' in pg.inner_text('main'), 'back goes to the result')
+    pg.click('button[data-act=cc-try-back]'); ok('a node accepts it' in pg.inner_text('main'), 'back goes to the result')
     # a contract job survives a reload
     pg.reload(); pg.wait_for_selector('form[data-form=unlock]'); pg.fill('input[name=p]', 'password123'); pg.click('form[data-form=unlock] button.primary')
     pg.wait_for_selector('[data-go=contracts]'); pg.click('nav >> text=Contracts')
     pg.wait_for_selector('button[data-act=cc-open]', timeout=15000); ok('Back to your last contract' in pg.inner_text('main'), 'after a reload the last contract comes back from its job id')
-    pg.click('button[data-act=cc-open]'); pg.wait_for_selector('text=Made and checked'); ok('Escrow' in pg.inner_text('h1'), 'it is the escrow, with its family')
+    pg.click('button[data-act=cc-open]'); pg.wait_for_selector('text=a node accepts it'); ok('escrow' in pg.inner_text('h1').lower(), 'it is the escrow, with its family')
     # the vote family: a choice from the options, the user's own address by default, sends the vote asset, closes at a block
     pg.click('button[data-act=cc-try-back]') if pg.query_selector('button[data-act=cc-try-back]') else None
     pg.click('nav >> text=Contracts'); pg.wait_for_selector('button[data-act=cc-family][data-id=vote]'); pg.click('button[data-act=cc-family][data-id=vote]')

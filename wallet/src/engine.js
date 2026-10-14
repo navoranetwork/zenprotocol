@@ -137,9 +137,14 @@ export class EngineClient {
   async req(path, body) {
     let r;
     try { r = await this.fetch(this.base + path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
-    catch { throw new Error('The contract engine is not answering'); }
+    catch { throw new Error("Can't reach the contract service: check your connection. Your wallet and your coins are not affected"); }
     const j = await r.json().catch(() => null);
-    if (!r.ok) { const e = new Error(j?.error || (r.status === 429 ? 'The daily limit for described contracts is reached: try again tomorrow' : r.status === 503 ? 'The contract engine is busy: try again in a few minutes' : `The contract engine answered ${r.status}`)); e.status = r.status; throw e; }
+    if (!r.ok) {
+      const msg = r.status === 503 ? 'The contract service is busy: try again in a few minutes. What you filled in is kept'
+        : r.status === 429 ? "Today's descriptions are used up: \"Describe it…\" is limited each day. Ready contracts are not limited: start from one"
+        : j?.error || `The contract service answered ${r.status}`;
+      const e = new Error(msg); e.status = r.status; throw e;
+    }
     return j;
   }
   families() { return this.req('/families'); }

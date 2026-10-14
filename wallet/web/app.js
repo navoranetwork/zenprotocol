@@ -57,9 +57,9 @@ const voteWeight = () => voters().reduce((s, w) => s + zpOf(w.id), 0n);
 const CONTRACT_ROLE = { CGP: 'Holds the community fund', VCGP: 'Counts CGP votes', FPC: 'Fixed-payout bets', 'DEX-V2': 'Exchange' };
 const EXTEND_WARN = 200000000n; // 2 ZP: ask the user to check the contract once more
 const MY_CONTRACTS_KEY = 'zp-wallet.my-contracts.v1';   // address -> the family it was made from (contracts activated here)
-const myContracts = () => { try { const v = JSON.parse(localStorage.getItem(MY_CONTRACTS_KEY)); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
-const rememberContract = (addr, name) => { try { localStorage.setItem(MY_CONTRACTS_KEY, JSON.stringify({ ...myContracts(), [addr]: name })); } catch { /* private mode */ } };
-const nameOf = (id, addr) => contractNames[addr] || contractNames[id] || myContracts()[addr] || null;
+const myContracts = () => { try { const v = JSON.parse(localStorage.getItem(MY_CONTRACTS_KEY)); return v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => /^c(zen|tzn)1/.test(k)).map(([k, x]) => [k, typeof x === 'string' ? { name: x } : x])) : {}; } catch { return {}; } };
+const rememberContract = (addr, x) => { try { localStorage.setItem(MY_CONTRACTS_KEY, JSON.stringify({ ...myContracts(), [addr]: x })); } catch { /* private mode */ } };
+const nameOf = (id, addr) => { const m = myContracts()[addr]; return contractNames[addr] || contractNames[id] || (typeof m === 'string' ? m : m?.name) || null; };
 // price of one ZP in an offer: BTC and satoshis, and in dollars when the oracle has a Bitcoin price (ticker BTC, USD)
 const btcUsd = () => { const r = S.markets?.round, i = r?.tickers?.indexOf('BTC') ?? -1; const v = i >= 0 ? Number(r.values[i]) : NaN; return v > 0 ? v : null; };
 const rateText = (sats, kalapas) => {
@@ -242,11 +242,11 @@ function createCard() {
   return `<div class="card"><h2>Create a contract</h2>
     <p class="muted small">Start from a ready contract. Each one is checked the way a node checks it, and tested, before you sign anything.</p>
     ${!E ? '<p class="muted small">Loading…</p>' : E.error ? `<p class="muted small">${esc(E.error)}</p>` : `<div class="fams" data-s="mt10">${fams}</div>`}
-    ${S.cc && ['job', 'result', 'try'].includes(S.cc.step) ? `<button class="btn" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
+    ${S.cc && ['job', 'result', 'try', 'activate'].includes(S.cc.step) ? `<button class="btn" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
 }
 const ccStatus = j => !j ? 'Sending…' : j.status === 'queued' ? `Waiting in line${j.position ? ' (' + j.position + ' ahead)' : ''}…` : j.status === 'running' ? (j.kind === 'ask' ? `Writing and checking the contract${j.rounds?.length ? ' (round ' + j.rounds.length + ')' : ''}…` : 'Building, testing and checking the contract…') : '';
 function createView() {
-  const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family ? famName(c.family) : 'Create a contract'), 'contracts');
+  const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family ? (c.step === 'result' && c.job?.ok ? 'Your ' + famName(c.family).toLowerCase() : famName(c.family)) : 'Create a contract'), 'contracts');
   if (c.step === 'form') {
     const f = c.family, mine = active() && S.open.get(active().id) && canSpend(S.open.get(active().id)) ? signerOf(S.open.get(active().id)) : null;
     const how = FAMILY_HOW[f.id], params = Object.entries(f.params || {});
@@ -282,9 +282,18 @@ function createView() {
       <div class="warn">Experimental: an AI model writes the contract and its tests. The engine holds them to the same checks and gas as any contract, but the tests are the model's own: read them before you activate anything.</div>
       <label class="field">What should the contract do?<textarea name="text" rows="5" placeholder="A vault that pays the owner after block 2500" required>${esc(c.text || '')}</textarea></label>
       ${errBox()}<button class="btn primary big">Write the contract</button></form>${nav('contracts')}`;
-  if (c.step === 'job') return `${back}<div class="screen"><div class="card"><p><span class="spin"></span> ${esc(ccStatus(c.job))}</p><p class="muted small">This takes up to a minute${c.kind === 'ask' ? ' or a few' : ''}. You can leave this screen; the contract waits for you here for a day.</p></div>${errBox()}</div>${nav('contracts')}`;
+  if (c.step === 'job') {
+    const st = c.job?.status, ask = c.kind === 'ask', step = (n, t, sub) => `<div class="bstep"><span class="bdot ${n}"></span><div><b class="${n === 'todo' ? 'muted' : ''}">${t}</b>${sub ? `<div class="muted small">${sub}</div>` : ''}</div></div>`;
+    return `${back}<div class="screen"><div class="card bsteps">
+      ${step(st === 'queued' || !st ? 'run' : 'done', st === 'queued' ? `Waiting in line${c.job?.position ? ` (${c.job.position} ahead)` : ''}` : ask ? 'Written by the model' : 'Made from the template', ask ? 'A model writes the contract and its tests.' : '')}
+      ${step(st === 'running' ? 'run' : 'todo', 'Checked like a node, and its tests run', 'The same build every node runs; each call on its gas.')}
+      ${step('todo', 'Ready to review', '')}</div>
+      <p class="muted small">This takes up to a minute${ask ? ' or a few' : ''}. You can leave this screen; the contract waits for you under Contracts for a day.</p>${errBox()}</div>${nav('contracts')}`;
+  }
   if (c.step === 'result') return `${back}<div class="screen">${resultHtml(c)}</div>${nav('contracts')}`;
   if (c.step === 'try' && c.try) return tryView();
+  if (c.step === 'activate') return activateView();
+  if (c.step === 'active' && c.done) return activeView();
   return `${back}<div class="screen"><p class="muted">Nothing to show.</p></div>${nav('contracts')}`;
 }
 function resultHtml(c) {
@@ -298,32 +307,91 @@ function resultHtml(c) {
   const sameAsReport = id.slice(8) === String(j.report?.contractId || '').replace(/^00000001/, '');
   const checked = !c.edited || (c.check && c.checkedSource === src && c.check.verdict === 'accepted');
   const tests = Array.isArray(j.tests) ? j.tests : [], costs = tests.map(t => Number(t.expect?.declaredCost)).filter(n => Number.isFinite(n) && n > 0);
-  const canTry = commandsOf(c.family).length && checked && chk.verdict !== 'refused';
-  return `<div class="card">${c.edited ? `<h2>Your edited version</h2>` : '<h2 class="ok">✓ Made and checked</h2>'}
-      <div class="kv"><span class="muted">Contract id</span><span class="mono small" title="${esc(id)}">${esc(id.slice(0, 14))}…${esc(id.slice(-8))}</span></div>
-      <div class="kv"><span class="muted">Size</span><span>${src.length.toLocaleString('en-US')} characters</span></div>
-      <div class="kv"><span class="muted">A node's check</span><span>${c.edited && !c.check ? 'not checked yet' : chk.verdict === 'accepted' ? '✓ accepted' : chk.verdict === 'refused' ? '✗ refused' : esc(chk.verdict || '–')}</span></div>
-      <div class="kv"><span class="muted">Tests</span><span>${tests.length} ${tests.length === 1 ? 'test passes' : 'tests pass'}${c.edited ? ' <span class="muted small">(engine\'s version)</span>' : ''}</span></div>
-      ${costs.length ? `<div class="kv"><span class="muted">Per call</span><span>${esc(Math.min(...costs) === Math.max(...costs) ? Math.min(...costs).toLocaleString('en-US') : Math.min(...costs).toLocaleString('en-US') + '–' + Math.max(...costs).toLocaleString('en-US'))} gas · fee: none required</span></div>` : ''}
-      ${c.kind === 'ask' ? `<div class="warn" data-s="mt10">Written by an AI model${Array.isArray(j.rounds) ? ` in ${j.rounds.length} round${j.rounds.length === 1 ? '' : 's'}` : ''}. Its tests are its own: read them, and the source, before activating.</div>` : ''}
-      ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}
-      ${canTry ? '<button class="btn" data-s="mt10" data-act="cc-try-open">Try it (no real money)</button>' : ''}</div>
-    <div class="card"><details><summary><b>Tests</b></summary><div class="list">${tests.map(t => `<div class="item"><div><div>${esc(t.name || t.command || 'test')}</div><div class="muted small">${esc(t.command || '')}${t.expect?.declaredCost != null ? ' · cost ' + esc(t.expect.declaredCost) : ''} · expects ${t.expect?.ok === false ? 'a refusal' : 'success'}</div></div></div>`).join('') || '<p class="muted small">None.</p>'}</div></details></div>
-    <div class="card"><details ${c.editing ? 'open' : ''}><summary><b>Source</b>${c.edited ? ' <span class="pill">edited</span>' : ''}</summary>
-      ${c.editing ? `<form data-form="cc-check" class="screen" data-s="flush"><textarea name="source" rows="16" class="mono" spellcheck="false">${esc(src)}</textarea>
+  const canTry = commandsOf(c.family).length && checked && chk.verdict !== 'refused', view = c.view || 'tests';
+  const pill = (ok, text) => `<span class="spill ${ok ? 'ok' : ''}"><span class="dot ${ok ? 'ok' : 'bad'}"></span>${esc(text)}</span>`;
+  return `<div class="pills">${c.edited && !c.check ? pill(false, 'Your changes are not checked yet') : pill(chk.verdict === 'accepted', chk.verdict === 'accepted' ? 'Made and checked: a node accepts it' : chk.verdict === 'refused' ? 'A node refuses it' : 'Not checked')}
+      ${pill(true, `${tests.length} of ${tests.length} tests pass${c.edited ? " (the engine's version)" : ''}`)}</div>
+    <div class="card"><div class="kv"><span class="muted">Contract id</span><span class="ok small">${sameAsReport || c.edited ? '✓ computed in your wallet' : ''}</span></div>
+      <div class="mono small" data-s="wrap">${esc(id)}</div>
+      ${costs.length ? `<div class="kv"><span class="muted">Each call</span><span>${esc(Math.min(...costs) === Math.max(...costs) ? Math.min(...costs).toLocaleString('en-US') : Math.min(...costs).toLocaleString('en-US') + '–' + Math.max(...costs).toLocaleString('en-US'))} gas · no fee required</span></div>` : ''}
+      <div class="kv"><span class="muted">To activate</span><span>${src.length.toLocaleString('en-US')} kalapas per block</span></div>
+      ${!sameAsReport && !c.edited ? '<p class="bad small">The id of this source differs from the engine\'s report: do not use it.</p>' : ''}</div>
+    ${c.kind === 'ask' ? `<div class="warn">Written by an AI model${Array.isArray(j.rounds) ? ` in ${j.rounds.length} round${j.rounds.length === 1 ? '' : 's'}` : ''}. Its tests are its own: read them, and the source, before activating.</div>` : ''}
+    <div class="seg" role="tablist"><button class="chip ${view === 'tests' ? 'on' : ''}" role="tab" aria-selected="${view === 'tests'}" data-act="cc-view" data-v="tests">Tests</button><button class="chip ${view === 'source' ? 'on' : ''}" role="tab" aria-selected="${view === 'source'}" data-act="cc-view" data-v="source">Source${c.edited ? ' · edited' : ''}</button></div>
+    ${view === 'tests' ? `<div class="card"><div class="list">${tests.map(t => `<div class="item"><div class="tline"><span class="ok">✓</span><span>${esc(t.name || t.command || 'test')}<span class="muted small"> · expects ${t.expect?.ok === false ? 'a refusal' : 'success'}</span></span></div></div>`).join('') || '<p class="muted small">None.</p>'}</div></div>`
+    : `<div class="card">${c.editing ? `<form data-form="cc-check" class="screen" data-s="flush"><textarea name="source" rows="16" class="mono" spellcheck="false">${esc(src)}</textarea>
           <div class="row"><button class="btn">Check my changes</button><button type="button" class="btn" data-act="cc-reset">Undo changes</button></div></form>`
         : `<pre class="src">${esc(src)}</pre><button class="btn small" data-act="cc-edit">Edit</button>`}
-      ${c.check && c.edited ? (c.check.verdict === 'accepted' ? '<p class="ok small">✓ A node accepts the changed source.</p>' : refusalHtml(c.check)) : ''}</details></div>
-    <div class="card"><h2>Activate</h2>
-      ${early ? `<p class="muted small">V1 contracts open at block ${Number(v1h).toLocaleString('en-US')}; the node is at ${Number(S.tip).toLocaleString('en-US')}.</p>`
-      : !checked ? '<p class="muted small">Check the changed source first.</p>'
-      : `<form data-form="cc-activate" class="screen" data-s="flush">
-        <label class="field">Keep it active for (blocks)<input name="blocks" inputmode="numeric" autocomplete="off" value="${esc(c.blocks || '1000')}" required></label>
-        <p class="muted small">It costs ${src.length.toLocaleString('en-US')} kalapas per block (its length), paid once from ${esc(active()?.name || 'the active wallet')}. You can extend it later.</p>
-        ${errBox()}<button class="btn primary">Review</button></form>`}</div>`;
+      ${c.check && c.edited ? (c.check.verdict === 'accepted' ? '<p class="ok small">✓ A node accepts the changed source.</p>' : refusalHtml(c.check)) : ''}</div>`}
+    ${errBox()}
+    ${early ? `<p class="muted small">V1 contracts open at block ${Number(v1h).toLocaleString('en-US')}; the node is at ${Number(S.tip).toLocaleString('en-US')}.</p>` : !checked ? '<p class="muted small">Check the changed source before activating it.</p>' : ''}
+    <div class="row bottom">${canTry ? '<button class="btn" data-act="cc-try-open">Try it</button>' : ''}<button class="btn primary" data-act="cc-activate-open" ${early || !checked ? 'disabled' : ''}>Activate…</button></div>`;
 }
+// ---- activating: how long, what it costs, the balance; signed here
+const DURATIONS = [[2520, '1 week'], [10800, '1 month'], [131400, '1 year']];   // at about 4 minutes a block
+function activateView() {
+  const c = S.cc, a = active(), w = a && S.open.get(a.id), d = a && S.data.get(a.id);
+  const blocks = Number(c.blocks || 10800), custom = !DURATIONS.some(([b]) => b === blocks) || c.customBlocks;
+  const cost = activationCost(c.source, Number.isSafeInteger(blocks) && blocks > 0 ? blocks : 0), zp = d?.state?.assets?.find(x => x.asset === '00');
+  const bal = zp ? zp.spendable : null, short = bal !== null && bal < cost;
+  const id = v1ContractId(c.source), expect = String(c.edited ? c.check?.contractId : c.job?.report?.contractId || '').replace(/^00000001/, '');
+  const afford = bal !== null && c.source.length ? Number(bal / BigInt(c.source.length)) : 0;
+  return `${backBarAct('Activate', 'cc-activate-back')}<form data-form="cc-activate" class="screen">
+    <div class="small muted">Keep it active for</div>
+    <div class="tabs4">${DURATIONS.map(([b, l]) => `<button type="button" class="chip ${!custom && blocks === b ? 'on' : ''}" data-act="cc-blocks" data-v="${b}">${l}</button>`).join('')}<button type="button" class="chip ${custom ? 'on' : ''}" data-act="cc-blocks" data-v="custom">Blocks…</button></div>
+    ${custom ? `<label class="field">Blocks<input name="blocks" inputmode="numeric" autocomplete="off" value="${esc(String(blocks))}"></label>` : `<input type="hidden" name="blocks" value="${blocks}">`}
+    <p class="muted small">${blocks.toLocaleString('en-US')} blocks${dateAfter(blocks) ? `, until around ${dateAfter(blocks)}` : ''}. You can extend it later.</p>
+    <div class="card"><div class="kv"><span class="muted">Activation</span><span>${formatZP(cost)} ZP</span></div>
+      <div class="kv"><span class="muted">Network fee</span><span>None</span></div>
+      <div class="kv"><b>Total</b><b>${formatZP(cost)} ZP</b></div>
+      <div class="kv"><span class="muted">Your balance (${esc(a?.name || '–')})</span><span class="${short ? 'bad' : 'ok'}">${bal === null ? '–' : formatZP(bal) + ' ZP' + (short ? '' : ' · enough')}</span></div></div>
+    <p class="muted small">${c.source.length.toLocaleString('en-US')} characters × ${blocks.toLocaleString('en-US')} blocks × 1 kalapa.</p>
+    ${short ? `<div class="err" role="alert"><span class="err-ic" aria-hidden="true">!</span><div><b>Not enough ZP</b><div class="err-more">You need about ${formatZP(cost - bal)} ZP more to activate it for this long. Activate it for fewer blocks, or add ZP to this wallet first.</div></div></div>
+      <div class="row">${afford > 0 ? `<button type="button" class="btn" data-act="cc-blocks" data-v="${afford}">Fewer blocks</button>` : ''}<button type="button" class="btn" data-go="receive">Receive ZP</button></div>
+      <p class="muted small">The contract stays here, made and checked, for a day.</p>` : ''}
+    <div class="card small"><div class="tline"><span class="ok">✓</span><span>${expect === id.slice(8) ? `The id matches the source you reviewed (${esc(id.slice(8, 16))}…${esc(id.slice(-8))})` : 'The wallet computed the id from the source you reviewed'}</span></div>
+      <div class="tline"><span class="ok">✓</span><span>You sign here, with your key. Nothing goes through the engine service.</span></div></div>
+    ${errBox()}<button class="btn primary big" ${short || !w || !canSpend(w) ? 'disabled' : ''} ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and activate'}</button></form>${nav('contracts')}`;
+}
+// ---- after activation: the address to share, its QR, how it is used
+function activeView() {
+  const c = S.cc, x = c.done, f = c.family, cmds = commandsOf(f);
+  const q = qrcode(0, 'M'); q.addData(x.address); q.make();
+  const live = S.contracts?.find(k => k.address === x.address), until = live ? Number(live.expire) : x.until;
+  return `${backBarAct(x.name, 'cc-active-done')}<div class="screen">
+    <div class="bigcheck">${icon('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</div>
+    <h2>${live ? `Your ${esc(x.name.toLowerCase())} is active` : `Your ${esc(x.name.toLowerCase())} is sent`}</h2>
+    <p class="muted small">${live ? '' : 'It becomes active with the next block (about 4 minutes). '}Active until block ${until ? Number(until).toLocaleString('en-US') : '–'}${until && S.tip && dateAfter(until - S.tip) ? `, around ${dateAfter(until - S.tip)}` : ''}.</p>
+    <div class="card"><div class="muted small">Address (send to it, share it)</div><div class="mono small" data-s="wrap">${esc(x.address)}</div>
+      <div class="muted small" data-s="mt10">Contract id</div><div class="mono small" data-s="wrap">${esc(x.id)}</div></div>
+    <div class="row"><button class="btn" data-act="cc-share" data-text="${esc(x.address)}">Share</button><button class="btn" data-act="cc-qr">${c.showQr ? 'Hide QR' : 'Show QR'}</button></div>
+    ${c.showQr ? `<div class="qr">${q.createSvgTag({ cellSize: 5, margin: 2, scalable: false })}</div>` : ''}
+    ${cmds.length ? `<div class="card"><h2>How it is used</h2><div class="list">${cmds.map(m => `<div class="item"><span><b>${esc(m.name[0].toUpperCase() + m.name.slice(1))}</b>${m.description ? `: ${esc(m.description.replace(/\.$/, ''))}` : ''}</span><span class="muted small" data-s="right">${esc(m.signedBy.length ? m.signedBy.join(', ') : 'anyone')}</span></div>`).join('')}</div>
+      ${cmds.some(m => m.signedBy.length) ? '<p class="muted small">Share the address with the others named here: they call it from their own wallets.</p>' : ''}</div>` : ''}
+    <button class="btn primary big" data-act="cc-active-done">Done</button></div>${nav('contracts')}`;
+}
+const backBarAct = (title, act) => `<div class="back"><button class="iconbtn" data-act="${act}" aria-label="Back">${I.back}</button><h1>${esc(title)}</h1></div>`;
+// ---- the contracts this wallet activated (kept by address), and one made but not activated yet
+function myContractsCard() {
+  const mine = Object.entries(myContracts()), tip = S.tip || 0, c = S.cc;
+  const made = c && c.job?.ok && ['result', 'try', 'activate'].includes(c.step) && !c.activated;
+  if (!mine.length && !made) return '';
+  const rows = mine.reverse().map(([addr, x]) => {
+    const live = S.contracts?.find(k => k.address === addr), until = live ? Number(live.expire) : x.until, left = until ? until - tip : null;
+    const ended = !live && until && tip > until, soon = live && left < 720, waiting = !live && !ended;
+    const status = ended ? `<span class="muted small">Ended at block ${until.toLocaleString('en-US')}</span>` : waiting ? '<span class="muted small">Waiting for its block</span>'
+      : soon ? `<span class="small lvl-warn">Ends in ${dateIn(left)}</span>` : '<span class="small"><span class="dot ok"></span> Active</span>';
+    const i = S.contracts?.findIndex(k => k.address === addr) ?? -1;
+    return `<div class="mc ${soon ? 'warn-line' : ''}"><div class="between"><b>${esc(x.name)}</b>${status}</div>
+      <div class="muted small">${ended ? 'No longer runs. Extending it starts it again.' : until ? `Until block ${until.toLocaleString('en-US')}${left > 0 && dateIn(left) ? `, about ${dateIn(left)}` : ''}` : ''}</div>
+      ${ended ? '' : `<div class="row"><button class="btn small" data-act="cc-open-mine" data-addr="${esc(addr)}">Open</button>${i >= 0 ? `<button class="btn small ${soon ? 'accent' : ''}" data-act="extend" data-i="${i}">Extend</button>` : ''}</div>`}</div>`;
+  }).join('');
+  return `<div class="card"><h2>My contracts</h2><div class="mcs">${made ? `<div class="mc"><div class="between"><b>${esc(c.family ? famName(c.family) : 'Described contract')}</b><span class="muted small">Made, not active</span></div>
+      <div class="muted small">Checked and tested · kept for a day</div><div class="row"><button class="btn small" data-act="cc-open">Review</button><button class="btn small primary" data-act="cc-activate-open">Activate</button></div></div>` : ''}${rows}</div></div>`;
+}
+const dateIn = blocks => { const m = blocks * BLOCK_MINUTES; return m < 90 ? `${Math.max(1, Math.round(m))} min` : m < 2880 ? `${Math.round(m / 60)} hours` : m < 60 * 24 * 60 ? `${Math.round(m / 1440)} days` : `${Math.round(m / 43200)} months`; };
 function refusalHtml(chk) {
-  if (chk.verdict === 'environment') return '<p class="muted small">The engine could not check it right now (its tools failed, not your contract). Try again later.</p>';
+  if (chk.verdict === 'environment') return '<div class="warn"><b>Couldn\'t check it right now</b><br>The checking service had a problem of its own. This says nothing about your contract: try again later.</div>';
   const r = chk.refusal; if (!r) return chk.nodeMessage ? `<p class="bad small">${esc(chk.nodeMessage)}</p>` : '';
   return `<div class="card" data-s="mt10"><p class="bad"><b>A node would refuse it: ${esc(r.title || r.rule || '')}</b>${r.line ? ` · line ${esc(r.line)}` : ''}</p>
     ${r.code ? `<pre class="src">${esc(r.code)}</pre>` : ''}${r.why ? `<p class="small">${esc(r.why)}</p>` : ''}${r.fix ? `<p class="small"><b>Fix:</b> ${esc(r.fix)}</p>` : ''}${r.hint ? `<p class="muted small">${esc(r.hint)}</p>` : ''}
@@ -595,8 +663,9 @@ const views = {
   contracts: () => {
     const cs = S.contracts, wa = active(), mayExtend = !!(wa && S.open.get(wa.id) && canSpend(S.open.get(wa.id)));
     return `${top()}<div class="screen"><h1>Smart contracts</h1>
+    ${myContractsCard()}
     ${createCard()}
-    <div class="card"><h2>Active contracts</h2><div class="list">${!cs ? '<p class="muted small">Loading…</p>' : cs.length === 0 ? '<p class="muted small">None.</p>' : cs.map((k, i) => {
+    <div class="card"><h2>All active contracts</h2><div class="list">${!cs ? '<p class="muted small">Loading…</p>' : cs.length === 0 ? '<p class="muted small">None.</p>' : cs.map((k, i) => {
       const left = k.expire - (S.tip || k.expire), cls = left < 300 ? 'lvl-bad' : left < 3000 ? 'lvl-warn' : '';
       return `<div class="item"><div><div>${esc(k.name || 'Contract')}</div><div class="muted small mono" title="${esc(k.address)}">${esc(shortAddr(k.address))}</div></div>
         <div data-s="right"><div class="small">until ${Number(k.expire).toLocaleString('en-US')}</div><div class="small ${cls}">${left.toLocaleString('en-US')} blocks left</div>${dateAfter(left) ? `<div class="small muted">around ${dateAfter(left)}</div>` : ''}${mayExtend ? `<button class="btn small" data-act="extend" data-i="${i}">Extend</button>` : ''}</div></div>`;
@@ -1190,6 +1259,18 @@ $app.addEventListener('click', async e => {
     if (act === 'cc-try-open') { const k = S.cc.try; S.cc.try = k && k.source === S.cc.source ? k : { source: S.cc.source, cmd: commandsOf(S.cc.family)[0]?.name, values: {}, signer: null, session: { wallet: [], state: null }, last: null, runs: 0 }; S.cc.step = 'try'; S.error = ''; render(); return window.scrollTo(0, 0); }
     if (act === 'cc-block') { if (S.cc?.try && !S.cc.try.running) { const f = $app.querySelector('form[data-form=cc-try]'), i = f?.querySelector('input[name=block]'); if (i) i.value = t.dataset.v; S.cc.try.block = Number(t.dataset.v);
       f?.querySelectorAll('[data-act=cc-block]').forEach(b => b.classList.toggle('on', b === t)); } return; }
+    if (act === 'cc-view') { if (S.cc) { S.cc.view = t.dataset.v; render(); } return; }
+    if (act === 'cc-activate-open') { if (!S.cc) return; S.cc.step = 'activate'; S.cc.blocks ||= 10800; S.error = ''; S.screen === 'create' ? render() : go('create'); window.scrollTo(0, 0); const a = active(); if (a) { await refreshWallet(a.id); render(); } return; }
+    if (act === 'cc-activate-back') { if (S.cc) { S.cc.step = 'result'; S.error = ''; render(); } return; }
+    if (act === 'cc-blocks') { if (!S.cc) return; if (t.dataset.v === 'custom') S.cc.customBlocks = true; else { S.cc.blocks = Number(t.dataset.v); S.cc.customBlocks = !DURATIONS.some(([b]) => b === S.cc.blocks); } S.error = ''; freshScreen = true; return render(); }
+    if (act === 'cc-qr') { if (S.cc) { S.cc.showQr = !S.cc.showQr; render(); } return; }
+    if (act === 'cc-share') { const text = t.dataset.text; try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); t.textContent = 'Copied'; } } catch { /* cancelled */ } return; }
+    if (act === 'cc-active-done') return go('contracts');
+    if (act === 'cc-open-mine') {
+      const x = myContracts()[t.dataset.addr]; if (!x) return;
+      const family = S.engine?.families?.find(f => f.id === x.family) || null;
+      S.cc = { step: 'active', kind: 'make', family, activated: true, done: { name: x.name, address: t.dataset.addr, id: x.id || '', until: x.until } }; return go('create');
+    }
     if (act === 'cc-try-back') { if (S.cc) { S.cc.step = 'result'; S.error = ''; render(); window.scrollTo(0, 0); } return; }
     if (act === 'cc-cmd') { if (S.cc?.try && !S.cc.try.running) { S.cc.try.cmd = t.dataset.name; S.cc.try.signer = null; S.cc.try.values = {}; S.error = ''; render(); } return; }
     if (act === 'cc-try-reset') { if (S.cc?.try && !S.cc.try.running) { Object.assign(S.cc.try, { session: { wallet: [], state: null }, last: null, runs: 0, block: null }); S.error = ''; render(); } return; }
@@ -1198,7 +1279,6 @@ $app.addEventListener('click', async e => {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
       for (const sp of m.prepared.spent || []) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() });
-      if (m.prepared.address && m.name) rememberContract(m.prepared.address, m.name);
       S.busy = false; S.modal = { type: 'activated', hash, address: m.prepared.address, blocks: m.prepared.blocks }; render(); setTimeout(() => refreshAll(), 30000); return;
     }
     if (act === 'swap-new') {
@@ -1392,13 +1472,24 @@ $app.addEventListener('submit', async e => {
         S.cc = { ...S.cc, check: j.check, checkedSource: src, editing: j.check.verdict !== 'accepted' }; S.error = ''; return render();
       }
       case 'cc-activate': {
-        const c = S.cc, blocks = Number(String(v.blocks).trim()), a = active(); c.blocks = v.blocks;
+        const c = S.cc, blocks = Number(String(v.blocks ?? c.blocks).trim()), a = active();
+        if (!Number.isSafeInteger(blocks) || blocks < 1) throw fieldError('Blocks: a whole number from 1', 'blocks');
+        c.blocks = blocks;
         if (!a || !canSpend(S.open.get(a.id))) throw new Error('Choose a wallet that can sign');
         await refreshWallet(a.id); const d = S.data.get(a.id); if (!d?.state || d.error) throw new Error('Could not read the balance from the node');
         // the id the wallet signs for: the engine's report for its own source, the engine's check for an edited one
         const expect = c.edited ? c.check?.contractId : c.job.report?.contractId;
         const prepared = prepareActivateV1(S.open.get(a.id), d.state, c.source, blocks, expect);
-        S.modal = { type: 'confirm-activate', prepared, name: c.family ? famName(c.family) : 'Described contract' }; S.error = ''; return render();
+        S.busy = true; render();
+        try {
+          const hash = await publish(node(), prepared);
+          for (const sp of prepared.spent || []) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() });
+          const name = c.family ? famName(c.family) : 'Described contract', until = (S.tip || 0) + 1 + blocks;
+          rememberContract(prepared.address, { name, family: c.family?.id || null, id: prepared.contractId, until, at: Date.now() });
+          S.cc = { ...c, step: 'active', activated: true, done: { name, address: prepared.address, id: prepared.contractId, until, hash } }; saveCc(null);
+          S.error = ''; window.scrollTo(0, 0); setTimeout(() => refreshAll(), 30000);
+        } finally { S.busy = false; render(); }
+        return;
       }
       case 'node': {
         const url = v.url.trim().replace(/\/+$/, '');

@@ -11,6 +11,30 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.13.0 — 2026-10-14
+
+The contract flow as in the design "ZP Wallet: Create a contract".
+
+### Added
+- Activate is its own screen: keep it active for 1 week, 1 month (the default), 1 year or a number of blocks, with
+  the date it runs until; the cost (characters × blocks × 1 kalapa), no network fee, and the balance ("enough", or
+  "Not enough ZP" with how much more, "Fewer blocks" and "Receive ZP"; Sign stays off); the id check; signed and sent
+  from this screen.
+- After activation: the contract's address and id, Share, Show QR, and "How it is used" (each command and who may
+  call it); sent until its block, then active until block N.
+- My contracts at the top of Contracts: the contracts activated here (active, ending soon, waiting for its block, or
+  ended), with Open and Extend; a contract made but not activated yet, with Review and Activate.
+
+### Changed
+- Result: "Made and checked: a node accepts it" and "N of N tests pass" as badges; the id with "computed in your
+  wallet"; each call's gas; the cost to activate per block; Tests and Source as two tabs; Try it and Activate… at the
+  bottom.
+- While a contract is made: three steps (made, checked like a node with its tests, ready to review).
+- When the contract service cannot answer: "busy" (503), "today's descriptions are used up" (429), "can't reach the
+  contract service" (no answer, your coins are not affected) and "couldn't check it right now" (the checker's own
+  problem, not your contract).
+- "All active contracts" for the network's list.
+
 ## 0.12.0 — 2026-10-14
 
 ### Added

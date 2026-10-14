@@ -56,7 +56,9 @@ test('engine client: polls a job until done, explains errors', async () => {
   const { job } = await e.make('token', {});
   const steps = []; const j = await e.wait(job, s => steps.push(s.status), { everyMs: 1 });
   assert.equal(j.status, 'done'); assert.deepEqual(steps, ['running', 'running', 'done']);
-  await assert.rejects(e.ask('x'), /daily limit/);
+  await assert.rejects(e.ask('x'), /descriptions are used up/);
+  await assert.rejects(new EngineClient('https://x', async () => new Response('{}', { status: 503 })).families(), /The contract service is busy: try again in a few minutes/);
+  await assert.rejects(new EngineClient('https://x', async () => { throw new TypeError('offline'); }).families(), /Can't reach the contract service.*not affected/);
 });
 
 test('try: amounts, body bytes, commands and holdings', () => {

@@ -162,3 +162,23 @@ input::placeholder, textarea::placeholder { color: #5E7076; font-style: italic; 
 .qr-video { width: 100%; max-height: 50vh; border-radius: 12px; background: #000; margin: 10px 0; }
 [data-s~="mt8"] { margin-top: 8px; }
 .pfield div.field { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+
+/* contract flow (mockup "ZP Wallet: Create a contract") */
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.spill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 13px; background: var(--surface); border: 1px solid var(--line); }
+.seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; } .seg .chip { text-align: center; padding: 10px 4px; }
+.tabs4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .tabs4 .chip { text-align: center; padding: 10px 2px; }
+.tline { display: flex; gap: 10px; align-items: flex-start; } .tline + .tline { margin-top: 8px; }
+.row.bottom { margin-top: 4px; } .row.bottom .btn { flex: 1; min-height: 56px; } .row.bottom .btn.primary { flex: 1.4; }
+.bigcheck { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; }
+.bigcheck svg { width: 30px; height: 30px; stroke-width: 2.6; }
+.mcs { display: flex; flex-direction: column; gap: 10px; }
+.mc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: var(--surface2); }
+.mc.warn-line { border-color: var(--amber-line); } .mc .row .btn { flex: 1; }
+.btn.accent { border-color: var(--accent); color: var(--accent); }
+.between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bsteps { display: flex; flex-direction: column; } .bstep { display: flex; gap: 14px; padding: 12px 0; } .bstep + .bstep { border-top: 1px solid var(--line2); }
+.bdot { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box; }
+.bdot.done { background: var(--accent); border-color: var(--accent); }
+.bdot.run { border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
