@@ -1,0 +1,2 @@
+[2026-10-14 12:21] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
+[2026-10-14 12:21] B: fde5f8b1 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 1ef685d5 V1 Oracle: port of Oracle.fst (same comma
