@@ -2,7 +2,7 @@
 
 An oracle brings off-chain facts (here: prices) to contracts. On ZP it is three parts: the **Oracle contract** (records commitments), a **service** (fetches prices, builds the commitment, answers proof requests), and **consumer contracts** such as **FixedPayout** (a bet that pays out against an attested price).
 
-Status: the contracts are the developers' originals (repository `zenprotocol/contracts`). The old service (`zp-oracle`, F# on Mono, Intrinio data, MongoDB) is dead. The replacement lives in `src/Oracle` (this repository, .NET 10, SQLite, no paid data source). It is tested on our testnet only.
+Status: the contracts are the developers' originals (repository `zenprotocol/contracts`). On the testnet the Oracle runs as a V1 contract since 2026-10-14 (below). The old service (`zp-oracle`, F# on Mono, Intrinio data, MongoDB) is dead. The replacement lives in `src/Oracle` (this repository, .NET 10, SQLite, no paid data source). It is tested on our testnet only.
 
 ## How it works
 
@@ -40,6 +40,42 @@ The oracle is only a price source. The money in a bet is whatever asset the cons
 - **zUSD on the testnet** is that test unit: a token of the `Token` or `NamedToken` contract with no value, used as the collateral in the bet scenario (`scripts/testnet-bet.sh`). An authorised issuer can be modelled with `AuthenticatedSupply` (only one key may issue and destroy).
 - Nothing here is for real money before an independent review of the contracts and the service, and legal advice.
 
+## The V1 Oracle (testnet)
+
+`contracts/v1/Oracle.fst` is the V0 Oracle for ZP contracts V1 (built by every node, run on gas; zp-contracts-v1
+`docs/V1-SPEC.md`). Commands, message bodies, error messages and token derivations are V0's, so the service,
+FixedPayout and `/auditpath` are unchanged; only the contract id changes (version 1).
+
+| | |
+|---|---|
+| Contract | `00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741`, `ctzn1qqqqqqqwtea80gm9tsvp7zrvef5rtrqsvxj8zw6nma8klcajnlmamntxhgyclqt8k` (activated 2026-10-14, expires at block 22,233) |
+| Replaced | V0 `00000000424c3e43…701b`, `ctzn1qqqqqqqzzfsly8h…` (no more rounds; expires by itself) |
+| Cost (gas) | Commit 2,650; Attest 5,081 + 128 per coin in the contract's wallet; other commands 8. V1 has no fee per gas: gas only counts against block weight (400 per gas) |
+| Limit | Each Commit leaves one coin in the contract, so Attest grows by 128 gas per round: about 7,700 rounds (about 320 days at one round an hour) fit under the 1,000,000 gas per call. Replace the contract before that (a new contract id; bets name the oracle contract they use) |
+| FeeAsset | only `"00"` (ZP): Zulib V1 has no realization of `Zen.Asset.parse` yet. V0 also took token ids. Nobody uses fees today |
+
+Differences in the source (none observable): `Zen.Sha3` instead of `Zen.Hash.Sha3` and `Zen.PublicKey.compress`
+instead of a local copy (no V1 realization / not allowed in V1; same bytes and costs), no `module` line, `|>` after
+`>>=` chains in parentheses. Every other expression keeps V0's shape: the `val`s declare V0's exact costs, and a
+different shape changes the elaborated cost and fails the type check (seen with a field access instead of a record
+pattern).
+
+Testing and activation (on the testnet server, from a zenprotocol checkout on node-upgrade-script; Node.js through
+Docker, as the server has none):
+
+```bash
+docker run --rm --network host -v "$PWD":/b -w /b node:22-alpine node scripts/v1/oracle-try.mjs        # check + 18 calls on the engine service (127.0.0.1:11580)
+docker run --rm --network host -v "$PWD":/b -w /b node:22-alpine node scripts/v1/testnet-v1-oracle.mjs activate
+# set ORACLE_CONTRACT, ORACLE_ID, ORACLE_ADDRESS in ~/zenprotocol-testnet/testnet-stack.env, then
+docker compose -f docker-compose.testnet-stack.yml up -d --force-recreate oracle                           # in ~/zenprotocol-testnet
+docker run --rm --network host -v "$PWD":/b -w /b node:22-alpine node scripts/v1/testnet-v1-oracle.mjs attest     # a real Attest of the latest round
+```
+
+`oracle-try.mjs` checks that a node would accept the source, that every call's gas equals its declared cost, and the
+token subtypes against V0's formulas (commitment SHA3(commit ‖ cpk), attestation SHA3(SHA3(commit ‖ cpk))).
+Run on 2026-10-14: 44 checks passed. Extending the contract: run `activate` again with the same source (it only
+extends the expiry).
+
 ## The service (`src/Oracle`)
 
 Planned layout and behavior:
@@ -56,7 +92,7 @@ Planned layout and behavior:
 ## Running it on the testnet
 
 1. Start a testnet node with a known wallet (see [TESTNET.md](TESTNET.md)).
-2. Activate the Oracle contract: `scripts/testnet-contract.sh` shows the activation call; the Oracle contract is activated the same way with `CONTRACT=<path to Oracle.fst>`.
+2. Activate the Oracle contract. After the testnet's V1 fork (block 2050): the V1 Oracle, `node scripts/v1/testnet-v1-oracle.mjs activate` (see "The V1 Oracle" below; `install-testnet-stack.sh` does this). Before it, or on a V0-only network: `scripts/testnet-contract.sh` with `CONTRACT=src/ContractExamples/Oracle.fst`.
 3. Start the oracle service with the `mock` provider (or `frankfurter` for ECB currency rates, `coingecko` for crypto prices, `auto` for both in one list: currencies from Frankfurter, crypto symbols from CoinGecko, `coinmarketcap` with a key) pointing at the node and the contract address.
 4. Watch `/rounds/latest`; each round shows a transaction hash that appears in the explorer.
 

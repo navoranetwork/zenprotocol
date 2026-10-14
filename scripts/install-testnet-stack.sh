@@ -59,7 +59,13 @@ activate() {   # file name-of-variable-prefix
   [ -n "$OUT" ] || { echo "activation of $1 failed"; return 1; }
   put "$2_ADDRESS" "$(echo "$OUT" | sed -n 's/^CONTRACT_ADDRESS=//p')"; put "$2_ID" "$(echo "$OUT" | sed -n 's/^CONTRACT_ID=//p')"
 }
-if [ -z "$(get ORACLE_ID)" ]; then echo "-- Oracle"; activate src/ContractExamples/Oracle.fst ORACLE; fi
+if [ -z "$(get ORACLE_ID)" ]; then echo "-- Oracle"
+  if [ "$(tip)" -ge 2050 ]; then   # past the testnet's V1 fork: the V1 Oracle (contracts/v1/Oracle.fst, docs/ORACLE.md)
+    OUT=$($D run --rm --network host -v "$DIR:/b" -w /b node:22-alpine node scripts/v1/testnet-v1-oracle.mjs activate "$API" "$PW") \
+      || { echo "activation of the V1 Oracle failed"; echo "$OUT" | tail -5; exit 1; }
+    put ORACLE_ADDRESS "$(echo "$OUT" | sed -n 's/^ORACLE_ADDRESS=//p')"; put ORACLE_ID "$(echo "$OUT" | sed -n 's/^ORACLE_ID=//p')"
+  else activate src/ContractExamples/Oracle.fst ORACLE; fi
+fi
 PK=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"path\":\"m/44'/258'/0'/3/0\",\"password\":\"$PW\"}" $API/wallet/publickey | tr -d '"')
 if [ -z "$(get BRIDGE_ID)" ]; then echo "-- AuthenticatedSupply (zUSDC, bridge key)"
   sed "s/^let authenticatedPubKey = \"\"/let authenticatedPubKey = \"$PK\"/" src/ContractExamples/AuthenticatedSupply.fst > /tmp/AuthenticatedSupply.fst
