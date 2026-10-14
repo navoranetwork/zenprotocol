@@ -95,7 +95,7 @@ install)
   smoke "$NAME"
   log "following for 10 minutes"
   sleep 600; log "now at block $(height)"
-  docker logs --since 15m "$NAME" 2>&1 | grep -iE "\[(ERR|FTL)|unhandled exception|invalid block" | tail -10
+  docker logs --since 15m "$NAME" 2>&1 | grep -iE "\[(ERR|FTL)|unhandled exception|invalid block" | tail -10 || true   # no matches is success
   ;;
 rollback)
   h=$(height); [ -n "$h" ] && [ "$h" -ge 2050 ] && [ -z "${FORCE:-}" ] && { log "past the fork: rolling back means leaving V1 (FORCE=1)"; exit 1; }
@@ -126,7 +126,7 @@ status)
     grep -n "image:" "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$NAME" | cut -d, -f1)" | head -3
   else log "NOT started by docker compose: install will stop and print what to recreate by hand"; fi
   log "env: $(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | grep -E '^(MINER_THREADS|WALLET_API|EXTERNAL_IP|SEEDS|NETWORK)=' | tr '\n' ' ')"
-  docker logs --since 30m "$NAME" 2>&1 | grep -iE "V1|\[(ERR|FTL)|invalid block" | tail -10
+  docker logs --since 30m "$NAME" 2>&1 | grep -iE "V1|\[(ERR|FTL)|invalid block" | tail -10 || true
   ;;
 *) echo "unknown mode $MODE"; exit 2 ;;
 esac
