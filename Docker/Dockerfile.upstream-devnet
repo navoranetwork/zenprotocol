@@ -26,7 +26,7 @@ COPY .paket ./.paket
 COPY paket.dependencies paket.lock ./
 RUN mono .paket/paket.exe restore \
  && chmod +x packages/zen_z3_linux/output/z3-linux \
- && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal \
+ && msbuild src/zenprotocol.sln /p:Configuration=Debug /v:minimal \
  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/ \
  && test -f src/Node/bin/Debug/zen-node.exe \
  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/
