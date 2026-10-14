@@ -5,13 +5,13 @@
 //   Issue    signed by authenticatedPubKey; body { Amount: U64 (not 0), returnAddress: Lock }
 //            mints Amount of this contract's default token and locks it to returnAddress
 //   Destroy  signed by authenticatedPubKey; body { Amount: U64 (not 0) }
-//            destroys Amount of the token; the caller sends that much in (the node refuses a transaction that
-//            destroys more than its inputs hold)
+//            destroys Amount of the token, which the call must bring in: more than was sent is refused
+//            ("Destroy Amount is more than was sent"; V0 built that transaction and the node rejected it)
 //
 // authenticatedPubKey (a compressed public key, 66 hex) is written into the source before activation
 // (scripts/v1/testnet-v1-zusdc.mjs: the node wallet's key at m/44'/258'/0'/3/0, as the V0 install did), so the
-// contract id depends on it. Cost: Issue 529, Destroy 381, other commands 7; nothing depends on the wallet.
-// Differences from V0: no `module` line. Every expression keeps V0's shape: the `val`s declare V0's exact costs.
+// contract id depends on it. Cost: Issue 529, Destroy 454 (V0 381), other commands 7; nothing depends on the wallet.
+// Differences from V0: no `module` line; `Zen.Prelude.result` in the vals; Destroy's check above. Every expression keeps V0's shape: the `val`s declare V0's exact costs.
 
 open Zen.Cost
 open Zen.Data
@@ -80,22 +80,29 @@ let issue tx contractID sender messageBody = // 13
     let authenticated = authenticate sender in // 135
     RT.bind3 amount returnAddress authenticated (issueTX tx contractID) // 211
 
-val destroyTX: txSkeleton -> contractId -> U64.t -> bool -> CR.t `cost` 142
-let destroyTX tx contractID amount authenticated = // 11
+// V1: refuses to destroy more of the token than the call brings in (V0 built that transaction and the node rejected it
+// as unbalanced; now the caller gets the reason). Elaborated: 20 (V0's 11 + let! 2 + call 2 + if 3 + comparison 2)
+val destroyTX: txSkeleton -> contractId -> U64.t -> bool -> CR.t `cost` 215
+let destroyTX tx contractID amount authenticated = // 20
     if authenticated then begin
         let! asset = Zen.Asset.getDefault contractID in // 64
-        // destroy the required amount of the asset
-        TX.destroy amount asset tx // 64
-        >>= CR.ofTxSkel end // 3
+        let! sent = TX.getAvailableTokens asset tx in // 64
+        if sent `U64.gte` amount then
+            // destroy the required amount of the asset
+            (TX.destroy amount asset tx // 64
+            >>= CR.ofTxSkel) // 3
+        else
+            RT.autoFailw "Destroy Amount is more than was sent"
+    end
     else
         RT.autoFailw "Authentication failed"
 
-val destroy: txSkeleton -> contractId -> sender -> option data -> CR.t `cost` 374
+val destroy: txSkeleton -> contractId -> sender -> option data -> CR.t `cost` 447
 let destroy tx contractID sender messageBody = // 11
     let! dict = messageBody >!= tryDict in // 4
     let amount = getAmount dict in // 82
     let authenticated = authenticate sender in // 135
-    RT.bind2 amount authenticated (destroyTX tx contractID) // 142
+    RT.bind2 amount authenticated (destroyTX tx contractID) // 215
 
 val main:
     txSkeleton
@@ -108,16 +115,16 @@ val main:
     -> option data
     -> CR.t `cost` begin match command with
                    | "Issue" -> 529
-                   | "Destroy" -> 381
+                   | "Destroy" -> 454
                    | _ -> 7 end
 let main tx _ contractID command sender messageBody _ _ = // 7
     match command with
     | "Issue" -> issue tx contractID sender messageBody // 522
                  <: CR.t `cost` begin match command with
                                 | "Issue" -> 522
-                                | "Destroy" -> 374
+                                | "Destroy" -> 447
                                 | _ -> 0 end
-    | "Destroy" -> destroy tx contractID sender messageBody // 374
+    | "Destroy" -> destroy tx contractID sender messageBody // 447
     | _ -> RT.failw "Invalid Command"
 
 val cf:
@@ -132,5 +139,5 @@ val cf:
 let cf _ _ command _ _ _ _ = // 4
     ret begin match command with
         | "Issue" -> 529
-        | "Destroy" -> 381
+        | "Destroy" -> 454
         | _ -> 7 end

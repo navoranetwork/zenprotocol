@@ -90,13 +90,13 @@ await call('Issue, no returnAddress', { command: 'Issue', sender: { publicKey: B
 await call('Issue, with coins in the wallet', { command: 'Issue', sender: { publicKey: B }, wallet: [{ asset: 'zp', amount: '5' }, { asset: 'zp', amount: '7' }], bodyHex: issueBody }, { declared: 529 });
 
 await call('Destroy by the bridge key (1000 sent, 1000 destroyed)', { command: 'Destroy', sender: { publicKey: B }, spend: [{ asset: contractHash, amount: '1000' }], bodyHex: dict({ Amount: D.u64(1000) }) }, {
-  declared: 381,
+  declared: 454,
   check: [['1000 of the token to the destroy lock', r => (r.outputs || []).some(o => o.who?.kind === 'destroy' && isToken(o.asset) && String(o.amount) === '1000')]] });
-await call('Destroy by another key', { command: 'Destroy', sender: { publicKey: U }, spend: [{ asset: contractHash, amount: '1000' }], bodyHex: dict({ Amount: D.u64(1000) }) }, { error: 'Authentication failed', declared: 381 });
+await call('Destroy by another key', { command: 'Destroy', sender: { publicKey: U }, spend: [{ asset: contractHash, amount: '1000' }], bodyHex: dict({ Amount: D.u64(1000) }) }, { error: 'Authentication failed', declared: 454 });
 await call('Destroy, Amount 0', { command: 'Destroy', sender: { publicKey: B }, bodyHex: dict({ Amount: D.u64(0) }) }, { error: 'Amount cannot be 0' });
 await call('Unknown command', { command: 'Mint', sender: { publicKey: B }, bodyHex: issueBody }, { error: 'Invalid Command', declared: 7 });
-// the contract does not compare Amount with what was sent: the node refuses the transaction (outputs above inputs)
-await call('Destroy more than sent (500 sent, 1000 asked)', { command: 'Destroy', sender: { publicKey: B }, spend: [{ asset: contractHash, amount: '500' }], bodyHex: dict({ Amount: D.u64(1000) }) }, { info: true });
+await call('Destroy more than sent (500 sent, 1000 asked)', { command: 'Destroy', sender: { publicKey: B }, spend: [{ asset: contractHash, amount: '500' }], bodyHex: dict({ Amount: D.u64(1000) }) }, { error: 'Destroy Amount is more than was sent', declared: 454 });
+await call('Destroy with nothing sent', { command: 'Destroy', sender: { publicKey: B }, bodyHex: dict({ Amount: D.u64(1) }) }, { error: 'Destroy Amount is more than was sent' });
 
 console.log(`\ncontract id 00000001${contractHash}\ncosts:`);
 for (const [n, g] of Object.entries(costs)) console.log(`  ${n}: ${g}`);
