@@ -772,6 +772,7 @@ function render() {
     if (s.box) el.checked = s.value; else if (el.value !== s.value) el.value = s.value;
     if (s.focus) { el.focus(); try { el.setSelectionRange(s.from, s.to); } catch { /* checkbox */ } }
   }
+  if (S.modal?.type === 'offer') syncOffer();   // the price line after any re-render (an error, a mode change)
 }
 
 // ---------------------------------------------------------------- data

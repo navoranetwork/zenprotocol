@@ -211,7 +211,7 @@ export async function prepareVote({ w, state, node, votingContractId, command, b
   const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
   const fee = 1n;
   const skip = new Set(exclude);   // outputs already used by a vote that is not in a block yet
-  const fund = state.utxos.filter(u => u.spend.asset === '00' && u.lock.type === 'PK' && keyFor(u) && u.spend.amount >= fee && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
+  const fund = state.utxos.filter(u => u.spend.asset === '00' && spendableOwn(w, state, u) && keyFor(u) && u.spend.amount >= fee && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
     .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : -1))[0];
   if (!fund) throw new Error('You need a little ZP in a spendable output to pay the 1 kalapa fee');
   const spend = amount => ({ asset: ZEN_ASSET, amount });
@@ -252,6 +252,9 @@ export async function prepareVote({ w, state, node, votingContractId, command, b
   return { hash: hex(digest), hex: hex(serializeTx(signed)), phase: ph, signers: body.signers, spent: hex(fund.outpoint.txHash) + ':' + fund.outpoint.index };
 }
 
+// our ZP outputs a transaction can spend: PK, and coinbase rewards once mature (as the balance counts them)
+const spendableOwn = (w, state, u) => u.lock.type === 'PK' || (u.lock.type === 'Coinbase' && state.tip + 1 - u.lock.blockNumber >= maturityFor(w.network));
+
 // --- signed contract calls (ZP <-> BTC swap) ---------------------------------------------------------
 // The caller's public key is the contract's sender: the contract witness carries the key and a signature over
 // SHA3(transaction hash ‖ Message{contract, command, body}) (Consensus/InputValidation/ContractV0.fs getSender).
@@ -264,7 +267,7 @@ export async function prepareSignedCall({ w, state, node, contractId, command, b
   const fee = 1n, need = amount + fee;
   const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
   const skip = new Set(exclude);
-  const pool = state.utxos.filter(u => u.spend.asset === '00' && u.lock.type === 'PK' && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
+  const pool = state.utxos.filter(u => u.spend.asset === '00' && spendableOwn(w, state, u) && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
     .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : b.spend.amount < a.spend.amount ? -1 : 0));
   const fund = []; let sum = 0n;
   for (const u of pool) { if (sum >= need) break; fund.push(u); sum += u.spend.amount; }

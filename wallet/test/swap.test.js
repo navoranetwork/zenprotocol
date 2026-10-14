@@ -126,3 +126,15 @@ test('a price per ZP becomes the total in satoshis', async () => {
   assert.throws(() => totalFromPerZp('1', 100n, 'sat'), /at least/);
   assert.throws(() => totalFromPerZp('1,25', zp80k, 'usd', 1), /Enter the price/);
 });
+
+test('an offer can be funded by mining rewards once they are mature (as the balance counts them); immature ones are not used', async () => {
+  const amount = 400000000n, f = fixture({ contractAdds: offerAdds(amount) });
+  // only coinbase outputs: one mature (block 2000 at tip 2100), one immature (block 2095; testnet maturity 10)
+  f.state.utxos = [{ outpoint: { txHash: new Uint8Array(32).fill(9), index: 0 }, lock: { type: 'Coinbase', blockNumber: 2000, pkHash: f.k.pkHash }, spend: { asset: '00', amount: 5n * 100000000n } },
+                   { outpoint: { txHash: new Uint8Array(32).fill(10), index: 0 }, lock: { type: 'Coinbase', blockNumber: 2095, pkHash: f.k.pkHash }, spend: { asset: '00', amount: 50n * 100000000n } }];
+  const out = await prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-cb', amount, sats: 50000n, scripts });
+  const tx = deserializeTx(unhex(out.hex));
+  assert.equal(hex(tx.inputs[0].outpoint.txHash), '09'.repeat(32)); assert.equal(tx.inputs.length, 2);   // the mature reward and the swap's mint
+  assert.ok(verifyDigest(tx.witnesses[0].signature, sha3_256(Uint8Array.from([...txHash(tx), ...witnessesHash([tx.witnesses[1]])])), f.k.publicKey));
+  await assert.rejects(prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-cb2', amount: 6n * 100000000n, sats: 50000n, scripts }), /Not enough spendable ZP/);
+});
