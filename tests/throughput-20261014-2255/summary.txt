@@ -1,0 +1,2 @@
+[2026-10-14 22:55] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
+[2026-10-14 22:55] B: bde3fb20 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 7f667690 V1 crypto probe: a test contract and scri
