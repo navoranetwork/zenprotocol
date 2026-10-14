@@ -96,3 +96,26 @@ export function totalFromPerZp(text, kalapas, unit, btcUsd) {
   if (sats > MAX_SATS) throw new Error('That is more bitcoin than exists');
   return sats;
 }
+
+// Each reservation needs a Bitcoin address of its own: with a reused address, a late payment from one buyer could be
+// proved for the next buyer's reservation. scripts/addrs: the seller's lines; known: scripts this browser used in
+// earlier offers; market: the scripts of every offer in the market (the prover's /swap/status). Then, on Bitcoin
+// (mempool.space), an address that ever received bitcoin is refused. checked: false when Bitcoin could not be asked.
+export const BTC_API = { main: 'https://mempool.space/api', test: 'https://mempool.space/testnet4/api' };
+export async function checkFresh(scripts, addrs, { known = [], market = [], api = BTC_API.main, fetchFn = (...a) => globalThis.fetch(...a) } = {}) {
+  const bad = [];
+  scripts.forEach((s, i) => {
+    if (known.includes(s)) bad.push(`${addrs[i]} was used in an earlier offer`);
+    else if (market.includes(s)) bad.push(`${addrs[i]} is used by an offer in the market`);
+  });
+  if (bad.length) return { bad, checked: false };
+  let checked = true;
+  await Promise.all(addrs.map(async a => {
+    try {
+      const r = await fetchFn(`${api}/address/${encodeURIComponent(a)}`, { cache: 'no-store' }); if (!r.ok) throw new Error();
+      const j = await r.json(), n = Number(j?.chain_stats?.funded_txo_count || 0) + Number(j?.mempool_stats?.funded_txo_count || 0);
+      if (n > 0) bad.push(`${a} already received bitcoin`);
+    } catch { checked = false; }
+  }));
+  return { bad, checked };
+}

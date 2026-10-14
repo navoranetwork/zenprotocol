@@ -18,6 +18,10 @@ def published(): return json.load(urllib.request.urlopen(NODE + '/__published'))
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 390, 'height': 860})
     ctx.add_init_script("localStorage.setItem('zp-wallet.settings.v1', JSON.stringify({network:'test', nodes:{test:'%s/node', main:'%s/node'}}))" % (NODE, NODE))
+    # Bitcoin as mempool.space answers: one address has received bitcoin before, the others never did
+    FUNDED = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'
+    ctx.route('https://mempool.space/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'Access-Control-Allow-Origin': '*'},
+        body=json.dumps({'chain_stats': {'funded_txo_count': 2 if r.request.url.endswith(FUNDED) else 0}, 'mempool_stats': {'funded_txo_count': 0}})))
     pg = ctx.new_page(); errors = []
     pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e)))
     mock(tip=2100, zp=10, utxo=0, reset=1)
@@ -35,6 +39,7 @@ with sync_playwright() as p:
     ok('3 ZP for 0.00060000 BTC' in card and '1 ZP for 0.00020000 BTC' in card, 'own offers listed')
     ok('0.00020000 BTC per ZP' in card and '≈ $20.00' in card, 'each offer shows its price per ZP, in dollars from the oracle\'s BTC price')
     ok('7 ZP' not in card, 'another seller\'s offer is not listed as mine')
+    ok('you can take it back from block' in card and pg.query_selector('button[data-act=swap-cancel][data-id=o-mine3]') is None, 'no Take back in the 10 blocks after a reservation ended')
     ok(pg.query_selector('button[data-act=swap-cancel][data-id=o-mine1]') is not None and pg.query_selector('button[data-act=swap-cancel][data-id=o-mine2]') is None, 'Take back only on the open offer, not the reserved one')
     pg.screenshot(path=f'{OUT}/s1-markets.png', full_page=True)
     # new offer
@@ -50,12 +55,18 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/s1b-offer-per-zp.png')
     pg.fill('textarea[name=addrs]', 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'); pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(500)
     ok('testnet address' in pg.inner_text('.sheet'), 'a Bitcoin testnet address is refused (the contract follows mainnet)')
+    pg.fill('textarea[name=addrs]', FUNDED); pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(800)
+    ok('already received bitcoin' in pg.inner_text('.sheet'), 'an address that already received bitcoin is refused')
+    pg.fill('textarea[name=addrs]', 'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3'); pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(800)
+    ok('is used by an offer in the market' in pg.inner_text('.sheet'), 'an address another offer uses is refused')
+    ok('make a new receive address for each line' in pg.inner_text('.sheet'), 'the form explains: a new address per line, not a fixed one')
     pg.fill('textarea[name=addrs]', 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'); pg.click('form[data-form=offer] button.primary')
     pg.wait_for_selector('button[data-act=confirm-offer]'); t = pg.inner_text('.sheet')
     ok('4 ZP' in t and '0.00080000 BTC' in t and 'Bitcoin address 2' in t, 'confirm shows amount, price and both addresses')
     pg.screenshot(path=f'{OUT}/s2-confirm-offer.png')
     pg.click('button[data-act=confirm-offer]'); pg.wait_for_selector('h2:has-text("Broadcast successfully")')
     pub = published(); ok(len(pub) == 1, 'one transaction published')
+    ok(len(pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.btc-scripts.v1'))")) == 2, 'the two addresses are remembered')
     # check the published transaction with the wallet's own reader (node), outside the browser
     import subprocess
     chk = subprocess.run(['node', '-e', '''
@@ -77,6 +88,10 @@ with sync_playwright() as p:
     pg.click('button[data-act=confirm-cancel]'); pg.wait_for_selector('h2:has-text("Broadcast successfully")')
     ok(len(published()) == 2, 'cancel published')
     pg.click('button[data-act=close]')
+    pg.click('button[data-act=swap-new]'); pg.wait_for_selector('form[data-form=offer]'); pg.fill('input[name=zp]', '1'); pg.fill('input[name=per]', '1')
+    pg.fill('textarea[name=addrs]', 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'); pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(800)
+    ok('was used in an earlier offer' in pg.inner_text('.sheet'), 'an address from an earlier offer of this wallet is refused')
+    pg.click('form[data-form=offer] button[data-act=close]')
     pg.click('nav >> text=Wallet'); pg.wait_for_timeout(300); pg.click('nav >> text=Markets'); pg.wait_for_timeout(600)
     ok(pg.query_selector('[data-mtab=swap][aria-selected=true]') is not None, 'the chosen Markets tab is kept when coming back')
     card = pg.inner_text('.card:has(h2:has-text("Your offers"))')

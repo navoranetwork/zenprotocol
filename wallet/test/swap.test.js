@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { btcScript, parseBTC, offerBody, checkOfferId } from '../src/swap.js';
+import { btcScript, parseBTC, offerBody, checkOfferId, checkFresh } from '../src/swap.js';
 import { openWallet, prepareOffer, prepareCancel, signerOf } from '../src/wallet.js';
 import { deriveKey } from '../src/keys.js';
 import { verifyDigest } from '../src/tx.js';
@@ -137,4 +137,16 @@ test('an offer can be funded by mining rewards once they are mature (as the bala
   assert.equal(hex(tx.inputs[0].outpoint.txHash), '09'.repeat(32)); assert.equal(tx.inputs.length, 2);   // the mature reward and the swap's mint
   assert.ok(verifyDigest(tx.witnesses[0].signature, sha3_256(Uint8Array.from([...txHash(tx), ...witnessesHash([tx.witnesses[1]])])), f.k.publicKey));
   await assert.rejects(prepareOffer({ w: f.w, state: f.state, node: f.node, swapContractId: SWAP, id: 'o-cb2', amount: 6n * 100000000n, sats: 50000n, scripts }), /Not enough spendable ZP/);
+});
+
+test('Bitcoin addresses must be new: used here before, used in the market, or already funded on Bitcoin', async () => {
+  const a1 = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', a2 = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+  const s1 = btcScript(a1), s2 = btcScript(a2);
+  assert.match((await checkFresh([s1], [a1], { known: [s1], fetchFn: async () => { throw new Error('not asked'); } })).bad[0], /earlier offer/);
+  assert.match((await checkFresh([s1], [a1], { market: [s1] })).bad[0], /in the market/);
+  const chain = { [a1]: { chain_stats: { funded_txo_count: 0 }, mempool_stats: { funded_txo_count: 0 } }, [a2]: { chain_stats: { funded_txo_count: 3 }, mempool_stats: { funded_txo_count: 0 } } };
+  const f = async url => new Response(JSON.stringify(chain[decodeURIComponent(url.split('/').pop())]));
+  const r = await checkFresh([s1, s2], [a1, a2], { fetchFn: f });
+  assert.deepEqual(r, { bad: [`${a2} already received bitcoin`], checked: true });
+  assert.deepEqual(await checkFresh([s1], [a1], { fetchFn: async () => { throw new Error('offline'); } }), { bad: [], checked: false });
 });

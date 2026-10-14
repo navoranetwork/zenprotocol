@@ -123,6 +123,7 @@ async function round() {
     const k = Number(o.k || 0), nextScript = o['s' + k];
     offers.push({ id, zp: Number(o.amount) / 1e8, amount: String(o.amount), sats: Number(o.sats), confs: confsFor(Number(o.sats)),
       seller: typeof o.seller === 'string' ? o.seller : null, scripts: [0, 1, 2, 3].map(i => o['s' + i]).filter(Boolean).length, used: k,
+      scriptList: [0, 1, 2, 3].map(i => o['s' + i]).filter(x => typeof x === 'string'),   // so a wallet can refuse an address already in the market
       state: held ? 'reserved' : closing.has(id) ? 'closing' : o.cur ? 'expired' : 'open', until, buyer: o.buyer?.PK?.hash || null,
       address: o.cur ? scriptAddress(o[o.cur]) : null, script: o.cur ? o[o.cur] : null,
       canReserve: !held && !closing.has(id) && !!nextScript, payment: null });
