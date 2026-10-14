@@ -1282,8 +1282,8 @@ $app.addEventListener('submit', async e => {
 setInterval(() => { if (S.key && Date.now() - S.lastActivity > LOCK_AFTER_MS) lock(); }, 30000);
 setInterval(() => { if (S.key && S.screen === 'home' && !S.modal) refreshAll(); }, 120000);
 setInterval(() => { if (S.key && S.screen === 'vote' && !S.modal) refreshVotes(); }, 20000);
-// while an offer is being taken back, follow the swap until it leaves the market
-setInterval(() => { if (S.key && S.screen === 'markets' && !S.modal && (S.swap?.offers.some(takingBack) || pendingOffers().length)) loadSwap(); }, 45000);
+// the ZP ⇄ BTC tab follows the market as the site's page does (reservations, payments, a sent offer, a take-back)
+setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'swap' && !S.modal && !document.hidden) loadSwap(); }, 30000);
 ['keydown', 'pointerdown'].forEach(ev => addEventListener(ev, () => { S.lastActivity = Date.now(); }, { passive: true }));
 
 (async () => {
