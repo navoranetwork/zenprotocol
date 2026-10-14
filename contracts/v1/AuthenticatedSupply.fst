@@ -26,7 +26,7 @@ module U64 = FStar.UInt64
 // the public key that messages must be signed with
 let authenticatedPubKey = ""
 
-val getReturnAddress: option (Dict.t data) -> result lock `cost` 77
+val getReturnAddress: option (Dict.t data) -> Zen.Prelude.result lock `cost` 77
 let getReturnAddress dict = // 11
     let! returnAddress = dict >!= Dict.tryFind "returnAddress" // 64
                               >?= tryLock in // 2
@@ -36,7 +36,7 @@ let getReturnAddress dict = // 11
     | None ->
         RT.failw "Message Body must include valid returnAddress"
 
-val getAmount: option (Dict.t data) -> result U64.t `cost` 82
+val getAmount: option (Dict.t data) -> Zen.Prelude.result U64.t `cost` 82
 let getAmount dict = // 16
     let! orderTotal = dict >!= Dict.tryFind "Amount" // 64
                            >?= tryU64 in // 2
@@ -49,7 +49,7 @@ let getAmount dict = // 16
         RT.failw "Message Body must include valid Amount"
 
 // checks that the sender matches the authenticatedPubKey
-val authenticate: sender -> result bool `cost` 135
+val authenticate: sender -> Zen.Prelude.result bool `cost` 135
 let authenticate sender = // 15
     let! authenticatedPubKey = Zen.Crypto.parsePublicKey authenticatedPubKey in // 120
     match authenticatedPubKey, sender with
