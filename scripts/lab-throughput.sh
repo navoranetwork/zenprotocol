@@ -32,6 +32,10 @@ PROFILE=${PROFILE:-}; PROFILE_RATE=${PROFILE_RATE:-3000}
 STAMP=$(date -u +%Y%m%d-%H%M); RUN="$([ -n "$PROFILE" ] && echo profile || echo throughput)-$STAMP"
 OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"; W=/opt/zp-tput; mkdir -p "$W"
 M1="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
+# the miner's wallet (M0) only funds the two senders; each sender has its own wallet (the miner's wallet as a
+# sender failed: its split could not find the last 100 outputs among the coinbase outputs, 2026-10-14 run)
+M0="$M1"
+M1="legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth title"
 M2="letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic bless"
 API=http://127.0.0.1:20000; NODE_C=zp-tput-node
 export GIT_AUTHOR_NAME=zp-lab GIT_AUTHOR_EMAIL=zp-lab@navora.network GIT_COMMITTER_NAME=zp-lab GIT_COMMITTER_EMAIL=zp-lab@navora.network
@@ -93,17 +97,17 @@ start_node() {  # $1: A or B, $2: result folder. A fresh chain, mining, sender 2
   local K=$1 D=$2 IMG=zen-tput-$(echo $1 | tr AB ab)
   docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1; rm -rf "$W/diag"; mkdir -p "$W/diag"
   docker run -d --name $NODE_C --cpuset-cpus 0-3 -p 127.0.0.1:20000:20000 -v "$W/diag:/tmp" -e NODES=1 -e MINER_THREADS=1 \
-    -e DEVNET_MNEMONIC="$M1" $IMG > /dev/null || stop "$K: docker run"
+    -e DEVNET_MNEMONIC="$M0" $IMG > /dev/null || stop "$K: docker run"
   local h=""; for i in $(seq 360); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 40 ] && break
     docker inspect -f '{{.State.Running}}' $NODE_C 2>/dev/null | grep -q true || break; done
   [ -n "$h" ] && [ "$h" -ge 40 ] || { docker logs --tail 50 $NODE_C > "$D/node-start.log" 2>&1; stop "$K: the node does not mine (node-start.log)"; }
-  local a2; a2=$(addr_of "$M2") || stop "$K: address of sender 2"
+  local a1 a2; a1=$(addr_of "$M1") || stop "$K: address of sender 1"; a2=$(addr_of "$M2") || stop "$K: address of sender 2"
   r=$(curl -s -m 120 -X POST -H 'Content-Type: application/json' $API/wallet/send \
-      -d "{\"outputs\":[{\"address\":\"$a2\",\"asset\":\"00\",\"amount\":\"3000000000\"}],\"password\":\"devnet\"}")
-  echo "send to sender 2 ($a2): $r" > "$D/fund.txt"
+      -d "{\"outputs\":[{\"address\":\"$a1\",\"asset\":\"00\",\"amount\":\"3000000000\"},{\"address\":\"$a2\",\"asset\":\"00\",\"amount\":\"3000000000\"}],\"password\":\"devnet\"}")
+  echo "send to sender 1 ($a1) and sender 2 ($a2): $r" > "$D/fund.txt"
   # both wallets need >= 20 ZP mature (coinbase maturity 10): wait 40 more blocks
   for i in $(seq 360); do sleep 5; h2=$(height); [ -n "$h2" ] && [ "$h2" -ge $((h + 40)) ] && break; done
-  log "$K: node up, block $(height), sender 2 funded"
+  log "$K: node up, block $(height), senders 1 and 2 funded"
 }
 
 stats_loop() {  # docker stats every 10 s into $1
@@ -121,6 +125,16 @@ senders() {  # $1: result folder, $2: per-sender rates, $3: step minutes, $4: ma
       -e TESTNET_MNEMONIC="$m" node:22 node tools/load-test.mjs --node $API --rates "$2" --step-min "$3" \
       --outputs 20000 --unit 0.001 --max-min "$4" --max-mempool 400000 --out /out > /dev/null || stop "sender $s"
   done
+  # both senders must get past their split (a few blocks): a sender that exits early makes a one-sender run
+  for i in $(seq 60); do sleep 10
+    [ -f "$1/s1/load.csv" ] && [ -f "$1/s2/load.csv" ] && return 0
+    for s in 1 2; do
+      docker inspect -f '{{.State.Running}}' zp-tput-s$s 2>/dev/null | grep -q true && continue
+      [ -f "$1/s$s/load.csv" ] && continue
+      docker logs --tail 20 zp-tput-s$s > "$1/s$s/sender.log" 2>&1; stop "sender $s exited before its load ($(tail -1 "$1/s$s/sender.log"))"
+    done
+  done
+  stop "the senders did not start their load in 10 minutes"
 }
 
 collect() {  # $1: result folder, $2: stats pid
@@ -136,7 +150,8 @@ if [ -n "$PROFILE" ]; then
   half=$((PROFILE_RATE / 2)); log "profile: load $PROFILE_RATE/min (two senders), trace 60 s at minute 2"
   senders "$D" "$half" 5 6
   sleep 120
-  pid=$(docker exec $NODE_C sh -c 'for p in /proc/[0-9]*; do tr "\0" " " < $p/cmdline 2>/dev/null | grep -q "zen-node.dll" && basename $p; done' | head -1)
+  pid=$(docker exec $NODE_C sh -c 'for p in /proc/[0-9]*; do [ "$p" = /proc/$$ ] && continue; case "$(tr "\0" " " < $p/cmdline 2>/dev/null)" in *dotnet*zen-node.dll*|*zen-node.dll*) basename $p;; esac; done' | head -1)
+  [ -n "$pid" ] || stop "profile: no zen-node process in the container"
   docker run --rm --pid container:$NODE_C -v "$W/diag:/tmp" -v "$D:/out" mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
     "dotnet tool install -g dotnet-trace > /dev/null && /root/.dotnet/tools/dotnet-trace collect -p $pid --providers Microsoft-DotNETCore-SampleProfiler,Microsoft-Windows-DotNETRuntime:0x1:4 --duration 00:00:01:00 --format speedscope -o /out/trace.nettrace" \
     > "$D/trace.txt" 2>&1 || log "profile: dotnet-trace failed (trace.txt)"
