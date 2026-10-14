@@ -1,0 +1,8 @@
+
+Provider Name                           Keywords            Level               Enabled By
+Microsoft-DotNETCore-SampleProfiler     0x0000000000000000  Informational(4)    --providers
+Microsoft-Windows-DotNETRuntime         0x0000000000000001  Informational(4)    --providers
+
+[ERROR] System.ArgumentException: Process with an Id of 124 is not running.
+   at System.Diagnostics.Process.GetProcessById(Int32 processId, String machineName)
+   at Microsoft.Diagnostics.Tools.Trace.CollectCommandHandler.Collect(CancellationToken ct, CommandLineConfiguration cliConfig, Int32 processId, FileInfo output, UInt32 buffersize, String[] providers, String[] profile, TraceFileFormat format, TimeSpan duration, String clrevents, String clreventlevel, String name, String diagnosticPort, Boolean showchildio, Boolean resumeRuntime, String stoppingEventProviderName, String stoppingEventEventName, String stoppingEventPayloadFilter, Nullable`1 rundown, String dsrouter, EventPipeBufferingMode bufferingMode) in /_/src/Tools/dotnet-trace/CommandLine/Commands/CollectCommand.cs:line 223

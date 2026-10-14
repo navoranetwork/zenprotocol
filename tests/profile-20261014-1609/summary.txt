@@ -1,2 +1,7 @@
 [2026-10-14 16:09] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
 [2026-10-14 16:09] B: fde5f8b1 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 7f667690 V1 crypto probe: a test contract and scri
+[2026-10-14 16:09] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-14 16:09] B: node up, block 313, sender 2 funded
+[2026-10-14 16:09] profile: load 3000/min (two senders), trace 60 s at minute 2
+[2026-10-14 16:11] profile: dotnet-trace failed (trace.txt)
+[2026-10-14 16:17] profile done: 
