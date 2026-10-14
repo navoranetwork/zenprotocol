@@ -47,3 +47,28 @@ every node in seconds (no Z3), so it does not block the node's API as the V0 one
 3. The V0 header chain contract stops getting headers; it expires by itself (about block 21,600).
 4. The prover logs each reserved offer it watches and each proof it sends:
    `docker compose -f docker-compose.testnet-stack.yml logs -f prover`.
+
+## The swap's rules (BitZenSwap since 2026-10-14)
+
+| Price | Confirmations | Reservation held | Buyer pays within (page) |
+| --- | --- | --- | --- |
+| up to 0.01 BTC | 2 | 20 ZP blocks (about 80 min) | about 30 min (8 blocks) |
+| up to 0.1 BTC | 3 | 30 blocks (about 2 h) | about 45 min (11 blocks) |
+| above 0.1 BTC | 4 (up to 1 BTC) or 6 | 60 blocks (about 4 h) | about 60 min (15 blocks) |
+
+- After the hold the offer is open again by itself; nothing to do.
+- The seller cannot take an offer back while it is held **and for 10 blocks after** (a payment that is slow to confirm
+  can still be proved then: a proof after the hold counts while nobody else reserved the offer and it is not taken back).
+- A take-back waiting in the mempool: the prover shows the offer as `closing` and refuses to reserve it; the page
+  disables Buy; the wallet shows "Taking back".
+- Each reservation uses the next of the seller's Bitcoin addresses (up to 4 per offer). **Every address must be new**:
+  with a reused address, a late payment of one buyer could be proved for the next buyer's reservation. The wallet
+  refuses an address used in an earlier offer from that browser, one used by any offer in the market (`scriptList` in
+  `/swap/status`), and one that ever received bitcoin (asked from mempool.space; if it cannot be asked, the confirm
+  screen says so). Wallets with one fixed address (Trust Wallet, as far as we know) and exchange deposit addresses are
+  not suitable for more than one address per offer; most wallets show the same receive address until it is paid, so
+  the seller makes a new one per line.
+- Replacing the swap contract only (the chain contract and the relayer stay):
+  `docker run --rm --network host -e CHAIN=<BitZenChain contract id> -v "$PWD":/b -w /b node:22-alpine node scripts/testnet-v1-deploy.mjs http://127.0.0.1:31567 testnet`
+  in `~/bitzen`, then `PROVER_SWAP=` in `testnet-stack.env` and `--profile v1 up -d --force-recreate prover`. Offers in
+  the old swap contract are no longer seen by the wallet: take them back before.
