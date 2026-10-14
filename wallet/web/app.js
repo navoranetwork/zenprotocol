@@ -19,6 +19,8 @@ const WALLET_VERSION = typeof __WALLET_VERSION__ === 'string' ? __WALLET_VERSION
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const shortAddr = a => a ? a.slice(0, 10) + '…' + a.slice(-6) : '';
+// a token's amount as its users read it: zUSDC has 6 decimals (as USDC), other tokens are shown in whole units of 1e-8 like ZP
+const tokenAmount = (asset, units) => S.assetNames[asset] === 'zUSDC' ? (Number(BigInt(units)) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 6 }) : formatZP(units);
 const ago = ms => { const s = (Date.now() - ms) / 1000; return s < 90 ? 'just now' : s < 5400 ? Math.round(s / 60) + ' min ago' : s < 172800 ? Math.round(s / 3600) + ' h ago' : new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const icon = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I = {
@@ -198,7 +200,7 @@ function assetOptions() {
   const a = active(), st = a && S.data.get(a.id)?.state;
   const toks = (st?.assets || []).filter(x => x.asset !== '00' && x.spendable + x.maturing > 0n).map(x => {
     let v; try { v = engineAsset(x.asset); } catch { return null; }
-    return { v, label: S.assetNames[x.asset] || 'Token ' + x.asset.slice(8, 16) + '…', bal: (x.spendable + x.maturing).toLocaleString('en-US') };
+    return { v, label: S.assetNames[x.asset] || 'Token ' + x.asset.slice(8, 16) + '…', bal: S.assetNames[x.asset] === 'zUSDC' ? tokenAmount(x.asset, x.spendable + x.maturing) + ' zUSDC' : (x.spendable + x.maturing).toLocaleString('en-US') };
   }).filter(Boolean);
   return [{ v: 'zp', label: 'ZP' }, ...toks];
 }
@@ -588,7 +590,7 @@ const views = {
         <div class="row k"><span>CGP · INTERVAL ${c.community}</span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt4">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
         <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
-      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span title="${esc(x.asset)}">${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${formatZP(x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
+      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span title="${esc(x.asset)}">${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
       <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => activityRow(h, a)).join('')}</div></div>${nav('home')}`;
   },
