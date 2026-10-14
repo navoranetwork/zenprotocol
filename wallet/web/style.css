@@ -150,3 +150,12 @@ details > summary { cursor: pointer; list-style: revert; }
 .fam-go { flex: none; color: var(--muted); }
 .fam-ask { background: transparent; border: 1px dashed var(--amber); } .fam-ask .fam-ic { background: var(--amber-bg); color: var(--amber); }
 .fam:disabled { cursor: not-allowed; opacity: .6; } .fam:disabled:hover { border-color: var(--amber); }
+
+/* contract forms */
+.pfield { padding: 12px 0; border-top: 1px solid var(--line2); } .pfield:first-of-type { border-top: 0; padding-top: 6px; }
+.pfield .field { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 6px; } .pfield input { background: var(--bg); }
+.pfield .wrapchips { margin-top: 8px; }
+.hint { margin-top: 6px; color: var(--accent); }
+.how-list { margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.5; } .how-list li + li { margin-top: 4px; }
+input::placeholder, textarea::placeholder { color: #5E7076; font-style: italic; }
+.center { text-align: center; }

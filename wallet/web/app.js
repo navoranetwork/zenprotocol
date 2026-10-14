@@ -165,6 +165,42 @@ const FAMILY_UI = {   // [icon, what it does, plain name]
   token: ['<circle cx="12" cy="12" r="8"/><path d="M9 12h6M12 9v6"/>', 'Your own token, sold 1:1 for ZP and bought back', "Token"],
   vote: ['<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', "Holders vote by amount; their tokens come back after the close", "Holders' vote"],
 };
+// what each family does, in plain words (the engine's description stays under "Technical description")
+const FAMILY_HOW = {
+  escrow: ['The buyer locks money in the contract.', 'The buyer or the arbiter can release it to the seller.', 'The seller or the arbiter can refund it to the buyer; from the refund block on, anyone can.', 'The arbiter only decides: it is never paid.'],
+  swap: ['You put in what you sell (its stock).', 'Anyone buys at your fixed price: the payment goes straight to you, the bought amount comes from the stock.', 'Only you can take the stock back.'],
+  'timelock-vault': ['Anyone can put ZP in.', 'From the unlock block on, ZP can be paid out, and only to the owner.', 'Before it, nothing can leave.'],
+  token: ["Creates the contract's own token.", 'Anyone buys it 1:1 with ZP; the ZP stays in the contract.', 'Sending the token back returns the same amount of ZP.'],
+  vote: ['Holders vote by sending tokens with their choice; each choice counts the amount sent for it.', 'The tokens stay locked until the close, so each holder votes once; voters get receipts.', 'From the closing block, receipts are returned for the tokens 1:1.'],
+};
+// the form's fields in plain words: label, help, an example in the empty field, and what to fill in for you
+const PARAM_UI = {
+  'escrow.buyer': { label: "Buyer's public key", help: 'Gets a refund; can release the money to the seller.', ph: 'Paste a public key: 66 characters, starts with 02 or 03' },
+  'escrow.seller': { label: "Seller's public key", help: 'Gets the money when it is released; can refund the buyer.', ph: 'Paste a public key: 66 characters, starts with 02 or 03' },
+  'escrow.arbiter': { label: "Arbiter's public key", help: 'Settles a dispute: can release or refund. Never paid.', ph: 'Paste a public key: 66 characters, starts with 02 or 03' },
+  'escrow.asset': { label: 'What it holds', help: 'ZP, or a token (its contract hash).' },
+  'escrow.timeout_block': { label: 'Refund to the buyer from block', help: 'From this block on, anyone can return the money to the buyer.', kind: 'block', prefill: 'block' },
+  'swap.owner': { label: 'Your public key (the owner)', help: 'Receives every payment; only this key can take the stock back.', ph: 'Paste a public key, or use yours below', prefill: 'mine-key' },
+  'swap.pay_asset': { label: 'Buyers pay with', help: 'ZP, or a token (its contract hash).' },
+  'swap.sell_asset': { label: 'You sell', help: "A token (its contract hash), or ZP.", ph: 'A token: its contract hash (64 characters)' },
+  'swap.price_num': { label: 'Price: buyers get…', help: 'Units of what you sell.', ph: 'e.g. 3' },
+  'swap.price_den': { label: '…for every', help: 'Units they pay. Example: 3 and 2 means buyers get 3 for every 2 they pay.', ph: 'e.g. 2' },
+  'timelock-vault.owner': { label: 'Owner (who gets the money)', help: 'Withdrawals go only to this address. Filled with yours.', prefill: 'mine-hash' },
+  'timelock-vault.unlock_block': { label: 'Unlock at block', help: 'From this block on, the owner can withdraw.', kind: 'block', prefill: 'block' },
+  'vote.question': { label: 'Question', help: 'As voters will read it.', ph: 'e.g. Keep accepting V0 activations after the fork?' },
+  'vote.options': { label: 'Choices', help: '2 to 8, separated by commas.', ph: 'e.g. yes, no, abstain' },
+  'vote.vote_asset': { label: 'Holders vote with', help: 'ZP, or a token (its contract hash).' },
+  'vote.close_block': { label: 'Voting closes at block', help: 'Votes are accepted before this block; tokens come back from it.', kind: 'block', prefill: 'block' },
+};
+const paramUI = (fid, n, p) => PARAM_UI[fid + '.' + n] || { label: n.replace(/_/g, ' ').replace(/^./, x => x.toUpperCase()), help: p.description || '', ph: p.example != null ? 'e.g. ' + p.example : '', kind: /_block$/.test(n) ? 'block' : '' };
+const BLOCK_MINUTES = 4;   // about 4 minutes a block, mainnet and testnet
+function syncBlockHint(i) { const h = i?.dataset.block && $app.querySelector(`[data-hint="${i.name}"]`); if (h) h.textContent = blockHint(i.value); }
+function blockHint(v) {
+  const b = Number(String(v).trim()); if (!S.tip || !/^\d+$/.test(String(v).trim())) return S.tip ? `The chain is at block ${S.tip.toLocaleString('en-US')}.` : '';
+  const d = b - S.tip; if (d <= 0) return `That block has passed: the chain is at ${S.tip.toLocaleString('en-US')}.`;
+  const m = d * BLOCK_MINUTES, t = m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 6) / 10} hours` : `${Math.round(m / 144) / 10} days`;
+  return `About ${t} from now (the chain is at block ${S.tip.toLocaleString('en-US')}).`;
+}
 const famName = f => FAMILY_UI[f?.id]?.[2] || f?.title || f?.id || 'Contract';
 const famIcon = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const chevron = '<svg class="fam-go" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
@@ -186,13 +222,26 @@ function createView() {
   const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family ? famName(c.family) : 'Create a contract'), 'contracts');
   if (c.step === 'form') {
     const f = c.family, mine = active() && S.open.get(active().id) && canSpend(S.open.get(active().id)) ? signerOf(S.open.get(active().id)) : null;
-    return `${back}<form data-form="cc-make" class="screen"><p class="muted small">${esc(f.description || '')}</p>
-      ${Object.entries(f.params).map(([n, p]) => `<label class="field">${esc(n)} <span class="muted small">· ${esc(p.type)}${p.default !== undefined ? ' · default ' + esc(p.default) : ''}</span>
-        <input name="p_${esc(n)}" autocomplete="off" autocapitalize="off" spellcheck="false" class="${['hash', 'publickey'].includes(p.type) ? 'mono' : ''}" placeholder="${esc(p.example ?? p.default ?? '')}" value="${esc(c.values?.[n] ?? '')}"></label>
-        ${p.description ? `<p class="muted small" data-s="mt4">${esc(p.description)}</p>` : ''}
-        ${mine && p.type === 'publickey' ? `<div class="row wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.publicKey)}">My key (${esc(active().name)})</button></div>` : ''}
-        ${mine && p.type === 'hash' ? `<div class="row wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.pkHash)}">My address (${esc(active().name)})</button></div>` : ''}`).join('')}
-      ${errBox()}<button class="btn primary big">Make the contract</button></form>${nav('contracts')}`;
+    const how = FAMILY_HOW[f.id], params = Object.entries(f.params || {});
+    const val = (n, p, ui) => c.values?.[n] ?? (ui.prefill === 'mine-hash' && mine ? hex(mine.pkHash) : ui.prefill === 'mine-key' && mine ? hex(mine.publicKey) : ui.prefill === 'block' && S.tip ? String(S.tip + 30) : p.default ?? '');
+    const field = ([n, p]) => {
+      const ui = paramUI(f.id, n, p), v = val(n, p, ui), isBlock = ui.kind === 'block';
+      return `<div class="pfield"><label class="field" for="p_${esc(n)}">${esc(ui.label)}</label>
+        <input id="p_${esc(n)}" name="p_${esc(n)}" autocomplete="off" autocapitalize="off" spellcheck="false" class="${['hash', 'publickey'].includes(p.type) ? 'mono' : ''}" ${isBlock ? 'inputmode="numeric" data-block="1"' : ''} placeholder="${esc(ui.ph || '')}" value="${esc(v)}">
+        ${isBlock ? `<div class="small hint" data-hint="p_${esc(n)}">${esc(blockHint(v))}</div>` : ''}
+        ${ui.help ? `<p class="muted small" data-s="mt4">${esc(ui.help)}</p>` : ''}
+        ${mine && p.type === 'publickey' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.publicKey)}">Use my key (${esc(active().name)})</button></div>` : ''}
+        ${mine && p.type === 'hash' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.pkHash)}">Use my address (${esc(active().name)})</button></div>` : ''}
+        ${p.type === 'asset' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="zp">ZP</button></div>` : ''}
+        ${isBlock && S.tip ? `<div class="wrapchips">${[[15, 'in 1 hour'], [360, 'in 1 day'], [2520, 'in 1 week']].map(([b, l]) => `<button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${S.tip + b}">${l}</button>`).join('')}</div>` : ''}</div>`;
+    };
+    return `${back}<form data-form="cc-make" class="screen">
+      <div class="card"><h2>What it does</h2>${how ? `<ul class="how-list">${how.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="small">${esc(String(f.description || '').split(/(?<=\.)\s/)[0])}</p>`}</div>
+      ${params.length ? `<div class="card"><h2>Fill in</h2>${params.map(field).join('')}</div>`
+        : '<div class="card"><p class="small">Nothing to fill in: the contract is ready to make. You can try it before you activate it.</p></div>'}
+      ${f.description ? `<details class="how"><summary>Technical description</summary><p class="muted small">${esc(f.description)}</p></details>` : ''}
+      ${errBox()}<button class="btn primary big">Make the contract</button>
+      <p class="muted small center">Nothing is signed or sent yet: the engine writes and tests it, then you review it.</p></form>${nav('contracts')}`;
   }
   if (c.step === 'ask') return `${back}<form data-form="cc-ask" class="screen">
       <div class="warn">Experimental: an AI model writes the contract and its tests. The engine holds them to the same checks and gas as any contract, but the tests are the model's own: read them before you activate anything.</div>
@@ -1097,7 +1146,7 @@ $app.addEventListener('click', async e => {
     if (act === 'cc-family') { const f = S.engine?.families?.find(x => x.id === t.dataset.id); if (!f) return; S.cc = { step: 'form', kind: 'make', family: f, values: {} }; return go('create'); }
     if (act === 'cc-open') return go('create');
     if (act === 'cc-ask') { S.cc = { step: 'ask', kind: 'ask', text: '' }; return go('create'); }
-    if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) i.value = t.dataset.v; return; }
+    if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) { i.value = t.dataset.v; i.classList.remove('invalid'); syncBlockHint(i); } return; }
     if (act === 'cc-again') { S.cc = { ...S.cc, step: S.cc.kind === 'ask' ? 'ask' : 'form' }; S.error = ''; return render(); }
     if (act === 'cc-edit') { S.cc.editing = true; return render(); }
     if (act === 'cc-try-open') { const k = S.cc.try; S.cc.try = k && k.source === S.cc.source ? k : { source: S.cc.source, cmd: commandsOf(S.cc.family)[0]?.name, values: {}, signer: null, session: { wallet: [], state: null }, last: null, runs: 0 }; S.cc.step = 'try'; S.error = ''; render(); return window.scrollTo(0, 0); }
@@ -1180,6 +1229,8 @@ $app.addEventListener('input', e => {
   else if (t.name === 'amount') syncAmt();
   else if (t.name === 'blocks') syncExtend();
   else if (t.name === 'zp' || t.name === 'btc' || t.name === 'per') syncOffer();
+  else if (t.dataset?.block) syncBlockHint(t);
+  if (t.classList?.contains('invalid')) { t.classList.remove('invalid'); t.removeAttribute('aria-invalid'); }
 });
 
 $app.addEventListener('submit', async e => {
@@ -1265,7 +1316,11 @@ $app.addEventListener('submit', async e => {
       }
       case 'cc-make': {
         const c = S.cc, params = {}; c.values = {};
-        for (const [n, p] of Object.entries(c.family.params)) { c.values[n] = v['p_' + n] ?? ''; const x = checkParam(n, p, c.values[n]); if (x !== null) params[n] = x; }
+        for (const [n, p] of Object.entries(c.family.params)) {
+          c.values[n] = v['p_' + n] ?? '';
+          let x; try { x = checkParam(n, p, c.values[n]); } catch (e) { throw fieldError(e.message.replace(n + ':', paramUI(c.family.id, n, p).label + ':'), 'p_' + n); }
+          if (x !== null) params[n] = x;
+        }
         return await ccRun('make', e => e.make(c.family.id, params));
       }
       case 'cc-ask': {

@@ -11,6 +11,17 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.11.0 — 2026-10-14
+
+### Changed
+- Contract forms in plain words: "What it does" in a few lines per family; fields with names people use ("Buyer's
+  public key", "Refund to the buyer from block", "Voting closes at block") and one line of help, without types such as
+  "u32"; examples in the empty fields shown in italics so they do not look filled in; the engine's own text under
+  "Technical description". An error names the field and outlines it.
+- Filled in for you: your address as the vault's owner, your key as the swap's owner, "zp" where the asset is ZP, and
+  a block about 2 hours ahead; under each block field the time it means ("About 2 hours from now") and buttons for in
+  1 hour / 1 day / 1 week. The Token form says there is nothing to fill in.
+
 ## 0.10.0 — 2026-10-14
 
 ### Changed
