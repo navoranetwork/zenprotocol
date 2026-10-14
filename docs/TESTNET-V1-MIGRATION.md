@@ -129,8 +129,10 @@ call; replace the contract before that. Lessons: keep V0's expression shapes (th
 
 ### 2. USDC bridge (zUSDC)
 
-- Before: Alon withdraws his zUSDC to USDC through the bridge page (old token), so old zUSDC outstanding is 0 and
-  every USDC is backed by nothing on ZP; back up `bridge-data`.
+- Before: done differently on 2026-10-14 (see "Closed" above): the old bridge is stopped and its 115 USDC went back
+  to Alon directly, so the new bridge starts with 0 reserves and 0 outstanding; the old zUSDC is simply abandoned.
+  Back up `bridge-data` (links stay valid). Keep the `bridge` service stopped until `BRIDGE_CONTRACT`/`BRIDGE_ASSET`
+  point at the V1 contract; the 1 USDC check deposit below then funds the new reserves.
 - Port `AuthenticatedSupply` to V1: `Issue` (Amount, returnAddress) and `Destroy` (Amount), only the bridge key (the
   node wallet's `m/44'/258'/0'/3/0`, the same as today). Tests: issue by the key, by another key refused, destroy
   more than sent refused, cost equals the declared cost.
