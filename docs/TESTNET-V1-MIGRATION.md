@@ -137,11 +137,11 @@ asked the lab to run parsePublicKey / Crypto.verify / ecdsaVerify through the no
 zen-node:testnet-v1 (which file it loads, sha256); the fix (the V1 loader resolves "secp256k1" to the node's own
 library, a start-up self-test, the engine using the node's loader) goes in the next image. **Activate zUSDC only
 after the lab confirms the node runs parsePublicKey from V0's library, or after the fixed image is on every testnet
-node**; then rerun `scripts/v1/zusdc-try.mjs`. Meanwhile: withdraw the 105 old zUSDC to 0 (Alon chose this over
-leaving them): backup bridge-data, `MM_CANCEL_ALL=1` the market maker (it signs with the node wallet, whose address is
-also the bridge's ZP address `tzn1qqfjjy…`), Alon withdraws his 5 through /bridge.html, then the market maker's 100:
-link Alon's funder EVM address to the bridge's ZP address, the node wallet pays the zUSDC to that address, `/withdraw`
-to the funder.
+node**; then rerun `scripts/v1/zusdc-try.mjs`. The old zUSDC: see "Before" below (the V0 bridge was closed and its
+USDC returned; the 105 old zUSDC are abandoned). `site/bridge/bridge.mjs` counts outstanding, deposits and
+withdrawals only for the current `BRIDGE_ASSET` (entries carry `asset`; the old ones have none and stay as history in
+`done.json`), so after the switch `/status` starts at 0 without editing `done.json`. The EVM scan continues from
+`evm-cursor.json`, so old deposits are not issued again.
 
 
 - Before: done differently on 2026-10-14 (see "Closed" above): the old bridge is stopped and its 115 USDC went back

@@ -35,7 +35,7 @@ const file = n => path.join(DATA, n);
 const load = (n, d) => { try { return JSON.parse(fs.readFileSync(file(n), 'utf8')); } catch { return d; } };
 const save = (n, v) => { fs.writeFileSync(file(n) + '.tmp', JSON.stringify(v, null, 1)); fs.renameSync(file(n) + '.tmp', file(n)); };
 let links = load('links.json', {});        // evm address (lower case) -> { zp, since }
-let done = load('done.json', {});          // "<evmtx>:<log>" -> { zp tx, amount }   and  "w:<zptx>" -> { evm tx }
+let done = load('done.json', {});          // "<evmtx>:<log>" -> { zp tx, amount, asset }   and  "w:<zptx>" -> { evm tx, asset }; status counts only asset === ASSET
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 // ---- ZP side ----------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ async function depositsRound() {
     if (!link) { keep.push(d); if (!pendingDeposits.some(p => p.tx === d.tx && p.log === d.log)) notify('waiting', { evm: d.from }); continue; }       // wait until the sender links a ZP address
     try {
       const tx = await issue(link.zp, d.amount);
-      done[key] = { zpTx: tx, amount: d.amount, zp: link.zp, from: d.from }; save('done.json', done);
+      done[key] = { zpTx: tx, amount: d.amount, zp: link.zp, from: d.from, asset: ASSET }; save('done.json', done);
       log('deposit', d.amount, 'from', d.from, '-> issued to', link.zp, tx);
       notify('deposit', { evm: d.from });
     } catch (e) { log('deposit failed', key, e.message); keep.push(d); }
@@ -147,7 +147,7 @@ async function withdraw(zpTx, evmTo) {
   if (!link || !senders.has(link.zp)) throw new Error('the paying ZP address is not linked to that EVM address');
   const burn = await destroy(paid);
   const out = await evmSend(evmTo, paid);
-  done[key] = { evmTx: out, burn, amount: String(paid), to: evmTo }; save('done.json', done);
+  done[key] = { evmTx: out, burn, amount: String(paid), to: evmTo, asset: ASSET }; save('done.json', done);
   log('withdrawal', String(paid), '->', evmTo, out);
   notify('withdrawal', { evm: evmTo.toLowerCase() });
   return done[key];
@@ -171,11 +171,13 @@ http.createServer(async (req, res) => {
       return;
     }
     if (req.method === 'GET' && u.pathname === '/status') {
-      const outstanding = Object.values(done).filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - Object.values(done).filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
+      // only this token: entries of an earlier zUSDC contract (no `asset`, or another one) are history, not outstanding
+      const cur = Object.values(done).filter(d => d.asset === ASSET);
+      const outstanding = cur.filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - cur.filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
       const reserves = await evmReserves();   // first: it also learns chainId
       return json(res, 200, { chain: 'testnet', evm: EVM.startsWith('mock:') ? 'mock' : EVM, chainId, bridgeEvm: bridgeEvm(), bridgeZp: await bridgeZp(), usdc: USDC, contract: CONTRACT, asset: ASSET,
         confirmations: CONF, reserves,
-        links: Object.keys(links).length, deposits: Object.values(done).filter(d => d.zpTx).length, withdrawals: Object.values(done).filter(d => d.burn).length,
+        links: Object.keys(links).length, deposits: cur.filter(d => d.zpTx).length, withdrawals: cur.filter(d => d.burn).length,
         zusdcOutstanding: String(outstanding), pendingDeposits: pendingDeposits.length });
     }
     if (req.method === 'GET' && u.pathname === '/lookup') {
