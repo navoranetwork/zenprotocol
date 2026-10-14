@@ -1,0 +1,303 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.upstream-devnet
+#1 transferring dockerfile: 2.34kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/mono:6.12
+#3 DONE 0.6s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 DONE 0.9s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [stage-1  1/12] FROM docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5
+#5 resolve docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5 0.0s done
+#5 DONE 0.0s
+
+#6 [stage-1  2/12] RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g; s|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g; /buster-updates/d' /etc/apt/sources.list  && apt-get -o Acquire::Check-Valid-Until=false update  && apt-get install -y --no-install-recommends libgomp1 libstdc++6 liblmdb0 curl unzip  && rm -rf /var/lib/apt/lists/*  && command -v msbuild && command -v fsharpc
+#6 CACHED
+
+#7 [internal] load build context
+#7 transferring context: 39.05kB 0.0s done
+#7 DONE 0.0s
+
+#8 [certs 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#8 resolve docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 0.0s done
+#8 sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39 3.15MB / 28.25MB 0.2s
+#8 sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39 28.25MB / 28.25MB 0.3s done
+#8 extracting sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39
+#8 extracting sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39 0.7s done
+#8 DONE 1.0s
+
+#9 [certs 2/2] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+#9 0.182 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#9 0.199 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#9 0.202 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+#9 0.275 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+#9 0.337 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+#9 0.405 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [349 kB]
+#9 1.166 Fetched 9388 kB in 1s (9457 kB/s)
+#9 1.166 Reading package lists...
+#9 1.814 Reading package lists...
+#9 2.337 Building dependency tree...
+#9 2.495 Reading state information...
+#9 2.634 The following additional packages will be installed:
+#9 2.634   libssl3 openssl
+#9 2.657 The following NEW packages will be installed:
+#9 2.658   ca-certificates libssl3 openssl
+#9 2.680 0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+#9 2.680 Need to get 3643 kB of archives.
+#9 2.680 After this operation, 8955 kB of additional disk space will be used.
+#9 2.680 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u1 [2039 kB]
+#9 2.706 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u1 [1442 kB]
+#9 2.710 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u1 [162 kB]
+#9 2.818 debconf: delaying package configuration, since apt-utils is not installed
+#9 2.840 Fetched 3643 kB in 0s (77.0 MB/s)
+#9 2.858 Selecting previously unselected package libssl3:amd64.
+#9 2.858 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+#9 2.862 Preparing to unpack .../libssl3_3.0.22-1~deb12u1_amd64.deb ...
+#9 2.865 Unpacking libssl3:amd64 (3.0.22-1~deb12u1) ...
+#9 2.992 Selecting previously unselected package openssl.
+#9 2.994 Preparing to unpack .../openssl_3.0.22-1~deb12u1_amd64.deb ...
+#9 2.996 Unpacking openssl (3.0.22-1~deb12u1) ...
+#9 3.097 Selecting previously unselected package ca-certificates.
+#9 3.100 Preparing to unpack .../ca-certificates_20250419~deb12u1_all.deb ...
+#9 3.102 Unpacking ca-certificates (20250419~deb12u1) ...
+#9 3.155 Setting up libssl3:amd64 (3.0.22-1~deb12u1) ...
+#9 3.160 Setting up openssl (3.0.22-1~deb12u1) ...
+#9 3.168 Setting up ca-certificates (20250419~deb12u1) ...
+#9 3.240 debconf: unable to initialize frontend: Dialog
+#9 3.240 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#9 3.240 debconf: falling back to frontend: Readline
+#9 3.240 debconf: unable to initialize frontend: Readline
+#9 3.240 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+#9 3.240 debconf: falling back to frontend: Teletype
+#9 3.691 Updating certificates in /etc/ssl/certs...
+#9 4.366 150 added, 0 removed; done.
+#9 4.390 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+#9 4.403 Processing triggers for ca-certificates (20250419~deb12u1) ...
+#9 4.408 Updating certificates in /etc/ssl/certs...
+#9 5.043 0 added, 0 removed; done.
+#9 5.043 Running hooks in /etc/ca-certificates/update.d...
+#9 5.045 done.
+#9 DONE 5.2s
+
+#10 [stage-1  3/12] COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates-current.crt
+#10 DONE 0.0s
+
+#11 [stage-1  4/12] RUN cert-sync /etc/ssl/certs/ca-certificates-current.crt > /dev/null  && cp /etc/ssl/certs/ca-certificates-current.crt /etc/ssl/certs/ca-certificates.crt
+#11 DONE 0.4s
+
+#12 [stage-1  5/12] WORKDIR /src
+#12 DONE 0.0s
+
+#13 [stage-1  6/12] COPY src ./src
+#13 DONE 0.1s
+
+#14 [stage-1  7/12] COPY .paket ./.paket
+#14 DONE 0.0s
+
+#15 [stage-1  8/12] COPY paket.dependencies paket.lock ./
+#15 DONE 0.0s
+
+#16 [stage-1  9/12] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Debug/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/
+#16 2.545 paket.exe is deprecated and will no longer be published from Paket 12.0 onwards. The .NET tool is now the only supported way to run Paket: dotnet tool install paket
+#16 2.555 Paket version 11.0.1+2a2b5bc904ab6ba68497d7ba5079266bf5c45384
+#16 2.985 Starting full restore process.
+#16 3.070 Downloading NetMQ 4.0.0.207-pre
+#16 3.070 Downloading FSharp.Control.Reactive 4.1
+#16 3.070 Downloading System.Security.Cryptography.Encoding 4.3
+#16 3.070 Downloading Argu 5.1
+#16 3.070 Downloading System.Reactive.Compatibility 4.1.2
+#16 5.071 Download of System.Security.Cryptography.Encoding 4.3 done in 1 second. (578 kbit/s, 0 MB)
+#16 5.071 Download of Argu 5.1 done in 1 second. (1266 kbit/s, 0 MB)
+#16 5.078 Download of FSharp.Control.Reactive 4.1 done in 2 seconds. (795 kbit/s, 0 MB)
+#16 5.102 Download of NetMQ 4.0.0.207-pre done in 2 seconds. (2252 kbit/s, 0 MB)
+#16 5.189 Download of System.Reactive.Compatibility 4.1.2 done in 2 seconds. (78 kbit/s, 0 MB)
+#16 5.268 Downloading FSharp.Core 4.3.4
+#16 5.268 Downloading AsyncIO 0.1.69
+#16 5.268 Downloading System.Reactive.Core 4.1.2
+#16 5.272 Downloading System.Security.Cryptography.Primitives 4.3
+#16 5.272 Downloading Newtonsoft.Json 12.0.1
+#16 5.552 Download of AsyncIO 0.1.69 done in 283 milliseconds. (2026 kbit/s, 0 MB)
+#16 5.577 Download of System.Security.Cryptography.Primitives 4.3 done in 304 milliseconds. (2141 kbit/s, 0 MB)
+#16 5.579 Downloading Base58Check 0.2
+#16 5.602 Download of System.Reactive.Core 4.1.2 done in 333 milliseconds. (1149 kbit/s, 0 MB)
+#16 5.620 Downloading System.Security.Cryptography.X509Certificates 4.3.2
+#16 5.625 Downloading System.Reactive.Experimental 4.1.2
+#16 5.687 Download of FSharp.Core 4.3.4 done in 418 milliseconds. (54726 kbit/s, 2 MB)
+#16 5.696 Download of Newtonsoft.Json 12.0.1 done in 423 milliseconds. (64452 kbit/s, 3 MB)
+#16 5.868 Download of Base58Check 0.2 done in 288 milliseconds. (440 kbit/s, 0 MB)
+#16 5.878 Downloading BouncyCastle 1.8.4
+#16 5.917 Download of System.Reactive.Experimental 4.1.2 done in 292 milliseconds. (798 kbit/s, 0 MB)
+#16 5.934 Downloading System.Reactive.Interfaces 4.1.2
+#16 5.982 Download of System.Security.Cryptography.X509Certificates 4.3.2 done in 361 milliseconds. (8041 kbit/s, 0 MB)
+#16 5.999 Downloading NodaTime 1.3.2
+#16 6.005 Downloading FSharp.Data 3.0
+#16 6.039 Downloading System.Threading.Tasks.Extensions 4.5.1
+#16 6.191 Download of BouncyCastle 1.8.4 done in 313 milliseconds. (21953 kbit/s, 0 MB)
+#16 6.202 Download of System.Reactive.Interfaces 4.1.2 done in 268 milliseconds. (1398 kbit/s, 0 MB)
+#16 6.226 Downloading System.Reactive.Linq 4.1.2
+#16 6.260 Downloading CGPContract 0.0.3
+#16 6.287 Download of NodaTime 1.3.2 done in 288 milliseconds. (14761 kbit/s, 0 MB)
+#16 6.337 Downloading NUnit 3.11
+#16 6.405 Download of System.Threading.Tasks.Extensions 4.5.1 done in 366 milliseconds. (2691 kbit/s, 0 MB)
+#16 6.463 Downloading System.ValueTuple 4.5
+#16 6.490 Download of System.Reactive.Linq 4.1.2 done in 264 milliseconds. (1429 kbit/s, 0 MB)
+#16 6.498 Download of FSharp.Data 3.0 done in 493 milliseconds. (76538 kbit/s, 4 MB)
+#16 6.516 Downloading System.Reactive.PlatformServices 4.1.2
+#16 6.745 Download of System.ValueTuple 4.5 done in 282 milliseconds. (5812 kbit/s, 0 MB)
+#16 6.773 Download of NUnit 3.11 done in 435 milliseconds. (75852 kbit/s, 3 MB)
+#16 6.798 Download of System.Reactive.PlatformServices 4.1.2 done in 281 milliseconds. (1326 kbit/s, 0 MB)
+#16 6.811 Downloading Zen.FSharp.Compiler.Service 17.0.2
+#16 6.819 Downloading System.Reactive.Providers 4.1.2
+#16 6.819 Downloading FSharpx.Async 1.13.2
+#16 6.966 Download of CGPContract 0.0.3 done in 706 milliseconds. (167 kbit/s, 0 MB)
+#16 6.975 Downloading FAKE 4.64.13
+#16 7.069 Downloading NUnit.ConsoleRunner 3.9
+#16 7.102 Download of FSharpx.Async 1.13.2 done in 282 milliseconds. (3469 kbit/s, 0 MB)
+#16 7.122 Downloading FSharpx.Collections 1.17
+#16 7.202 Download of System.Reactive.Providers 4.1.2 done in 382 milliseconds. (975 kbit/s, 0 MB)
+#16 7.224 Downloading System.Reactive.Runtime.Remoting 4.1.2
+#16 7.384 Download of NUnit.ConsoleRunner 3.9 done in 314 milliseconds. (10331 kbit/s, 0 MB)
+#16 7.440 Downloading secp256k1-vc140 0.1.0.16
+#16 7.648 Download of System.Reactive.Runtime.Remoting 4.1.2 done in 423 milliseconds. (550 kbit/s, 0 MB)
+#16 7.662 Downloading System.Reactive.Windows.Forms 4.1.2
+#16 7.747 Download of Zen.FSharp.Compiler.Service 17.0.2 done in 935 milliseconds. (37455 kbit/s, 4 MB)
+#16 8.016 Downloading zen_secp256k1_linux 0.1.0.26-v6ad5cdb42a1a
+#16 8.094 Download of FSharpx.Collections 1.17 done in 971 milliseconds. (1822 kbit/s, 0 MB)
+#16 8.120 Downloading FSharpx.Extras 2.2.1
+#16 8.234 Download of System.Reactive.Windows.Forms 4.1.2 done in 571 milliseconds. (408 kbit/s, 0 MB)
+#16 8.247 Downloading System.Reactive.Windows.Threading 4.1.2
+#16 8.292 Download of zen_secp256k1_linux 0.1.0.26-v6ad5cdb42a1a done in 275 milliseconds. (5276 kbit/s, 0 MB)
+#16 8.312 Downloading zen_secp256k1_osx 0.1.0.26-v6ad5cdb42a1a
+#16 8.544 Download of secp256k1-vc140 0.1.0.16 done in 1 second. (11773 kbit/s, 1 MB)
+#16 8.667 Download of System.Reactive.Windows.Threading 4.1.2 done in 420 milliseconds. (725 kbit/s, 0 MB)
+#16 8.690 Downloading System.Reflection.Metadata 1.6
+#16 8.716 Downloading SpecFlow 2.3.2
+#16 8.782 Download of zen_secp256k1_osx 0.1.0.26-v6ad5cdb42a1a done in 470 milliseconds. (1847 kbit/s, 0 MB)
+#16 8.797 Downloading zen_z3_linux 4.5.1.8-v1f29cebd4df
+#16 8.929 Download of FAKE 4.64.13 done in 1 second. (47326 kbit/s, 11 MB)
+#16 9.008 Download of System.Reflection.Metadata 1.6 done in 318 milliseconds. (21436 kbit/s, 0 MB)
+#16 9.037 Download of SpecFlow 2.3.2 done in 321 milliseconds. (16093 kbit/s, 0 MB)
+#16 9.060 Download of FSharpx.Extras 2.2.1 done in 939 milliseconds. (3666 kbit/s, 0 MB)
+#16 9.104 Downloading System.Runtime 4.3
+#16 9.110 Downloading FsNetMQ 0.2.8
+#16 9.128 Downloading SpecFlow.NUnit 2.3.2
+#16 9.422 Download of zen_z3_linux 4.5.1.8-v1f29cebd4df done in 624 milliseconds. (117643 kbit/s, 8 MB)
+#16 9.670 Download of FsNetMQ 0.2.8 done in 560 milliseconds. (569 kbit/s, 0 MB)
+#16 9.683 Downloading FsPickler 5.2
+#16 9.757 Download of System.Runtime 4.3 done in 652 milliseconds. (89125 kbit/s, 6 MB)
+#16 9.884 Downloading zen_z3_osx 4.5.1.8-v1f29cebd4df6
+#16 9.905 Download of SpecFlow.NUnit 2.3.2 done in 777 milliseconds. (124 kbit/s, 0 MB)
+#16 9.915 Downloading System.Buffers 4.5
+#16 10.04 Downloading FParsec 1.0.3
+#16 10.22 Download of System.Buffers 4.5 done in 304 milliseconds. (2801 kbit/s, 0 MB)
+#16 10.27 Downloading System.Collections.Immutable 1.5
+#16 10.38 Download of zen_z3_osx 4.5.1.8-v1f29cebd4df6 done in 490 milliseconds. (124052 kbit/s, 7 MB)
+#16 10.60 Downloading System.Runtime.CompilerServices.Unsafe 4.5.2
+#16 10.67 Download of FParsec 1.0.3 done in 630 milliseconds. (5420 kbit/s, 0 MB)
+#16 10.67 Download of System.Collections.Immutable 1.5 done in 403 milliseconds. (15968 kbit/s, 0 MB)
+#16 10.73 Downloading zen_z3_windows 4.5.1.7-v1f29cebd4df
+#16 10.73 Downloading FsBech32 0.1.5
+#16 10.75 Downloading System.IO 4.3
+#16 10.85 Download of FsPickler 5.2 done in 1 second. (5530 kbit/s, 0 MB)
+#16 10.89 Download of System.Runtime.CompilerServices.Unsafe 4.5.2 done in 286 milliseconds. (2929 kbit/s, 0 MB)
+#16 10.92 Downloading System.Security.Cryptography.Algorithms 4.3.1
+#16 10.93 Downloading FsUnit 3.4
+#16 11.06 Download of zen_z3_windows 4.5.1.7-v1f29cebd4df done in 332 milliseconds. (139466 kbit/s, 5 MB)
+#16 11.07 Download of FsBech32 0.1.5 done in 334 milliseconds. (362 kbit/s, 0 MB)
+#16 11.07 Download of System.IO 4.3 done in 316 milliseconds. (17813 kbit/s, 0 MB)
+#16 11.08 Downloading FsCheck 3.0.0-alpha4
+#16 11.21 Download of System.Security.Cryptography.Algorithms 4.3.1 done in 288 milliseconds. (11196 kbit/s, 0 MB)
+#16 11.25 Downloading System.Net.Http 4.3.4
+#16 11.35 Downloading ZFS-Tools 0.0.24
+#16 11.48 Download of FsUnit 3.4 done in 554 milliseconds. (882 kbit/s, 0 MB)
+#16 11.50 Downloading Hopac 0.3.23
+#16 11.56 Download of System.Net.Http 4.3.4 done in 311 milliseconds. (15965 kbit/s, 0 MB)
+#16 11.64 Downloading System.Net.Requests 4.3
+#16 11.75 Download of ZFS-Tools 0.0.24 done in 400 milliseconds. (783 kbit/s, 0 MB)
+#16 11.76 Downloading ZFStar 0.0.26
+#16 11.85 Download of FsCheck 3.0.0-alpha4 done in 772 milliseconds. (7531 kbit/s, 0 MB)
+#16 11.93 Downloading FsCheck.NUnit 3.0.0-alpha4
+#16 11.94 Download of System.Net.Requests 4.3 done in 297 milliseconds. (10307 kbit/s, 0 MB)
+#16 12.09 Download of Hopac 0.3.23 done in 587 milliseconds. (8329 kbit/s, 0 MB)
+#16 12.09 Downloading System.Reactive 4.1.2
+#16 12.16 Downloading LightningDB 0.10
+#16 12.45 Download of FsCheck.NUnit 3.0.0-alpha4 done in 522 milliseconds. (575 kbit/s, 0 MB)
+#16 12.47 Downloading FSharp.Compatibility.OCaml 0.1.14
+#16 12.48 Download of ZFStar 0.0.26 done in 720 milliseconds. (37907 kbit/s, 3 MB)
+#16 12.78 Download of System.Reactive 4.1.2 done in 684 milliseconds. (28619 kbit/s, 2 MB)
+#16 12.80 Downloading Zulib 0.3.43
+#16 13.05 Download of FSharp.Compatibility.OCaml 0.1.14 done in 582 milliseconds. (4341 kbit/s, 0 MB)
+#16 13.08 Downloading FSharp.Compiler.Tools 10.2.1
+#16 13.09 Download of LightningDB 0.10 done in 930 milliseconds. (5257 kbit/s, 0 MB)
+#16 13.15 Downloading Logary 4.2.1
+#16 13.93 Download of Zulib 0.3.43 done in 1 second. (80185 kbit/s, 10 MB)
+#16 14.46 Download of Logary 4.2.1 done in 1 second. (3565 kbit/s, 0 MB)
+#16 14.50 Downloading Microsoft.Extensions.Logging.Abstractions 2.1.1
+#16 14.80 Download of Microsoft.Extensions.Logging.Abstractions 2.1.1 done in 295 milliseconds. (1399 kbit/s, 0 MB)
+#16 14.81 Downloading NBitcoin 4.1.1.72
+#16 15.11 Download of FSharp.Compiler.Tools 10.2.1 done in 2 seconds. (30116 kbit/s, 7 MB)
+#16 15.58 Downloading FSharp.Configuration 1.5
+#16 16.01 Download of FSharp.Configuration 1.5 done in 432 milliseconds. (15714 kbit/s, 0 MB)
+#16 16.18 Downloading FSharp.Control.AsyncSeq 2.0.21
+#16 16.58 Download of NBitcoin 4.1.1.72 done in 1 second. (20772 kbit/s, 4 MB)
+#16 16.85 Download of FSharp.Control.AsyncSeq 2.0.21 done in 663 milliseconds. (3040 kbit/s, 0 MB)
+#16 17.43 Total time taken: 24 seconds
+#16 17.61 Microsoft (R) Build Engine version 16.10.1 for Mono
+#16 17.61 Copyright (C) Microsoft Corporation. All rights reserved.
+#16 17.61 
+#16 18.94 /usr/lib/mono/msbuild/Current/bin/Microsoft.Common.CurrentVersion.targets(2218,5): warning MSB3245: Could not resolve this reference. Could not locate the assembly "fstar". Check to make sure the assembly exists on disk. If this reference is required by your code, you may get compilation errors. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 18.94 /usr/lib/mono/msbuild/Current/bin/Microsoft.Common.CurrentVersion.targets(2218,5): warning MSB3245: Could not resolve this reference. Could not locate the assembly "parser". Check to make sure the assembly exists on disk. If this reference is required by your code, you may get compilation errors. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 18.94 /usr/lib/mono/msbuild/Current/bin/Microsoft.Common.CurrentVersion.targets(2218,5): warning MSB3245: Could not resolve this reference. Could not locate the assembly "prettyprint". Check to make sure the assembly exists on disk. If this reference is required by your code, you may get compilation errors. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 18.94 /usr/lib/mono/msbuild/Current/bin/Microsoft.Common.CurrentVersion.targets(2218,5): warning MSB3245: Could not resolve this reference. Could not locate the assembly "basic". Check to make sure the assembly exists on disk. If this reference is required by your code, you may get compilation errors. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.72 /src/src/Infrastructure/Http.fs(30,10): error FS0039: The namespace or module 'FStar' is not defined. Maybe you want one of the following:   FSharp [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(66,9): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(66,9): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(67,13): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(68,13): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(69,13): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(70,13): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(167,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(167,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(169,41): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(169,40): error FS0072: Lookup on object of indeterminate type based on information prior to this program point. A type annotation may be needed prior to this program point to constrain the type of the object. This may allow the lookup to be resolved. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(170,42): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.91 /src/src/Infrastructure/ZFStar.fs(170,41): error FS0072: Lookup on object of indeterminate type based on information prior to this program point. A type annotation may be needed prior to this program point to constrain the type of the object. This may allow the lookup to be resolved. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.93 /src/src/Infrastructure/ZFStar.fs(255,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.93 /src/src/Infrastructure/ZFStar.fs(255,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 22.93 /src/src/Infrastructure/ZFStar.fs(261,15): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+#16 ERROR: process "/bin/sh -c mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Debug/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/" did not complete successfully: exit code: 1
+------
+ > [stage-1  9/12] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Debug/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/:
+22.91 /src/src/Infrastructure/ZFStar.fs(70,13): error FS0074: The type referenced through 'FStar.Parser.AST.modul' is defined in an assembly that is not referenced. You must add a reference to assembly 'parser'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(167,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(167,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(169,41): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(169,40): error FS0072: Lookup on object of indeterminate type based on information prior to this program point. A type annotation may be needed prior to this program point to constrain the type of the object. This may allow the lookup to be resolved. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(170,42): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.91 /src/src/Infrastructure/ZFStar.fs(170,41): error FS0072: Lookup on object of indeterminate type based on information prior to this program point. A type annotation may be needed prior to this program point to constrain the type of the object. This may allow the lookup to be resolved. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.93 /src/src/Infrastructure/ZFStar.fs(255,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.93 /src/src/Infrastructure/ZFStar.fs(255,13): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+22.93 /src/src/Infrastructure/ZFStar.fs(261,15): error FS0074: The type referenced through 'FStar.Util.hint' is defined in an assembly that is not referenced. You must add a reference to assembly 'basic'. [/src/src/Infrastructure/Infrastructure.fsproj]
+------
+Dockerfile.upstream-devnet:27
+--------------------
+  26 |     COPY paket.dependencies paket.lock ./
+  27 | >>> RUN mono .paket/paket.exe restore \
+  28 | >>>  && chmod +x packages/zen_z3_linux/output/z3-linux \
+  29 | >>>  && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal \
+  30 | >>>  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/ \
+  31 | >>>  && test -f src/Node/bin/Debug/zen-node.exe \
+  32 | >>>  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/
+  33 |     COPY devnet-entrypoint.sh /entrypoint.sh
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/Node/Node.fsproj /p:Configuration=Debug /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Debug/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Debug/. /zen/" did not complete successfully: exit code: 1

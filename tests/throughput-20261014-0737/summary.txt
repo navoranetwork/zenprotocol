@@ -1,2 +1,4 @@
 [2026-10-14 07:37] throughput comparison: A = upstream a0191cbc (+ block interval 2 s), B = zp-pow testnet-v1; rates 600,1200,3000,6000,12000,30000 /min, 5 min each
 [2026-10-14 07:37] B: 645b2f75 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 854d311e wallet: contract calls (offers, votes) sp
+[2026-10-14 07:37] build A (upstream, Mono)
+[2026-10-14 07:38] STOPPED: A build (A-build.txt)
