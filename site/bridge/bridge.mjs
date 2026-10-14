@@ -90,7 +90,7 @@ async function evmDeposits() {
   const to = tip - CONF; if (to < from) return [];
   const usdc = new ethers.Contract(USDC, ['event Transfer(address indexed from, address indexed to, uint256 value)'], provider);
   const out = [];
-  const RANGE = Number(env('BRIDGE_LOG_RANGE', '450'));   // public rpc nodes limit eth_getLogs to ~500 blocks
+  const RANGE = Number(env('BRIDGE_LOG_RANGE', '190'));   // public rpc nodes limit eth_getLogs (sepolia.base.org: 200 blocks since 2026-10)
   for (let a = from; a <= to; a += RANGE) {
     const evs = await usdc.queryFilter(usdc.filters.Transfer(null, bridgeEvm()), a, Math.min(to, a + RANGE - 1));
     for (const e of evs) out.push({ tx: e.transactionHash, log: e.index, from: e.args.from.toLowerCase(), amount: String(e.args.value), block: e.blockNumber });
