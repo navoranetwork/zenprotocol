@@ -449,8 +449,9 @@ function tryView() {
       : `<input name="t_${esc(n)}" autocomplete="off" spellcheck="false" class="${f.type === 'address' ? 'mono' : ''}" placeholder="${f.type === 'amount' ? (asset && asset !== 'zp' ? 'units' : '2.5 ZP') : ''}" value="${esc(val)}">`;
     return `<label class="field">${esc(n)}${input}</label>${f.description ? `<p class="muted small" data-s="mt4">${esc(f.description)}${f.type === 'address' && me ? ' (your address by default)' : ''}</p>` : ''}`;
   };
-  const out = !L ? '' : L.check ? `<div class="card">${refusalHtml(L.check)}</div>` : `<div class="card"><div class="between"><h2>What happens</h2><span class="pill ${L.ok ? 'ok' : 'bad'}">${L.ok ? 'OK' : 'Refused'}</span></div>
+  const out = !L ? '' : L.check ? `<div class="card">${refusalHtml(L.check)}</div>` : `<div class="card"><div class="between"><h2>What happens</h2><span class="pill ${L.ok ? 'ok' : 'bad'}">${L.ok ? 'OK' : L.unbalanced?.length ? 'Not valid' : 'Refused'}</span></div>
       ${L.ok ? (L.moves.length ? `<div class="list">${L.moves.map(m => { const n = BigInt(String(m.change)); return `<div class="item"><div>${esc(whoLabel(m.who))} ${n < 0n ? 'pays' : 'gets'} <b>${esc(formatAmount(n < 0n ? -n : n, m.asset))}</b></div></div>`; }).join('')}</div>` : '<p class="muted small">Nothing moves.</p>')
+        : L.unbalanced?.length ? `<div class="err" role="alert"><span class="err-ic" aria-hidden="true">!</span><div><b>A node would reject this transaction</b><div class="err-more">It pays out ${L.unbalanced.map(u => esc(formatAmount(u.missing, u.asset))).join(' and ')} more than goes in. The contract allows it, but the network does not: nothing would move, and this call cannot be sent as it is. The contract should refuse it.</div></div></div>`
         : `<p class="bad small">${esc(L.error || 'The contract refused the call.')}</p><p class="muted small">Nothing moves.</p>`}
       <div class="kv"><span class="muted">Gas</span><span>${esc(L.declared ?? '–')} declared · ${esc(L.used ?? '–')} used</span></div>
       <div class="kv"><span class="muted">At block</span><span>${esc(Number(L.block).toLocaleString('en-US'))}</span></div>
@@ -490,8 +491,10 @@ async function ccTry(v) {
     if (j.check && !j.try) { T.last = { check: j.check }; T.runs++; return; }
     const t = j.try || {}, r = t.result || {};
     if (typeof t.contract === 'string') c.tryId = t.contract;
-    T.last = { ok: !!r.ok, error: r.error, declared: r.declaredCost, used: r.gasUsed, block: T.block, moves: Array.isArray(t.moves) ? t.moves : [], inputs: Array.isArray(r.inputs) ? r.inputs : [], outputs: Array.isArray(r.outputs) ? r.outputs : [] };
-    if (t.next && typeof t.next === 'object') T.session = { wallet: Array.isArray(t.next.wallet) ? t.next.wallet : [], state: t.next.state ?? null };
+    // unbalanced: the contract pays out more than goes in; a node rejects such a transaction, so it is not a success and the session does not move on
+    const unbalanced = Array.isArray(r.unbalanced) ? r.unbalanced.filter(u => u && u.asset != null && /^\d+$/.test(String(u.missing)) && BigInt(String(u.missing)) > 0n) : [];
+    T.last = { ok: !!r.ok && !unbalanced.length, unbalanced, error: r.error, declared: r.declaredCost, used: r.gasUsed, block: T.block, moves: Array.isArray(t.moves) ? t.moves : [], inputs: Array.isArray(r.inputs) ? r.inputs : [], outputs: Array.isArray(r.outputs) ? r.outputs : [] };
+    if (!unbalanced.length && t.next && typeof t.next === 'object') T.session = { wallet: Array.isArray(t.next.wallet) ? t.next.wallet : [], state: t.next.state ?? null };
     T.runs++;
   } finally { T.running = false; render(); }
 }

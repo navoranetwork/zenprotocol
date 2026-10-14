@@ -39,7 +39,7 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; } if (k === 'askLeft') st.askLeft = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
         case '/__published': return send(res, 200, st.published);
         case '/blockchain/info': return send(res, 200, { chain: NET === 'main' ? 'main' : 'testnet', blocks: st.tip, headers: st.tip, difficulty: 0.1, medianTime: Date.now() });
@@ -78,7 +78,9 @@ http.createServer((req, res) => {
             const amt = c.bodyHex ? Data.read(new Reader(unhex(c.bodyHex))).v.find(([k]) => k === 'amount')?.[1].v ?? 0n : 0n;
             const okRoles = c.command === 'release' ? ['buyer', 'arbiter'] : ['seller', 'arbiter'], to = c.command === 'release' ? 'seller' : 'buyer', anyone = c.command === 'refund' && (c.context?.blockNumber ?? 1) >= 5000;
             if (!okRoles.includes(role) && !anyone) result = { ok: false, declaredCost: '1557', gasUsed: '212', error: `only the ${okRoles.join(' or the ')} can ${c.command} (sign the call)` };
-            else if (amt > held) result = { ok: false, declaredCost: '1557', gasUsed: '640', error: 'not enough in the escrow' };
+            else if (amt > held && !st.loose) result = { ok: false, declaredCost: '1557', gasUsed: '640', error: 'not enough in the escrow' };
+            else if (amt > held && st.loose) { result = { ok: true, declaredCost: '1557', gasUsed: '1557', inputs: (c.wallet || []).map(x => ({ who: self, asset: 'zp', amount: x.amount })), outputs: [{ who: { kind: 'pk', hash: 'ee'.repeat(32), role: to }, asset: 'zp', amount: String(amt) }], unbalanced: [{ asset: 'zp', missing: String(amt - held) }] };   // a contract that pays out more than goes in (engine 7fdb129)
+              moves = [{ who: { kind: 'pk', hash: 'ee'.repeat(32), role: to }, asset: 'zp', change: String(amt) }, { who: self, asset: 'zp', change: String(-held) }]; next = { wallet: [], state: null }; }
             else { result = { ok: true, declaredCost: '1557', gasUsed: '1557', inputs: (c.wallet || []).map(x => ({ who: self, asset: 'zp', amount: x.amount })), outputs: [{ who: { kind: 'pk', hash: 'ee'.repeat(32), role: to }, asset: 'zp', amount: String(amt) }, ...(held > amt ? [{ who: self, asset: 'zp', amount: String(held - amt) }] : [])] };
               moves = [{ who: { kind: 'pk', hash: 'ee'.repeat(32), role: to }, asset: 'zp', change: String(amt) }, { who: self, asset: 'zp', change: String(-amt) }]; next = { wallet: held > amt ? [{ asset: 'zp', amount: String(held - amt) }] : [], state: null }; }
           }

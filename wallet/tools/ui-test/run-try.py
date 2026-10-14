@@ -59,6 +59,11 @@ with sync_playwright() as p:
     pg.click('form[data-form=cc-try] button.primary'); pg.wait_for_selector('text=the buyer gets', timeout=15000)
     t = pg.inner_text('main'); ok('the buyer gets 1 ZP' in t and 'holds 2.5 ZP' in t and last()['call']['context']['blockNumber'] == 5000, 'from the timeout the buyer\'s refund goes through, at block 5,000')
     pg.screenshot(path=f'{OUT}/t3-refund.png', full_page=True)
+    # a contract that pays out more than goes in (engine: result.unbalanced): a node would reject it
+    mock(loose=1); pg.click('button[data-act=cc-cmd][data-name=release]'); pg.wait_for_selector('input[name=t_amount]')
+    pg.select_option('select[name=signer]', 'buyer'); pg.fill('input[name=block]', '2101'); pg.fill('input[name=t_amount]', '5 ZP'); pg.click('form[data-form=cc-try] button.primary'); pg.wait_for_selector('text=A node would reject this transaction', timeout=15000)
+    t = pg.inner_text('main'); ok('pays out 2.5 ZP more than goes in' in t and 'Not valid' in t and 'holds 2.5 ZP' in t, 'unbalanced: warning with the amount, not valid, the session does not move on')
+    pg.screenshot(path=f'{OUT}/t4-unbalanced.png', full_page=True); mock(loose=0)
     pg.click('button[data-act=cc-try-reset]'); ok('holds nothing yet' in pg.inner_text('main'), 'Start over empties the session')
     ok(pg.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'no horizontal scroll at 390px')
     pg.click('button[data-act=cc-try-back]'); ok('a node accepts it' in pg.inner_text('main'), 'back goes to the result')
