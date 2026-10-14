@@ -86,7 +86,7 @@ const c = chk.check || {};
 ok('check: a node would accept it', c.verdict === 'accepted', `verdict ${c.verdict}; refusal ${JSON.stringify(c.refusal)}; node: ${c.nodeMessage}`);
 ok('check: same contract id as computed here', (c.contractId || '').endsWith(contractHash), `engine says ${c.contractId}`);
 ok('check: the engine runs the testnet toolchain', c.toolchain?.consensusFilesMatch === true, JSON.stringify(c.toolchain));
-if (c.verdict !== 'accepted') { console.log('\nStopped: the node would refuse the contract.'); process.exit(1); }
+if (c.verdict !== 'accepted') { console.log(`      elaborated costs: ${JSON.stringify(c.costs)}`); console.log('\nStopped: the node would refuse the contract.'); process.exit(1); }
 console.log(`      elaborated costs: ${JSON.stringify(c.costs)}; activation: ${JSON.stringify(c.activation)}`);
 
 // 2. Commit
@@ -101,6 +101,8 @@ const commitFee = await call('Commit with a fee of 1000 kalapas', { command: 'Co
   declared: 2650,
   check: [['its commitment token differs from the one without a fee',
     r => outTo(r, 'contract', contractHash, o => typeof o.asset === 'string' && o.asset.includes(contractHash) && !assetIs(o.asset, C0))]] });
+await call('Commit, FeeAsset "00" (ZP) with a fee', { command: 'Commit', sender: { publicKey: K }, bodyHex: dict({ Commit: D.hash(H), FeeAsset: D.string('00'), FeeAmount: D.u64(1000) }) }, { declared: 2650 });
+await call('Commit, FeeAsset a token id (not in V1)', { command: 'Commit', sender: { publicKey: K }, bodyHex: dict({ Commit: D.hash(H), FeeAsset: D.string('00000001' + contractHash), FeeAmount: D.u64(1000) }) }, { error: 'Invalid FeeAsset - failed to parse asset string' });
 await call('Unknown command', { command: 'Add', sender: { publicKey: K }, bodyHex: dict({ Commit: D.hash(H) }) }, { error: 'Command not recognized', declared: 8 });
 
 // 3. Attest

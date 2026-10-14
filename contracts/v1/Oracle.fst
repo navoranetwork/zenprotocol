@@ -12,6 +12,7 @@
 //           mints one attestation token, subtype SHA3(SHA3(Commit || cpk(OraclePubKey))), to Recipient
 //           (default: the sender's lock). With FeeAmount, that much of FeeAsset (default ZP) goes to the oracle's
 //           key and the change to ReturnAddress (default: the sender).
+//           FeeAsset: only "00" (ZP) in V1 (Zen.Asset.parse is not realized in Zulib V1); V0 also took token ids.
 //
 // Differences from V0 (none observable): Zen.PublicKey.compress replaces the local copy (V0's read the key with
 // Zen.Array.item, which V1 does not allow in code that runs; same bytes, same cost 305); no `module` line; tuple
@@ -158,6 +159,12 @@ let parseReturnAddress dict = // 12
     | Some _ ->
         failw "ReturnAddress (if specified) must be a lock"
 
+// V1 has no realization of Zen.Asset.parse (an `assume val` in Zulib V1): only "00" (ZP) is accepted as FeeAsset,
+// any other asset string is "Invalid FeeAsset". Same cost as Zen.Asset.parse (64), so the rest keeps V0's costs.
+val parseAsset : string -> option asset `cost` 64
+let parseAsset s =
+    incRet 60 (if s = "00" then Some Asset.zenAsset else None)
+
 val parseFeeAsset : Dict.t data -> asset `RT.t` 142
 let parseFeeAsset dict  = // 14
     let open RT in
@@ -166,7 +173,7 @@ let parseFeeAsset dict  = // 14
     | None ->
         incRet 64 Asset.zenAsset
     | Some (String asset) ->
-        Asset.parse asset // 64
+        parseAsset asset // 64
         |> ofOptionT "Invalid FeeAsset - failed to parse asset string"
     | Some _ ->
         incFailw 64 "FeeAsset must be a string"
