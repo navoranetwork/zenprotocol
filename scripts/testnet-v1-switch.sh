@@ -60,13 +60,17 @@ smoke() {   # the V1 build toolchain inside the running container ($1: container
     $ZP_V1_TOOLCHAIN/scripts/build-contract.sh --lax $W/t/contract.fst $W/out > $W/b.txt 2>&1 || { echo "build exit $?"; tail -5 $W/b.txt; exit 1; }
     echo "token template DLL: $(sha256sum $W/out/Z*.dll | cut -c1-64)"; rm -rf $W' 2>&1 | sed 's/^/  /'
   local rc=${PIPESTATUS[0]}
+  # the node's own check of the libsecp256k1 V1 contracts load (at start, since 87b24e2's image)
+  local st; st=$(docker logs "$1" 2>&1 | grep -m1 "V1 libsecp256k1 self-test" || true)
+  log "  ${st:-V1 libsecp256k1 self-test: no line in the log (an image before the self-test)}"
+  echo "$st" | grep -q FAILED && rc=1
   if [ "$rc" = 0 ]; then log "SMOKE OK"; else log "SMOKE FAILED (exit $rc): this node cannot build V1 contracts - roll back BEFORE block 2050 (testnet-v1-switch.sh rollback)"; fi
   return $rc
 }
 
 case $MODE in
 build)
-  : "${GH_TOKEN:?}"; TC_COMMIT=${TC_COMMIT:-c86a2c4}; SRC=/opt/zp-pow-image; GH="https://x-access-token:$GH_TOKEN@github.com"
+  : "${GH_TOKEN:?}"; TC_COMMIT=${TC_COMMIT:-87b24e2}; SRC=/opt/zp-pow-image; GH="https://x-access-token:$GH_TOKEN@github.com"
   rm -rf "$SRC" && git clone -q -b testnet-v1 "$GH/navoranetwork/zp-pow.git" "$SRC" || exit 1
   [ -d /opt/zp-contracts-v1/.git ] || git clone -q "$GH/navoranetwork/zp-contracts-v1.git" /opt/zp-contracts-v1
   git -C /opt/zp-contracts-v1 fetch -q "$GH/navoranetwork/zp-contracts-v1.git" main || exit 1

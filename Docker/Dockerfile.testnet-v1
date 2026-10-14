@@ -3,7 +3,7 @@
 # from the fork height on (testParameters.v1ContractsHeight) to build activated contracts.
 #
 # The toolchain repo is private: copy the pinned commit into the build context first
-#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ c86a2c4 | tar -x -C .
+#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ 87b24e2 | tar -x -C .
 #   docker build -f Docker/Dockerfile.testnet-v1 -t zen-node:testnet-v1 .
 # The image build fails unless every Zulib module verifies and the token template builds to the
 # DLL hash recorded in docs/V1-REVIEW.md (the same bytes as on the other machines).
@@ -43,7 +43,7 @@ FROM mcr.microsoft.com/dotnet/runtime:10.0
 ARG SDK=10.0.112
 ARG FSTAR_VERSION=v2026.09.27
 ARG FSTAR_SHA256=cafbbb8960efeb26f5d30bc447b61ab8a507968948507a2580585afd1397781d
-ARG TOKEN_DLL_SHA256=248da31312f3dc7ea8f1fce29af428da2bf8de89f3931e2a38819f121905332c
+ARG TOKEN_DLL_SHA256=a81bccb314d95e65c612dc11521c90e7ffced0a76c9243aa7595102c686c262f
 RUN apt-get update \
  && apt-get install -y --no-install-recommends mono-devel liblmdb-dev libgomp1 libgmp10 python3 curl unzip zip ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -65,6 +65,10 @@ RUN cd /zp-contracts-v1 && bash scripts/verify-zulib.sh > /tmp/verify.txt 2>&1; 
 RUN W=$(mktemp -d) && /zp-contracts-v1/tools/engine/zp-engine make token --out $W/token > /dev/null \
  && /zp-contracts-v1/scripts/build-contract.sh --lax $W/token/contract.fst $W/out > $W/build.txt 2>&1 || { cat $W/build.txt; exit 1; }; \
     h=$(sha256sum $W/out/Z*.dll | cut -c1-64); echo "token template DLL: $h"; [ "$h" = "$TOKEN_DLL_SHA256" ] && rm -rf $W
+# gate 3: Zen.Asset / ContractId / Hash.Sha3 run through Zulib and extraction (zp-contracts-v1 87b24e2)
+RUN cd /zp-contracts-v1 && bash scripts/run-asset-test.sh > /tmp/asset.txt 2>&1; \
+    grep -E ": (ok|FAILED)$" /tmp/asset.txt; [ "$(grep -c ': ok$' /tmp/asset.txt)" -ge 11 ] && ! grep -q FAILED /tmp/asset.txt \
+ && rm -rf contracts/asset-test/out
 
 COPY --from=build /out /zen
 COPY Docker/entrypoint.sh /entrypoint.sh

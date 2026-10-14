@@ -409,6 +409,16 @@ let main argv =
     let results = parser.Parse argv
 
     let config = Config.get results
+
+    // V1 contracts verify signatures with the node's libsecp256k1: check it before anything runs
+    if config.chainParams.v1ContractsHeight < System.UInt32.MaxValue then
+        match Consensus.ContractV1.secp256k1SelfTest () with
+        | Ok (path, sha256) ->
+            eventX "V1 libsecp256k1 self-test passed: {path} (sha256 {sha256})"
+            >> setField "path" path >> setField "sha256" sha256 |> Log.info
+        | Error e ->
+            eventX "V1 libsecp256k1 self-test FAILED: {error}. Exit node." >> setField "error" e |> Log.error
+            System.Environment.FailFast("V1 libsecp256k1 self-test failed: " + e, null)
     
     eventX "DB is stored at: {dataPath}"
     >> setField "dataPath" (Platform.getAbsolutePath config.dataPath)

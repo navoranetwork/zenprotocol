@@ -307,6 +307,50 @@ let secp256k1Path () =
     // next to this assembly (the node's folder), where the zen_secp256k1 package puts it
     Path.Combine(Path.GetDirectoryName(Reflection.Assembly.GetExecutingAssembly().Location), name)
 
+/// The library V1 contracts load (secp256k1Path), checked once at start with libsecp256k1's own
+/// vector (zp-contracts-v1 contracts/crypto-test): the compressed key parses to V0's 64-byte internal
+/// form, the signature verifies, and it does not verify another message. Calls the same file through
+/// its own exports, as a contract's DllImport does. A node that fails it would run V1 contracts
+/// differently from the others, so it must not start. Ok: the file and its SHA-256.
+module private SelfTestVector =
+    let pk = Convert.FromHexString "026f4b37dd5a125b678c67b8c89e519037a3be63214ccb34764ce03f03a8ac6793"
+    let internalForm =
+        [| 147uy; 103uy; 172uy; 168uy; 3uy; 63uy; 224uy; 76uy; 118uy; 52uy; 203uy; 76uy; 33uy; 99uy; 190uy; 163uy; 55uy; 144uy; 81uy; 158uy; 200uy; 184uy; 103uy; 140uy; 103uy; 91uy; 18uy; 90uy; 221uy; 55uy; 75uy; 111uy
+           116uy; 65uy; 242uy; 69uy; 240uy; 3uy; 172uy; 234uy; 87uy; 240uy; 190uy; 236uy; 162uy; 199uy; 224uy; 169uy; 108uy; 145uy; 45uy; 240uy; 73uy; 113uy; 38uy; 127uy; 229uy; 230uy; 76uy; 165uy; 118uy; 199uy; 189uy; 42uy |]
+    let signature =
+        [| 97uy; 224uy; 111uy; 12uy; 110uy; 78uy; 29uy; 9uy; 5uy; 104uy; 93uy; 232uy; 174uy; 212uy; 105uy; 216uy; 37uy; 53uy; 72uy; 252uy; 30uy; 77uy; 153uy; 125uy; 182uy; 205uy; 249uy; 110uy; 186uy; 243uy; 28uy; 199uy
+           70uy; 23uy; 0uy; 74uy; 182uy; 86uy; 182uy; 123uy; 125uy; 200uy; 96uy; 212uy; 199uy; 163uy; 36uy; 109uy; 68uy; 194uy; 38uy; 226uy; 90uy; 137uy; 219uy; 216uy; 154uy; 219uy; 231uy; 254uy; 169uy; 66uy; 104uy; 38uy |]
+    let msg =
+        [| 42uy; 109uy; 103uy; 234uy; 156uy; 185uy; 45uy; 79uy; 23uy; 81uy; 99uy; 180uy; 160uy; 86uy; 215uy; 24uy; 136uy; 7uy; 175uy; 125uy; 129uy; 142uy; 20uy; 131uy; 138uy; 132uy; 127uy; 65uy; 65uy; 200uy; 19uy; 21uy |]
+    let other =
+        [| 95uy; 80uy; 71uy; 222uy; 6uy; 237uy; 103uy; 173uy; 101uy; 78uy; 255uy; 100uy; 79uy; 98uy; 84uy; 20uy; 101uy; 172uy; 139uy; 62uy; 44uy; 190uy; 185uy; 22uy; 240uy; 231uy; 154uy; 93uy; 133uy; 33uy; 226uy; 79uy |]
+
+[<Runtime.InteropServices.UnmanagedFunctionPointer(Runtime.InteropServices.CallingConvention.Cdecl)>]
+type private ContextCreate = delegate of uint32 -> nativeint
+[<Runtime.InteropServices.UnmanagedFunctionPointer(Runtime.InteropServices.CallingConvention.Cdecl)>]
+type private PubkeyParse = delegate of nativeint * byte[] * byte[] * unativeint -> int
+[<Runtime.InteropServices.UnmanagedFunctionPointer(Runtime.InteropServices.CallingConvention.Cdecl)>]
+type private EcdsaVerify = delegate of nativeint * byte[] * byte[] * byte[] -> int
+
+let secp256k1SelfTest () : Result<string * string, string> =
+    let path = secp256k1Path ()
+    if not (File.Exists path) then Error (sprintf "libsecp256k1 not found next to the node (%s)" path) else
+    try
+        let lib = Runtime.InteropServices.NativeLibrary.Load path
+        let export name = Runtime.InteropServices.NativeLibrary.GetExport(lib, name)
+        let ctx = Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<ContextCreate>(export "secp256k1_context_create").Invoke(0x0101u)   // SECP256K1_CONTEXT_VERIFY, as V1
+        let parse = Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<PubkeyParse>(export "secp256k1_ec_pubkey_parse")
+        let verify = Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<EcdsaVerify>(export "secp256k1_ecdsa_verify")
+        let internalForm = Array.zeroCreate<byte> 64
+        if parse.Invoke(ctx, internalForm, SelfTestVector.pk, unativeint 33) <> 1 then Error "the test key does not parse"
+        elif internalForm <> SelfTestVector.internalForm then Error "the test key's internal form differs from V0's"
+        elif verify.Invoke(ctx, SelfTestVector.signature, SelfTestVector.msg, internalForm) <> 1 then Error "the test signature does not verify"
+        elif verify.Invoke(ctx, SelfTestVector.signature, SelfTestVector.other, internalForm) <> 0 then Error "the test signature verifies another message"
+        else
+            use f = File.OpenRead path
+            Ok (path, (Security.Cryptography.SHA256.HashData f |> Convert.ToHexString).ToLowerInvariant())
+    with ex -> Error (sprintf "%s: %s" path ex.Message)
+
 /// Contracts loaded so far, by DLL path: one load context per contract for the node's life,
 /// however often a template, a block or a reorg asks for it (each load made a new context).
 let private loaded = System.Collections.Concurrent.ConcurrentDictionary<string, Runner>()
