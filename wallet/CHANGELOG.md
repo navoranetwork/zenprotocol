@@ -11,6 +11,16 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.10.0 — 2026-10-14
+
+### Changed
+- Create a contract: each family is a full-width card (icon, plain name, one line on what it does, chevron) instead of
+  a small chip: Escrow, Token, Time-locked vault, Fixed-rate swap, Holders' vote. "Describe it…" is its own card
+  with a dashed border, dimmed and marked "Not available yet" while the engine has it off.
+- Active contracts: a contract activated from this wallet keeps the name of its family; the testnet's BitZen chain and
+  ZP ⇄ BTC swap contracts are named; any other shows as "Contract" with its short address (was "Unnamed").
+- The note under Active contracts no longer says that running contracts come later.
+
 ## 0.9.1 — 2026-10-14
 
 ### Changed

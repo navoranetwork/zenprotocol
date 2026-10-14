@@ -66,7 +66,7 @@ with sync_playwright() as p:
     pg.reload(); pg.wait_for_selector('form[data-form=unlock]'); pg.fill('input[name=p]', 'password123'); pg.click('form[data-form=unlock] button.primary')
     pg.wait_for_selector('[data-go=contracts]'); pg.click('nav >> text=Contracts')
     pg.wait_for_selector('button[data-act=cc-open]', timeout=15000); ok('Back to your last contract' in pg.inner_text('main'), 'after a reload the last contract comes back from its job id')
-    pg.click('button[data-act=cc-open]'); pg.wait_for_selector('text=Made and checked'); ok('Escrow with an arbiter' in pg.inner_text('main'), 'it is the escrow, with its family')
+    pg.click('button[data-act=cc-open]'); pg.wait_for_selector('text=Made and checked'); ok('Escrow' in pg.inner_text('h1'), 'it is the escrow, with its family')
     # the vote family: a choice from the options, the user's own address by default, sends the vote asset, closes at a block
     pg.click('button[data-act=cc-try-back]') if pg.query_selector('button[data-act=cc-try-back]') else None
     pg.click('nav >> text=Contracts'); pg.wait_for_selector('button[data-act=cc-family][data-id=vote]'); pg.click('button[data-act=cc-family][data-id=vote]')

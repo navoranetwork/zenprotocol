@@ -137,3 +137,16 @@ button.item { background: none; border: 0; border-bottom: 1px solid var(--line2)
 pre.src { max-height: 360px; overflow: auto; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 12.5px/1.45 var(--mono); white-space: pre; margin: 10px 0; }
 details > summary { cursor: pointer; list-style: revert; }
 .wrapchips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* contract families: full-width cards, clearly buttons */
+.fams { display: flex; flex-direction: column; gap: 10px; }
+.fam { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 14px 14px 14px 16px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.fam:hover, .fam:focus-visible { border-color: var(--accent); outline: none; }
+.fam:active { transform: scale(.99); }
+.fam-ic { flex: none; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(63, 193, 160, .14); color: var(--accent); }
+.fam-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fam-txt b { font-size: 16px; font-weight: 600; } .fam-txt > span { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.fam-go { flex: none; color: var(--muted); }
+.fam-ask { background: transparent; border: 1px dashed var(--amber); } .fam-ask .fam-ic { background: var(--amber-bg); color: var(--amber); }
+.fam:disabled { cursor: not-allowed; opacity: .6; } .fam:disabled:hover { border-color: var(--amber); }

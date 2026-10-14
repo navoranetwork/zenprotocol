@@ -23,6 +23,8 @@ with sync_playwright() as p:
     pg.wait_for_selector('[data-go=contracts]'); pg.wait_for_timeout(800)
     pg.click('nav >> text=Contracts'); pg.wait_for_selector('button[data-act=cc-family]')
     ok('Time-locked vault' in pg.inner_text('main') and 'experimental' in pg.inner_text('main'), 'families from the engine, and Describe it (experimental)')
+    ok('Anyone deposits; only the owner withdraws' in pg.inner_text('.fams'), 'each family is a card with what it does')
+    pg.screenshot(path=f'{OUT}/k0-families.png', full_page=True)
     pg.click('button[data-act=cc-family]'); pg.wait_for_selector('form[data-form=cc-make]')
     pg.click('button[data-act=cc-fill]'); v = pg.input_value('input[name=p_owner]')
     ok(len(v) == 64, 'My address fills the owner hash')

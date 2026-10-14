@@ -4,5 +4,8 @@
   "000000006ea5457ed23e3e13f31fe4cfd46c200587f2e4cc22df30ac77790f6d2c15cc12": "VCGP",
   "czen1qqqqqqqrw54zha5378cflx8lyel2xcgq9slewfnpzmuc2camepakjc9wvzga8dtw0": "VCGP",
   "czen1qqqqqqq9pdfruyeqwtga5pfgvhwk2rxkxexjhvek0r55cc8wlqpy5dxs95ylmr2s9": "FPC",
-  "czen1qqqqqqq8ptestf6xe72hysaew858j8j2naurpauqljw4cccsqhpfjyk2zcsnmrq85": "DEX-V2"
+  "czen1qqqqqqq8ptestf6xe72hysaew858j8j2naurpauqljw4cccsqhpfjyk2zcsnmrq85": "DEX-V2",
+  "ctzn1qqqqqqqfrsyjslq8k2qw56zdaukn6xaeqmxld24hz7zajzwr4j95z67c84qr80uy7": "BitZen chain (Bitcoin headers)",
+  "ctzn1qqqqqqqq2cgxux4r9lz5ldepy7827fzz29w72pwl6s2ulepmevqe2g44swyqsrfgrk": "ZP ⇄ BTC swap",
+  "ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97": "ZP ⇄ BTC swap (replaced)"
 }

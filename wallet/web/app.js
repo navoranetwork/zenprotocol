@@ -56,7 +56,10 @@ const voters = () => { const sel = S.settings.voteWallets[net()]; return wallets
 const voteWeight = () => voters().reduce((s, w) => s + zpOf(w.id), 0n);
 const CONTRACT_ROLE = { CGP: 'Holds the community fund', VCGP: 'Counts CGP votes', FPC: 'Fixed-payout bets', 'DEX-V2': 'Exchange' };
 const EXTEND_WARN = 200000000n; // 2 ZP: ask the user to check the contract once more
-const nameOf = (id, addr) => contractNames[addr] || contractNames[id] || null;
+const MY_CONTRACTS_KEY = 'zp-wallet.my-contracts.v1';   // address -> the family it was made from (contracts activated here)
+const myContracts = () => { try { const v = JSON.parse(localStorage.getItem(MY_CONTRACTS_KEY)); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
+const rememberContract = (addr, name) => { try { localStorage.setItem(MY_CONTRACTS_KEY, JSON.stringify({ ...myContracts(), [addr]: name })); } catch { /* private mode */ } };
+const nameOf = (id, addr) => contractNames[addr] || contractNames[id] || myContracts()[addr] || null;
 // price of one ZP in an offer: BTC and satoshis, and in dollars when the oracle has a Bitcoin price (ticker BTC, USD)
 const btcUsd = () => { const r = S.markets?.round, i = r?.tickers?.indexOf('BTC') ?? -1; const v = i >= 0 ? Number(r.values[i]) : NaN; return v > 0 ? v : null; };
 const rateText = (sats, kalapas) => {
@@ -153,18 +156,34 @@ async function loadEngine() {
     ccFollow(s.jobId);
   }
 }
+// the engine's families as cards: an icon, the name, what it does in one line (the family's own first sentence when
+// the wallet has no shorter line for it), and a chevron
+const FAMILY_UI = {   // [icon, what it does, plain name]
+  escrow: ['<path d="M12 3l8 4v5c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V7z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', 'Holds money for a sale until the buyer or an arbiter releases it', "Escrow"],
+  swap: ['<path d="M5 8h12l-3-3"/><path d="M19 16H7l3 3"/>', 'Sell one asset for another at your price; you are paid directly', "Fixed-rate swap"],
+  'timelock-vault': ['<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', 'Anyone deposits; only the owner withdraws, from a given block', "Time-locked vault"],
+  token: ['<circle cx="12" cy="12" r="8"/><path d="M9 12h6M12 9v6"/>', 'Your own token, sold 1:1 for ZP and bought back', "Token"],
+  vote: ['<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', "Holders vote by amount; their tokens come back after the close", "Holders' vote"],
+};
+const famName = f => FAMILY_UI[f?.id]?.[2] || f?.title || f?.id || 'Contract';
+const famIcon = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const chevron = '<svg class="fam-go" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 function createCard() {
-  const E = S.engine, A = E?.ask, askOff = A && (A.enabled === false || A.left === 0);
-  const chips = E?.families ? E.families.map(f => `<button class="chip" data-act="cc-family" data-id="${esc(f.id)}">${esc(f.title || f.id)}</button>`).join('')
-    + `<button class="chip" data-act="cc-ask" ${askOff ? 'disabled' : ''}>Describe it… <span class="muted small">experimental${A && A.enabled !== false && A.perDay != null ? ` · ${Number(A.left ?? 0)} of ${Number(A.perDay)} left today` : A?.enabled === false ? ' · off' : ''}</span></button>` : '';
+  const E = S.engine, A = E?.ask, askOff = !A || A.enabled === false || A.left === 0;
+  const fams = E?.families ? E.families.map(f => {
+    const ui = FAMILY_UI[f.id], line = ui?.[1] || String(f.description || '').split(/(?<=\.)\s/)[0];
+    return `<button class="fam" data-act="cc-family" data-id="${esc(f.id)}"><span class="fam-ic">${famIcon(ui?.[0] || '<path d="M6 3h9l3 3v15H6z"/><path d="M9 12h6M9 16h6"/>')}</span>
+      <span class="fam-txt"><b>${esc(famName(f))}</b><span>${esc(line)}</span></span>${chevron}</button>`;
+  }).join('') + `<button class="fam fam-ask" data-act="cc-ask" ${askOff ? 'disabled' : ''}><span class="fam-ic">${famIcon('<path d="M4 20l4-1 11-11-3-3L5 16z"/>')}</span>
+      <span class="fam-txt"><b>Describe it… <span class="pill soon">${askOff ? 'Not available yet' : 'experimental'}</span></b><span>${askOff ? 'Say what it should do and a model writes it: coming soon on this network' : `Say what it should do; a model writes it. Read its tests before you activate.${A?.perDay != null ? ` ${Number(A.left ?? 0)} of ${Number(A.perDay)} left today.` : ''}`}</span></span>${askOff ? '' : chevron}</button>` : '';
   return `<div class="card"><h2>Create a contract</h2>
-    <p class="muted small">Start from a ready template or describe what you need. The contract engine writes the contract and its tests and checks it as a node will; you read it, and you sign the activation yourself.</p>
-    ${!E ? '<p class="muted small">Loading…</p>' : E.error ? `<p class="muted small">${esc(E.error)}</p>` : `<div class="wrapchips" data-s="mt10">${chips}</div>`}
-    ${S.cc && ['job', 'result', 'try'].includes(S.cc.step) ? `<button class="btn small" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
+    <p class="muted small">Start from a ready contract. Each one is checked the way a node checks it, and tested, before you sign anything.</p>
+    ${!E ? '<p class="muted small">Loading…</p>' : E.error ? `<p class="muted small">${esc(E.error)}</p>` : `<div class="fams" data-s="mt10">${fams}</div>`}
+    ${S.cc && ['job', 'result', 'try'].includes(S.cc.step) ? `<button class="btn" data-s="mt10" data-act="cc-open">${S.cc.step === 'job' ? 'Your contract is being made…' : 'Back to your last contract'}</button>` : ''}</div>`;
 }
 const ccStatus = j => !j ? 'Sending…' : j.status === 'queued' ? `Waiting in line${j.position ? ' (' + j.position + ' ahead)' : ''}…` : j.status === 'running' ? (j.kind === 'ask' ? `Writing and checking the contract${j.rounds?.length ? ' (round ' + j.rounds.length + ')' : ''}…` : 'Building, testing and checking the contract…') : '';
 function createView() {
-  const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family?.title || 'Create a contract'), 'contracts');
+  const c = S.cc || {}, back = backBar(c.kind === 'ask' ? 'Describe a contract' : (c.family ? famName(c.family) : 'Create a contract'), 'contracts');
   if (c.step === 'form') {
     const f = c.family, mine = active() && S.open.get(active().id) && canSpend(S.open.get(active().id)) ? signerOf(S.open.get(active().id)) : null;
     return `${back}<form data-form="cc-make" class="screen"><p class="muted small">${esc(f.description || '')}</p>
@@ -286,7 +305,7 @@ function tryView() {
       ${L.ok && (L.inputs.length || L.outputs.length) ? `<details class="how"><summary>Details</summary>
         <p class="muted small"><b>In</b></p>${L.inputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}
         <p class="muted small"><b>Out</b></p>${L.outputs.map(x => `<p class="small">${esc(whoLabel(x.who))} · ${esc(formatAmount(x.amount, x.asset))}</p>`).join('') || '<p class="muted small">none</p>'}</details>` : ''}</div>`;
-  return `<div class="back"><button class="iconbtn" data-act="cc-try-back" aria-label="Back">${I.back}</button><h1>${esc('Try ' + (c.family?.title || 'the contract'))}</h1></div><div class="screen">
+  return `<div class="back"><button class="iconbtn" data-act="cc-try-back" aria-label="Back">${I.back}</button><h1>${esc('Try ' + (c.family ? famName(c.family) : 'the contract'))}</h1></div><div class="screen">
     <p class="muted small">No real money: the engine runs each call as a node would. Calls in a row build on each other.</p>
     <div class="wrapchips">${cmds.map(x => `<button class="chip ${x.name === cmd?.name ? 'on' : ''}" aria-pressed="${x.name === cmd?.name}" data-act="cc-cmd" data-name="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
     ${cmd ? `<form data-form="cc-try" class="card">${cmd.description ? `<p class="muted small">${esc(cmd.description)}</p>` : ''}
@@ -495,10 +514,10 @@ const views = {
     ${createCard()}
     <div class="card"><h2>Active contracts</h2><div class="list">${!cs ? '<p class="muted small">Loading…</p>' : cs.length === 0 ? '<p class="muted small">None.</p>' : cs.map((k, i) => {
       const left = k.expire - (S.tip || k.expire), cls = left < 300 ? 'lvl-bad' : left < 3000 ? 'lvl-warn' : '';
-      return `<div class="item"><div><div>${esc(k.name || 'Unnamed')}</div><div class="muted small mono" title="${esc(k.address)}">${esc(shortAddr(k.address))}</div></div>
+      return `<div class="item"><div><div>${esc(k.name || 'Contract')}</div><div class="muted small mono" title="${esc(k.address)}">${esc(shortAddr(k.address))}</div></div>
         <div data-s="right"><div class="small">until ${Number(k.expire).toLocaleString('en-US')}</div><div class="small ${cls}">${left.toLocaleString('en-US')} blocks left</div>${dateAfter(left) ? `<div class="small muted">around ${dateAfter(left)}</div>` : ''}${mayExtend ? `<button class="btn small" data-act="extend" data-i="${i}">Extend</button>` : ''}</div></div>`;
     }).join('')}</div></div>
-    <div class="card"><p class="muted small">Tokens issued by contracts appear on the Wallet screen. Extending a contract keeps it running past its end block: it costs ZP from the active wallet. Viewing code and running contracts arrive in a later version.</p></div></div>${nav('contracts')}`;
+    <div class="card"><p class="muted small">Tokens issued by contracts appear on the Wallet screen. Extending a contract keeps it running past its end block: it costs ZP from the active wallet.</p></div></div>${nav('contracts')}`;
   },
 
   create: () => createView(),
@@ -701,7 +720,7 @@ function modalHtml() {
     <p id="ext-note" class="small muted"></p>${errBox()}
     <div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" id="ext-go" disabled>Review</button></div></form></div></div>`;
   if (m.type === 'confirm-extend') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm extension</h2>
-    <div class="card"><div class="kv"><span class="muted">Contract</span><span>${esc(m.name || 'Unnamed')}</span></div>
+    <div class="card"><div class="kv"><span class="muted">Contract</span><span>${esc(m.name || 'Contract')}</span></div>
     ${CONTRACT_ROLE[m.name] ? `<div class="kv"><span class="muted">What it does</span><span>${esc(CONTRACT_ROLE[m.name])}</span></div>` : ''}
     <div class="kv"><span class="muted">Contract ID</span><span class="mono">${esc(m.id.slice(0, 12))}…${esc(m.id.slice(-8))}</span></div>
     <div class="kv"><span class="muted">Extend by</span><span>${m.blocks.toLocaleString('en-US')} blocks${net() === 'main' ? ` (${m.blocks < 365 ? 'less than a day' : 'about ' + (m.blocks / 365).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' days'})` : ''}</span></div>
@@ -1092,6 +1111,7 @@ $app.addEventListener('click', async e => {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
       for (const sp of m.prepared.spent || []) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() });
+      if (m.prepared.address && m.name) rememberContract(m.prepared.address, m.name);
       S.busy = false; S.modal = { type: 'activated', hash, address: m.prepared.address, blocks: m.prepared.blocks }; render(); setTimeout(() => refreshAll(), 30000); return;
     }
     if (act === 'swap-new') {
@@ -1271,7 +1291,7 @@ $app.addEventListener('submit', async e => {
         // the id the wallet signs for: the engine's report for its own source, the engine's check for an edited one
         const expect = c.edited ? c.check?.contractId : c.job.report?.contractId;
         const prepared = prepareActivateV1(S.open.get(a.id), d.state, c.source, blocks, expect);
-        S.modal = { type: 'confirm-activate', prepared, name: c.family?.title || 'Described contract' }; S.error = ''; return render();
+        S.modal = { type: 'confirm-activate', prepared, name: c.family ? famName(c.family) : 'Described contract' }; S.error = ''; return render();
       }
       case 'node': {
         const url = v.url.trim().replace(/\/+$/, '');
