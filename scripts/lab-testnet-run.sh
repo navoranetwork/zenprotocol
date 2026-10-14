@@ -68,6 +68,7 @@ if ! /opt/fstar/bin/fstar.exe --version 2>/dev/null | grep -q "${FSTAR_VERSION#v
   curl -fsSL -o /tmp/fstar.tgz "https://github.com/FStarLang/FStar/releases/download/$FSTAR_VERSION/fstar-$FSTAR_VERSION-Linux-x86_64.tar.gz" || stop "F* download"
   echo "$FSTAR_SHA256  /tmp/fstar.tgz" | sha256sum -c --quiet - || stop "F* checksum"
   rm -rf /opt/fstar && tar -xzf /tmp/fstar.tgz -C /opt && rm /tmp/fstar.tgz
+  chown -R root:root /opt/fstar && chmod -R a+rX /opt/fstar   # the release is uid 1001, mode 0600 (V1-REVIEW E3)
 fi
 export FSTAR_HOME=/opt/fstar
 log "F*: $($FSTAR_HOME/bin/fstar.exe --version | head -1)"

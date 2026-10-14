@@ -3,7 +3,7 @@
 # from the fork height on (testParameters.v1ContractsHeight) to build activated contracts.
 #
 # The toolchain repo is private: copy the pinned commit into the build context first
-#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ aec63af | tar -x -C .
+#   git -C /opt/zp-contracts-v1 archive --prefix=zp-contracts-v1/ c86a2c4 | tar -x -C .
 #   docker build -f Docker/Dockerfile.testnet-v1 -t zen-node:testnet-v1 .
 # The image build fails unless every Zulib module verifies and the token template builds to the
 # DLL hash recorded in docs/V1-REVIEW.md (the same bytes as on the other machines).
@@ -52,9 +52,11 @@ RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
  && dotnet --list-sdks | grep -q "^$SDK "
 RUN curl -fsSL -o /tmp/fstar.tgz "https://github.com/FStarLang/FStar/releases/download/$FSTAR_VERSION/fstar-$FSTAR_VERSION-Linux-x86_64.tar.gz" \
  && echo "$FSTAR_SHA256  /tmp/fstar.tgz" | sha256sum -c --quiet - \
- && tar -xzf /tmp/fstar.tgz -C /opt && rm /tmp/fstar.tgz && /opt/fstar/bin/fstar.exe --version
+ && tar -xzf /tmp/fstar.tgz -C /opt && rm /tmp/fstar.tgz && /opt/fstar/bin/fstar.exe --version \
+ && chown -R root:root /opt/fstar && chmod -R a+rX /opt/fstar   # the release is uid 1001, mode 0600 (E3)
 ENV FSTAR_HOME=/opt/fstar ZP_V1_TOOLCHAIN=/zp-contracts-v1 DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
 COPY zp-contracts-v1 /zp-contracts-v1
+RUN chown -R root:root /zp-contracts-v1 && chmod -R a+rX /zp-contracts-v1
 # gate 1: every Zulib module verifies; gate 2: the token template builds to the recorded bytes
 # (this also builds the elaborator, ZenAbi and ilcheck once, so a node never restores packages)
 RUN cd /zp-contracts-v1 && bash scripts/verify-zulib.sh > /tmp/verify.txt 2>&1; \

@@ -154,3 +154,18 @@ call's cost (a negative weight). Fix in zp-contracts-v1 aec63af (Zulib, consensu
 cost, or gas used outside `[0, declared]`, is refused whatever the contract's Zulib does. Regression:
 `scripts/run-security-test.sh`. Every V1 DLL changed: token template 248da313…332c (was c36acbaf…4dde).
 The testnet image is rebuilt with it before the fork at 2050.
+
+## E3: an unreadable toolchain refused contracts (found and fixed 2026-10-14)
+
+Found by the engine service: `zen-node:testnet-v1` run with `--cap-drop ALL` refused the token template
+(exit 10, `Module ContractEntry.fst was not checked`). The F* release unpacks with owner uid 1001 and mode
+0600: root reads it only through CAP_DAC_OVERRIDE. A node run as another user or with fewer capabilities
+would have refused every V1 contract other nodes accept. The public testnet node runs as root with
+Docker's default capabilities (smoke test passed), so it was not affected. The elaborator also wrote a
+fixed `/tmp/ZpMainTemplate.fst` and mapped `UnauthorizedAccessException` to "refused".
+Fix in zp-contracts-v1 c86a2c4 (no DLL change, token template still 248da313...332c, also built as an
+unprivileged user): `build-contract.sh` stops as the environment (exit 20) when a checked file of F* or
+the Zulib cache is unreadable, or when an F* step fails on unreadable/unwritable checked files (Error 317,
+Warning 247, permission denied); `verify-zulib.sh` makes the cache readable by all; the elaborator uses a
+private temp folder and maps access errors and a killed F* to exit 20. The image (Dockerfile.testnet-v1)
+gives F* and the toolchain root ownership, readable by all. Deploy with the next testnet image.
