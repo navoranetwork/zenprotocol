@@ -99,6 +99,21 @@ The old V0 contracts stay on the chain until they expire; nothing calls them any
 
 ### 1. Oracle (no funds held)
 
+**Done 2026-10-14.** `contracts/v1/Oracle.fst` (the V0 contract, same commands, bodies, errors and token
+derivations; FeeAsset only "00" until Zulib V1 realizes `Zen.Asset.parse`). Tested with
+`scripts/v1/oracle-try.mjs` against the engine service on 91.98.3.17: accepted, 44 checks passed, costs as V0
+(Commit 2650; Attest 5081 + 128 per coin in the contract's wallet). Activated with
+`scripts/v1/testnet-v1-oracle.mjs activate` (20,000 blocks, expires at block 22,233):
+`00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741`,
+`ctzn1qqqqqqqwtea80gm9tsvp7zrvef5rtrqsvxj8zw6nma8klcajnlmamntxhgyclqt8k`. `testnet-stack.env` updated
+(`ORACLE_CONTRACT`, `ORACLE_ID`, `ORACLE_ADDRESS`; old file `testnet-stack.env.bak-oracle-v0`), oracle service
+recreated; first round committed (tx 8824ac66…ca43) and a real Attest of it accepted (tx 6a1a11c4…7960, by
+`testnet-v1-oracle.mjs attest`). The V0 Oracle (`ctzn1qqqqqqqzzfsly8h…`) gets no more rounds and expires by itself.
+Attest grows 128 gas per round committed: about 7,700 rounds (about 320 days hourly) fit under the 1,000,000 gas per
+call; replace the contract before that. Lessons: keep V0's expression shapes (the `val`s carry exact costs);
+`Zen.Hash.Sha3` and `Zen.Asset.parse` have no V1 realization (use `Zen.Sha3`).
+
+
 - Port `src/ContractExamples/Oracle.fst` to V1 (same commands and message formats), test (ZenAbi harness, then lab
   devnet), activate on the testnet with the node wallet.
 - Point the oracle service at it (`ORACLE_CONTRACT` in `testnet-stack.env`), and every consumer: the FixedPayout

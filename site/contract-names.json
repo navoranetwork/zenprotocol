@@ -7,5 +7,8 @@
   "czen1qqqqqqq8ptestf6xe72hysaew858j8j2naurpauqljw4cccsqhpfjyk2zcsnmrq85": "DEX-V2",
   "ctzn1qqqqqqqfrsyjslq8k2qw56zdaukn6xaeqmxld24hz7zajzwr4j95z67c84qr80uy7": "BitZen chain (Bitcoin headers)",
   "ctzn1qqqqqqqq2cgxux4r9lz5ldepy7827fzz29w72pwl6s2ulepmevqe2g44swyqsrfgrk": "ZP ⇄ BTC swap",
-  "ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97": "ZP ⇄ BTC swap (replaced)"
+  "ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97": "ZP ⇄ BTC swap (replaced)",
+  "ctzn1qqqqqqqwtea80gm9tsvp7zrvef5rtrqsvxj8zw6nma8klcajnlmamntxhgyclqt8k": "Oracle (V1)",
+  "00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741": "Oracle (V1)",
+  "ctzn1qqqqqqqzzfsly8hcddxjq7vxjf9pn0edca575whhdvqf8d4k2p64yjwrsrvax32yd": "Oracle (V0, replaced)"
 }
