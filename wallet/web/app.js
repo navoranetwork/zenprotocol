@@ -393,7 +393,7 @@ const dateIn = blocks => { const m = blocks * BLOCK_MINUTES; return m < 90 ? `${
 function refusalHtml(chk) {
   if (chk.verdict === 'environment') return '<div class="warn"><b>Couldn\'t check it right now</b><br>The checking service had a problem of its own. This says nothing about your contract: try again later.</div>';
   const r = chk.refusal; if (!r) return chk.nodeMessage ? `<p class="bad small">${esc(chk.nodeMessage)}</p>` : '';
-  return `<div class="card" data-s="mt10"><p class="bad"><b>A node would refuse it: ${esc(r.title || r.rule || '')}</b>${r.line ? ` · line ${esc(r.line)}` : ''}</p>
+  return `<div class="card" data-s="mt10"><p class="bad"><b>A node would refuse it: ${esc(r.title || r.rule || '')}</b>${r.line ? ` · ${r.lineApprox ? 'near line' : 'line'} ${esc(r.line)}` : ''}</p>
     ${r.code ? `<pre class="src">${esc(r.code)}</pre>` : ''}${r.why ? `<p class="small">${esc(r.why)}</p>` : ''}${r.fix ? `<p class="small"><b>Fix:</b> ${esc(r.fix)}</p>` : ''}${r.hint ? `<p class="muted small">${esc(r.hint)}</p>` : ''}
     ${r.right ? `<p class="muted small">For example: <code>${esc(r.right)}</code></p>` : ''}</div>`;
 }

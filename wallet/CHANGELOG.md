@@ -9,7 +9,8 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 ## Unreleased
 
-Nothing yet.
+### Changed
+- When a node would refuse a contract and the checker can only guess the line, it says "near line N" (was "line N").
 
 ## 0.13.0 — 2026-10-14
 
