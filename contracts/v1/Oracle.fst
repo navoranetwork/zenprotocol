@@ -163,7 +163,7 @@ let parseReturnAddress dict = // 12
 // any other asset string is "Invalid FeeAsset". Same cost as Zen.Asset.parse (64), so the rest keeps V0's costs.
 val parseAsset : string -> option asset `cost` 64
 let parseAsset s =
-    incRet 60 (if s = "00" then Some Asset.zenAsset else None)
+    incRet 56 (if s = "00" then Some Asset.zenAsset else None) // 8 (2 calls, if 3, = 2, Some 1) + 56 = 64
 
 val parseFeeAsset : Dict.t data -> asset `RT.t` 142
 let parseFeeAsset dict  = // 14
