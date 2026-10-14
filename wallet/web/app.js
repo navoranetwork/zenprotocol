@@ -695,7 +695,7 @@ function modalHtml() {
     <label class="field">ZP to sell<input name="zp" inputmode="decimal" autocomplete="off" value="${esc(m.zp || '')}" required></label>
     <p class="muted small">From ${esc(active().name)}: ${m.balance === null ? '–' : formatZP(m.balance) + ' ZP'} spendable.</p>
     <div class="small">Price</div>
-    <div class="tabs3" role="group" aria-label="How to give the price">${[['total', 'Total in BTC'], ['usd', '$ per ZP'], ['sat', 'sat per ZP']].map(([k, l]) =>
+    <div class="tabs3" role="group" aria-label="How to give the price">${[['usd', '$ per ZP'], ['total', 'Total in BTC'], ['sat', 'sat per ZP']].map(([k, l]) =>
       `<button type="button" class="chip ${(m.mode || 'total') === k ? 'on' : ''}" data-act="price-mode" data-v="${k}" ${k === 'usd' && !btcUsd() ? 'disabled title="No Bitcoin price from the oracle right now"' : ''}>${l}</button>`).join('')}</div>
     ${(m.mode || 'total') === 'total'
       ? `<label class="field">Total price (BTC, for all of it)<input name="btc" inputmode="decimal" autocomplete="off" placeholder="0.0005" value="${esc(m.btc || '')}" required></label>`
@@ -1068,7 +1068,7 @@ $app.addEventListener('click', async e => {
     if (act === 'swap-new') {
       const a = active(); await refreshWallet(a.id);
       const z = S.data.get(a.id)?.state?.assets.find(x => x.asset === '00');
-      S.modal = { type: 'offer', balance: S.data.get(a.id)?.state ? (z?.spendable ?? 0n) : null }; S.error = ''; render(); return syncOffer();
+      S.modal = { type: 'offer', mode: btcUsd() ? 'usd' : 'total', balance: S.data.get(a.id)?.state ? (z?.spendable ?? 0n) : null }; S.error = ''; render(); return syncOffer();
     }
     if (act === 'confirm-offer' || act === 'confirm-cancel') {
       S.busy = true; render();

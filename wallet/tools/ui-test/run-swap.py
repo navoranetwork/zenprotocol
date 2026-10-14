@@ -39,6 +39,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/s1-markets.png', full_page=True)
     # new offer
     pg.click('button[data-act=swap-new]'); pg.wait_for_selector('form[data-form=offer]')
+    ok(pg.query_selector('button[data-act=price-mode][data-v=usd].on') is not None and pg.query_selector('input[name=per]') is not None, 'the offer opens in $ per ZP when the oracle has a Bitcoin price')
+    pg.click('button[data-act=price-mode][data-v=total]')
     pg.fill('input[name=zp]', '4'); pg.fill('input[name=btc]', '0.0008')
     ok('0.00020000 BTC per ZP (20,000 sat)' in pg.inner_text('#offer-rate'), 'rate shown: ' + pg.inner_text('#offer-rate'))
     pg.click('button[data-act=price-mode][data-v=usd]'); pg.fill('input[name=per]', '1')
