@@ -1,0 +1,5 @@
+Unable to find image 'mcr.microsoft.com/dotnet/sdk:10.0' locally
+10.0: Pulling from dotnet/sdk
+Digest: sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
+Status: Downloaded newer image for mcr.microsoft.com/dotnet/sdk:10.0
+[ERROR] The specified profile 'cpu-sampling' does not apply to `dotnet-trace collect`.

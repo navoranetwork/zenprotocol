@@ -1,2 +1,7 @@
 [2026-10-14 10:51] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
 [2026-10-14 10:51] B: 60efe1b8 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 521a306c ZP Wallet 0.13.0: the contract flow as in
+[2026-10-14 10:51] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-14 10:52] B: node up, block 314, sender 2 funded
+[2026-10-14 10:52] profile: load 3000/min (two senders), trace 60 s at minute 2
+[2026-10-14 10:54] profile: dotnet-trace failed (trace.txt)
+[2026-10-14 10:59] profile done: 
