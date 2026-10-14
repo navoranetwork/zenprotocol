@@ -164,7 +164,9 @@ cancelled (`MM_CANCEL_ALL=1`, 0 open; Alon had none) and the `marketmaker` servi
 `W.size` at run time, refused by rule 4.5) passes a node's checks and type check with V0's costs (Make 3693; Cancel
 4486 and Take 8020, + 256 per coin in the wallet) and stops at extraction: it needs `Zen.Asset.parse` (order assets are
 strings), which Zulib V1 realizes only in the next image. `scripts/v1/check.mjs contracts/v1/Dex.fst` gives the
-verdict. **Both zUSDC and the Dex wait for that image** (secp256k1 resolver and self-test, `Zen.Asset.parse`,
+verdict. `scripts/v1/dex-try.mjs` (written, not run yet) tests Make, Cancel, Take (all and half), the
+refusals and the costs once the image is in. The Dex uses no secp256k1 (it compares the signer with MakerPubKey), so
+it waits only for `Zen.Asset.parse`. **Both zUSDC and the Dex wait for that image** (secp256k1 resolver and self-test, `Zen.Asset.parse`,
 `Zen.Hash.Sha3`, c86a2c4) on every testnet node; then: zusdc-try.mjs, activate zUSDC, a Dex test script, activate the
 Dex, point the market maker, the Dex page, the explorer and the wallet's Markets tab at the new ids.
 
