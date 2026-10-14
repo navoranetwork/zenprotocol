@@ -2,10 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient, kalapasOf, formatAmount, bodyHexOf, commandsOf, holdings, sendsAsset, windowsOf } from '../src/engine.js';
+import { v1ContractId, v1SourceBytes, activationCost, checkParam, EngineClient, kalapasOf, formatAmount, bodyHexOf, commandsOf, holdings, sendsAsset, windowsOf, engineAsset, tryAsset } from '../src/engine.js';
 import { openWallet, prepareActivateV1 } from '../src/wallet.js';
 import { deriveKey } from '../src/keys.js';
-import { deserializeTx, txHash, hex, unhex, Writer, Data } from '../src/serialize.js';
+import { deserializeTx, txHash, hex, unhex, Writer, Data, Asset } from '../src/serialize.js';
 import { verifyDigest } from '../src/tx.js';
 
 const src = 'module X\nlet main = 1   // é ✓\n';
@@ -91,4 +91,15 @@ test('try: sourceId first, the source again when the engine no longer has it', a
   const f = async (url, o) => { const b = JSON.parse(o.body); sent.push(b); return b.sourceId ? new Response(JSON.stringify({ error: 'send the source' }), { status: 404 }) : new Response(JSON.stringify({ job: 'ab'.repeat(12) }), { status: 202 }); };
   const r = await new EngineClient('https://x', f).try({ source: 'let main = 1', sourceId: '00000001' + 'ab'.repeat(32), call: { command: 'deposit' }, roles: { buyer: '03' + 'ab'.repeat(32) } });
   assert.equal(r.job, 'ab'.repeat(12)); assert.equal(sent.length, 2); assert.ok(!('source' in sent[0])); assert.equal(sent[1].source, 'let main = 1'); assert.equal(sent[1].roles.buyer, '03' + 'ab'.repeat(32));
+});
+
+test('a wallet asset as the engine names it: zp, or v<version>:<contract hash>[:<subtype>]; /try takes the hash form', () => {
+  const s = a => { const w = new Writer(); Asset.write(w, a); return hex(w.out()); };
+  assert.equal(engineAsset('00'), 'zp');
+  const h = 'ee'.repeat(32), sub = '01'.padEnd(64, '0');
+  assert.equal(engineAsset(s({ contract: { version: 1, hash: unhex(h) }, subtype: new Uint8Array(32) })), 'v1:' + h);
+  assert.equal(engineAsset(s({ contract: { version: 0, hash: unhex(h) }, subtype: unhex(sub) })), `v0:${h}:${sub}`);
+  assert.equal(checkParam('asset', { type: 'asset' }, 'v1:' + h), 'v1:' + h);
+  assert.throws(() => checkParam('asset', { type: 'asset' }, 'nothex'), /contract hash/);
+  assert.equal(tryAsset('v1:' + h), h); assert.equal(tryAsset('zp'), 'zp');
 });

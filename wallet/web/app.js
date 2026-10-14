@@ -7,7 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1 } from '../src/wallet.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
-import { EngineClient, checkParam, v1ContractId, activationCost, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
+import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
@@ -193,6 +193,33 @@ const PARAM_UI = {
   'vote.close_block': { label: 'Voting closes at block', help: 'Votes are accepted before this block; tokens come back from it.', kind: 'block', prefill: 'block' },
 };
 const paramUI = (fid, n, p) => PARAM_UI[fid + '.' + n] || { label: n.replace(/_/g, ' ').replace(/^./, x => x.toUpperCase()), help: p.description || '', ph: p.example != null ? 'e.g. ' + p.example : '', kind: /_block$/.test(n) ? 'block' : '' };
+// what an asset field offers: ZP, then the tokens the active wallet holds (name or short id, and the balance)
+function assetOptions() {
+  const a = active(), st = a && S.data.get(a.id)?.state;
+  const toks = (st?.assets || []).filter(x => x.asset !== '00' && x.spendable + x.maturing > 0n).map(x => {
+    let v; try { v = engineAsset(x.asset); } catch { return null; }
+    return { v, label: S.assetNames[x.asset] || 'Token ' + x.asset.slice(8, 16) + '…', bal: (x.spendable + x.maturing).toLocaleString('en-US') };
+  }).filter(Boolean);
+  return [{ v: 'zp', label: 'ZP' }, ...toks];
+}
+const canScan = () => typeof window !== 'undefined' && 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia;
+// a QR code read by the camera (BarcodeDetector): the first public key in it goes into the field
+async function startScan() {
+  const m = S.modal, video = $app.querySelector('#qr-video'); if (!m || m.type !== 'scan' || !video) return;
+  try {
+    S.scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = S.scanStream; await video.play();
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    while (S.modal === m) {
+      const codes = await det.detect(video).catch(() => []);
+      const key = codes.map(c => String(c.rawValue).match(/0[23][0-9a-fA-F]{64}/)?.[0]).find(Boolean);
+      if (key) { stopScan(); const i = $app.querySelector(`input[name="p_${m.field}"]`); if (i) i.value = key.toLowerCase(); S.modal = null; S.error = ''; return render(); }
+      if (codes.length) { const e = $app.querySelector('#qr-msg'); if (e) e.textContent = 'This code holds no public key (66 characters, starting with 02 or 03).'; }
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } catch { stopScan(); if (S.modal === m) { S.modal = null; fail(new Error('The camera could not be opened: allow it in the browser, or paste the key')); } }
+}
+function stopScan() { S.scanStream?.getTracks().forEach(t => t.stop()); S.scanStream = null; }
 const BLOCK_MINUTES = 4;   // about 4 minutes a block, mainnet and testnet
 function syncBlockHint(i) { const h = i?.dataset.block && $app.querySelector(`[data-hint="${i.name}"]`); if (h) h.textContent = blockHint(i.value); }
 function blockHint(v) {
@@ -226,13 +253,21 @@ function createView() {
     const val = (n, p, ui) => c.values?.[n] ?? (ui.prefill === 'mine-hash' && mine ? hex(mine.pkHash) : ui.prefill === 'mine-key' && mine ? hex(mine.publicKey) : ui.prefill === 'block' && S.tip ? String(S.tip + 30) : p.default ?? '');
     const field = ([n, p]) => {
       const ui = paramUI(f.id, n, p), v = val(n, p, ui), isBlock = ui.kind === 'block';
+      if (p.type === 'asset') {
+        const opts = assetOptions(), other = c.assetOther?.[n] || (v && !opts.some(o => o.v === v));
+        return `<div class="pfield"><div class="field">${esc(ui.label)}</div>
+          <div class="wrapchips" role="group" aria-label="${esc(ui.label)}">${opts.map(o => `<button type="button" class="chip ${!other && o.v === v ? 'on' : ''}" aria-pressed="${!other && o.v === v}" data-act="cc-asset" data-name="${esc(n)}" data-v="${esc(o.v)}">${esc(o.label)}${o.bal ? ` <span class="muted">· ${esc(o.bal)}</span>` : ''}</button>`).join('')}
+            <button type="button" class="chip ${other ? 'on' : ''}" aria-pressed="${!!other}" data-act="cc-asset-other" data-name="${esc(n)}">Other token…</button></div>
+          <input id="p_${esc(n)}" name="p_${esc(n)}" class="mono" ${other ? '' : 'hidden'} autocomplete="off" spellcheck="false" placeholder="The token's contract hash (64 characters)" value="${esc(v)}" data-s="mt8">
+          ${ui.help ? `<p class="muted small" data-s="mt4">${esc(other ? "Paste the token's contract hash: 64 characters (0-9, a-f)." : ui.help)}</p>` : ''}</div>`;
+      }
       return `<div class="pfield"><label class="field" for="p_${esc(n)}">${esc(ui.label)}</label>
         <input id="p_${esc(n)}" name="p_${esc(n)}" autocomplete="off" autocapitalize="off" spellcheck="false" class="${['hash', 'publickey'].includes(p.type) ? 'mono' : ''}" ${isBlock ? 'inputmode="numeric" data-block="1"' : ''} placeholder="${esc(ui.ph || '')}" value="${esc(v)}">
         ${isBlock ? `<div class="small hint" data-hint="p_${esc(n)}">${esc(blockHint(v))}</div>` : ''}
         ${ui.help ? `<p class="muted small" data-s="mt4">${esc(ui.help)}</p>` : ''}
-        ${mine && p.type === 'publickey' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.publicKey)}">Use my key (${esc(active().name)})</button></div>` : ''}
-        ${mine && p.type === 'hash' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.pkHash)}">Use my address (${esc(active().name)})</button></div>` : ''}
-        ${p.type === 'asset' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="zp">ZP</button></div>` : ''}
+        ${p.type === 'publickey' ? `<div class="wrapchips">${mine ? `<button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.publicKey)}" title="The key of ${esc(active().name)}">Use my key</button>` : ''}
+          <button type="button" class="chip" data-act="cc-paste" data-name="${esc(n)}">Paste</button>${canScan() ? `<button type="button" class="chip" data-act="cc-scan" data-name="${esc(n)}">Scan QR</button>` : ''}</div>` : ''}
+        ${mine && p.type === 'hash' ? `<div class="wrapchips"><button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${hex(mine.pkHash)}" title="The address of ${esc(active().name)}">Use my address</button></div>` : ''}
         ${isBlock && S.tip ? `<div class="wrapchips">${[[15, 'in 1 hour'], [360, 'in 1 day'], [2520, 'in 1 week']].map(([b, l]) => `<button type="button" class="chip" data-act="cc-fill" data-name="${esc(n)}" data-v="${S.tip + b}">${l}</button>`).join('')}</div>` : ''}</div>`;
     };
     return `${back}<form data-form="cc-make" class="screen">
@@ -359,7 +394,7 @@ function tryView() {
     <div class="wrapchips">${cmds.map(x => `<button class="chip ${x.name === cmd?.name ? 'on' : ''}" aria-pressed="${x.name === cmd?.name}" data-act="cc-cmd" data-name="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
     ${cmd ? `<form data-form="cc-try" class="card">${cmd.description ? `<p class="muted small">${esc(cmd.description)}</p>` : ''}
       <label class="field">Signed by<select name="signer">${signers.map(([v, t]) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-      ${asset ? `<label class="field">Sends in (${esc(asset === 'zp' ? 'ZP' : cmd.sends === 'self' ? 'its own token' : assetLabel(asset))})<input name="spend" autocomplete="off" inputmode="decimal" placeholder="${asset === 'zp' ? '2.5 ZP' : 'units'}" value="${esc(T.values.spend ?? '')}"></label>` : ''}
+      ${asset ? `<label class="field">Sends in (${esc(asset === 'zp' ? 'ZP' : cmd.sends === 'self' ? 'its own token' : assetLabel(tryAsset(asset)))})<input name="spend" autocomplete="off" inputmode="decimal" placeholder="${asset === 'zp' ? '2.5 ZP' : 'units'}" value="${esc(T.values.spend ?? '')}"></label>` : ''}
       ${cmd.body.map(field).join('')}
       <label class="field">At block<input name="block" inputmode="numeric" autocomplete="off" value="${esc(block)}"></label>
       ${wins.length ? `<p class="muted small">${wins.map(w => esc(WINDOW_TEXT[w.kind](w.block.toLocaleString('en-US')))).join(' ')}</p>
@@ -375,7 +410,7 @@ async function ccTry(v) {
   const call = { command: cmd.name, wallet: T.session.wallet, ...(T.session.state != null ? { state: T.session.state } : {}), context: { blockNumber: T.block, timestamp: String(Date.now()) } };
   if (T.signer) { if (!roles[T.signer]) throw new Error('Fill in that key first'); call.sender = { publicKey: roles[T.signer] }; }
   const asset = sendsAsset(cmd, c.values, c.family, ccHash(c)), sp = String(v.spend || '').trim();
-  if (asset && sp) call.spend = [{ asset, amount: asset === 'zp' ? kalapasOf(sp, 'Sends in') : /^\d+$/.test(sp) ? sp : (() => { throw new Error('Sends in: a whole number of units'); })() }];
+  if (asset && sp) call.spend = [{ asset: tryAsset(asset), amount: asset === 'zp' ? kalapasOf(sp, 'Sends in') : /^\d+$/.test(sp) ? sp : (() => { throw new Error('Sends in: a whole number of units'); })() }];
   const bh = bodyHexOf(cmd.body, Object.fromEntries(cmd.body.map(([n]) => [n, v['t_' + n]])), { choices: choicesOf(c, cmd) }); if (bh) call.bodyHex = bh;
   const e = engine(), sourceId = c.edited ? c.check?.contractId : (c.tryId || c.job?.report?.contractId);
   T.running = true; S.error = ''; render();
@@ -735,6 +770,9 @@ async function reviewVote(kind, command, ballotHex, label, rows = []) {
 
 // ---------------------------------------------------------------- modal
 function modalHtml() {
+  if (S.modal?.type === 'scan') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Scan a public key</h2>
+    <video id="qr-video" class="qr-video" playsinline muted></video><p id="qr-msg" class="muted small" aria-live="polite">Point the camera at the QR code of the key.</p>
+    <button class="btn" data-act="close">Cancel</button></div></div>`;
   const m = S.modal; if (!m) return '';
   if (m.type === 'confirm-send') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm transfer</h2>
     <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt">${formatZP(m.amount)} ZP</span></div>
@@ -1191,7 +1229,21 @@ $app.addEventListener('click', async e => {
       const prepared = await waitingFirst(pendingSpent(d), ex => prepareCancel({ w: S.open.get(w.id), state: d.state, node: node(), swapContractId: S.swap.swapId, id: o.id, amount: BigInt(o.amount), exclude: ex }));
       S.modal = { type: 'confirm-cancel', id: o.id, prepared, amount: BigInt(o.amount), sats: o.sats, wallet: w.name }; S.error = ''; return render();
     }
-    if (act === 'close') { S.modal = null; S.error = ''; return render(); }
+    if (act === 'close') { stopScan(); S.modal = null; S.error = ''; return render(); }
+    if (act === 'cc-scan') { S.modal = { type: 'scan', field: t.dataset.name }; S.error = ''; render(); return startScan(); }
+    if (act === 'cc-paste') {
+      const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (!i) return;
+      let txt = ''; try { txt = await navigator.clipboard.readText(); } catch { i.focus(); throw fieldError('The browser did not allow pasting from here: long-press (or right-click) the field and paste', 'p_' + t.dataset.name); }
+      i.value = (txt.match(/0[23][0-9a-fA-F]{64}/)?.[0] || txt.trim()).toLowerCase(); i.classList.remove('invalid'); return;
+    }
+    if (act === 'cc-asset' || act === 'cc-asset-other') {
+      const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (!i || !S.cc) return;
+      (S.cc.assetOther ||= {})[t.dataset.name] = act === 'cc-asset-other';
+      const f = $app.querySelector('form[data-form=cc-make]'); if (f) S.cc.values = { ...S.cc.values, ...Object.fromEntries([...new FormData(f)].map(([k, v]) => [k.replace(/^p_/, ''), v])) };
+      S.cc.values[t.dataset.name] = act === 'cc-asset' ? t.dataset.v : ''; freshScreen = true; render();
+      if (act === 'cc-asset-other') $app.querySelector(`input[name="p_${t.dataset.name}"]`)?.focus();
+      return;
+    }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
     if (act === 'send-back') { S.draft = { ...S.draft, to: t.dataset.to }; return go('send'); }

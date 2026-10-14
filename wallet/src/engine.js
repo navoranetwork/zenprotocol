@@ -3,7 +3,7 @@
 // - computes the contract id from the source itself and refuses to sign when it differs from the engine's report,
 // - builds and signs the activation with the user's key (wallet.js prepareActivateV1).
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { hex, unhex, Writer, Data } from './serialize.js';
+import { hex, unhex, Writer, Reader, Data, Asset } from './serialize.js';
 
 export const MAX_V1_SOURCE = 65536;   // TransactionValidation.fs maxV1SourceBytes
 const enc = new TextEncoder();
@@ -41,7 +41,7 @@ export function checkParam(name, p, raw) {
     case 'publickey': if (!/^0[23][0-9a-f]{64}$/i.test(v)) throw new Error(`${name}: a public key, 66 hex characters starting 02 or 03`); return v.toLowerCase();
     case 'u32': case 'u64': return num();
     case 'amount': if (!/^\d+$/.test(v) && !/^\d+(\.\d{1,8})?\s*zp$/i.test(v)) throw new Error(`${name}: kalapas, or an amount like 2.5 ZP`); return v;
-    case 'asset': if (!/^(zp|[0-9a-f]{64}(:[0-9a-f]{1,64})?)$/i.test(v)) throw new Error(`${name}: zp, or a contract hash (64 hex), optionally :subtype`); return v.toLowerCase();
+    case 'asset': if (!/^(zp|(v\d{1,10}:)?[0-9a-f]{64}(:[0-9a-f]{64})?)$/i.test(v)) throw new Error(`${name}: ZP, or a token: its contract hash (64 hex)`); return v.toLowerCase();
     case 'string': if (!/^[\x20-\x7e]*$/.test(v) || /["\\]/.test(v)) throw new Error(`${name}: plain letters, digits and punctuation, no quotes or backslashes`);
       if (v.length > (p.max ?? 64)) throw new Error(`${name}: at most ${p.max ?? 64} characters`); return v;
     case 'options': { const xs = v.split(',').map(x => x.trim()).filter(Boolean);
@@ -167,3 +167,13 @@ export class EngineClient {
     }
   }
 }
+
+// a wallet asset (the node's hex form, "00" for ZP) as the engine names it: zp, or v<version>:<contract hash>[:<subtype>]
+export function engineAsset(walletAsset) {
+  if (walletAsset === '00') return 'zp';
+  const a = Asset.read(new Reader(unhex(walletAsset)));
+  const sub = hex(a.subtype);
+  return /^0*$/.test(hex(a.contract.hash)) && /^0*$/.test(sub) ? 'zp' : `v${a.contract.version}:${hex(a.contract.hash)}${/^0*$/.test(sub) ? '' : ':' + sub}`;
+}
+// the engine's /try takes "<contract hash>[:<subtype>]" (version 1 by default)
+export const tryAsset = a => String(a).replace(/^v1:/, '');

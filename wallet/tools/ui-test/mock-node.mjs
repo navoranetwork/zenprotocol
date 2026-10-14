@@ -8,7 +8,7 @@ import { deriveKey, encodeAddress } from '../../src/keys.js';
 import { openWallet } from '../../src/wallet.js';
 import { VOTING_CONTRACT, CGP_CONTRACT } from '../../src/cgp.js';
 import { v1ContractId } from '../../src/engine.js';
-import { Reader, VarInt, Output, Outpoint, Data, serializeTx, deserializeTx, txHash, hex, unhex } from '../../src/serialize.js';
+import { Reader, Writer, Asset, VarInt, Output, Outpoint, Data, serializeTx, deserializeTx, txHash, hex, unhex } from '../../src/serialize.js';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
 const NET = arg('net', 'test'), PORT = Number(arg('port', 8082));
@@ -19,7 +19,10 @@ const SWAP = '00000001' + 'dd'.repeat(32), SWAP_ADDR = encodeAddress(unhex(SWAP)
 const w = openWallet({ id: 'm', name: 'm', network: NET, kind: 'mnemonic' }, Array(23).fill('abandon').concat('art').join(' '));
 const key0 = deriveKey(w.account, 0, 0), addr0 = encodeAddress(key0.pkHash, NET);
 const other = encodeAddress(deriveKey(w.account, 0, 21).pkHash, NET);
-const fund = () => [{ outpoint: { txHash: 'ab'.repeat(32), index: st.utxo }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: '00', amount: String(st.zp) } }];
+// with tokens=1 the wallet also holds 250 of a V1 contract's token (version 1, hash ee…, default subtype)
+const TOKEN = (() => { const w2 = new Writer(); Asset.write(w2, { contract: { version: 1, hash: unhex('ee'.repeat(32)) }, subtype: new Uint8Array(32) }); return hex(w2.out()); })();
+const fund = () => [{ outpoint: { txHash: 'ab'.repeat(32), index: st.utxo }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: '00', amount: String(st.zp) } },
+  ...(st.tokens ? [{ outpoint: { txHash: 'ac'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: TOKEN, amount: '250' } }] : [])];
 const offers = () => [
   { id: 'o-mine1', zp: 3, amount: '300000000', sats: 60000, confs: 2, state: 'open', until: null, buyer: null, seller: hex(key0.publicKey), scripts: 2, used: 0, canReserve: true, payment: null },
   { id: 'o-mine2', zp: 1, amount: '100000000', sats: 20000, confs: 2, state: 'reserved', until: st.tip + 50, buyer: 'cd'.repeat(32), seller: hex(key0.publicKey), scripts: 2, used: 1, canReserve: false, payment: null },
@@ -36,7 +39,7 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); } if (k === 'askLeft') st.askLeft = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; } if (k === 'askLeft') st.askLeft = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
         case '/__published': return send(res, 200, st.published);
         case '/blockchain/info': return send(res, 200, { chain: NET === 'main' ? 'main' : 'testnet', blocks: st.tip, headers: st.tip, difficulty: 0.1, medianTime: Date.now() });
@@ -100,7 +103,7 @@ http.createServer((req, res) => {
         case '/swap/status': return send(res, 200, { swapId: SWAP, zpTip: st.tip, btcNet: 'main', offers: offers() });
         case '/contract/active': return send(res, 200, [{ contractId: VOTING, address: encodeAddress(unhex(VOTING), NET, true), expire: st.tip + 90000, code: '// voting contract\n'.padEnd(4000, 'x') }]);
         case '/addressdb/outputs': return send(res, 200, body.addresses?.includes(addr0) ? fund() : []);
-        case '/addressdb/balance': return send(res, 200, body.addresses?.includes(CGP_ADDR) ? [{ asset: '00', balance: '100000000000' }] : body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }] : []);
+        case '/addressdb/balance': return send(res, 200, body.addresses?.includes(CGP_ADDR) ? [{ asset: '00', balance: '100000000000' }] : body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }, ...(st.tokens ? [{ asset: TOKEN, balance: '250' }] : [])] : []);
         case '/addressdb/transactions': return send(res, 200, []);
         case '/addressdb/discovery': return send(res, 200, (body.addresses || []).map(a => ({ address: a, hasBalance: a === addr0, hasTxs: a === addr0 })));
         case '/blockchain/contract/execute': {

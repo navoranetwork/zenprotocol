@@ -11,6 +11,17 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.12.0 — 2026-10-14
+
+### Added
+- Contract forms: what a contract holds, sells or is voted with is chosen, not typed: ZP, the tokens this wallet holds
+  (name or short id, with the balance), or "Other token…", which opens the contract-hash field with its check.
+- Public key fields: Paste, and Scan QR where the browser can read QR codes (the camera opens in a window; the first
+  public key in the code fills the field), next to "Use my key".
+
+### Changed
+- "Use my key" / "Use my address" without the wallet's name (it shows on hover).
+
 ## 0.11.0 — 2026-10-14
 
 ### Changed
