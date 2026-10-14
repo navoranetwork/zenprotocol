@@ -10,5 +10,8 @@
   "ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97": "ZP ⇄ BTC swap (replaced)",
   "ctzn1qqqqqqqwtea80gm9tsvp7zrvef5rtrqsvxj8zw6nma8klcajnlmamntxhgyclqt8k": "Oracle (V1)",
   "00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741": "Oracle (V1)",
-  "ctzn1qqqqqqqzzfsly8hcddxjq7vxjf9pn0edca575whhdvqf8d4k2p64yjwrsrvax32yd": "Oracle (V0, replaced)"
+  "ctzn1qqqqqqqzzfsly8hcddxjq7vxjf9pn0edca575whhdvqf8d4k2p64yjwrsrvax32yd": "Oracle (V0, replaced)",
+  "ctzn1qqqqqqq26kfa28teg0zqvrpf78vhffq6fecnu4609x07j07lk2gxa45x4wuqyc408": "zUSDC (bridge token, V1)",
+  "000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577": "zUSDC (bridge token, V1)",
+  "ctzn1qqqqqqqy7psyxj3nr8tg908ajjgz8y5rey6epzkvsjpajvv4hn2taq0wf6vyvdhp0": "zUSDC (V0, closed)"
 }

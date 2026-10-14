@@ -16,7 +16,7 @@ A deposit from an address that has not linked yet waits (it is kept in `pending.
 ## Pieces
 
 - `site/bridge/bridge.mjs`: the service (Node 22 + `ethers` for the EVM side). `BRIDGE_EVM=mock:<file>` replaces the EVM chain with a JSON list of deposits, which is how CI tests it.
-- `src/ContractExamples/AuthenticatedSupply.fst`: the token contract; the bridge's public key (sign path `m/44'/258'/0'/3/0`) is the only key that may issue or destroy.
+- `contracts/v1/AuthenticatedSupply.fst`: the token contract on the testnet since 2026-10-15 (V1; tests `scripts/v1/zusdc-try.mjs`, activation `scripts/v1/testnet-v1-zusdc.mjs`); the bridge's public key (sign path `m/44'/258'/0'/3/0`) is the only key that may issue or destroy, and Destroy refuses more than the call brings in. The V0 contract (`src/ContractExamples/AuthenticatedSupply.fst`) was closed on 2026-10-14: its reserves went back to the funder and its 105 zUSDC are abandoned. `/status` counts only the current `BRIDGE_ASSET`.
 - `zen-oracle body ... returnAddress:p=<pkhash>`: builds the issue message with a chosen recipient (type `p`, a public key hash lock).
 - CI: `scripts/testnet-bridge.sh` (workflow `testnet`) activates the contract, starts the bridge with a mock deposit, links, and checks that 25,000,000 units arrive.
 

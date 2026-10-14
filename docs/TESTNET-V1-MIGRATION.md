@@ -129,6 +129,18 @@ call; replace the contract before that. Lessons: keep V0's expression shapes (th
 
 ### 2. USDC bridge (zUSDC)
 
+**Active since 2026-10-15 02:06 (Israel time).** `scripts/v1/crypto-probe.mjs` showed through the node that V1
+`parsePublicKey` / `Crypto.verify` work (the node loads `/zen/libsecp256k1.so` for V1 contracts; only the engine's
+runner missed it, fixed in engine ff5ddc9). `scripts/v1/zusdc-try.mjs` on the engine: all passed. Destroy now refuses
+more than the call brings in ("Destroy Amount is more than was sent", engine finding; V0 left it to the node's balance
+check), so Destroy costs 454 (V0 381); Issue 529. Activated by `FORCE=1 scripts/v1/testnet-v1-zusdc.mjs` (bridge key
+`m/44'/258'/0'/3/0`, 20,000 blocks, expires at block 22,298): `000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577`,
+`ctzn1qqqqqqq26kfa28teg0zqvrpf78vhffq6fecnu4609x07j07lk2gxa45x4wuqyc408`. `testnet-stack.env` BRIDGE_CONTRACT /
+ASSET / ID / ADDRESS set (old file `testnet-stack.env.bak-zusdc-v0`; `MM_ASSET` waits for the Dex step); bridge
+restarted from `~/zenprotocol-testnet` at acc106d2: `/status` 0 reserves, 0 outstanding, the 2 links kept.
+sepolia.base.org now limits `eth_getLogs` to 200 blocks: `BRIDGE_LOG_RANGE` defaults to 190. Check pending: a 1 USDC
+deposit and a withdrawal.
+
 **State 2026-10-14 16:45: ported, activation on hold.** `contracts/v1/AuthenticatedSupply.fst` (V0 shapes; `val`s use
 `Zen.Prelude.result`, since a bare `result` is F*'s own type in F* 2026 and opening `Zen.Prelude` is not allowed) is
 accepted by a node with V0's costs (Issue 529, Destroy 381). Its calls could not be tried: the engine container
