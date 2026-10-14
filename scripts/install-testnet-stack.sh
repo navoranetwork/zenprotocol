@@ -68,8 +68,15 @@ if [ -z "$(get ORACLE_ID)" ]; then echo "-- Oracle"
 fi
 PK=$(curl -s -X POST -H "Content-Type: application/json" -d "{\"path\":\"m/44'/258'/0'/3/0\",\"password\":\"$PW\"}" $API/wallet/publickey | tr -d '"')
 if [ -z "$(get BRIDGE_ID)" ]; then echo "-- AuthenticatedSupply (zUSDC, bridge key)"
-  sed "s/^let authenticatedPubKey = \"\"/let authenticatedPubKey = \"$PK\"/" src/ContractExamples/AuthenticatedSupply.fst > /tmp/AuthenticatedSupply.fst
-  activate /tmp/AuthenticatedSupply.fst BRIDGE; fi
+  if [ "$(tip)" -ge 2050 ]; then   # past the V1 fork: the V1 token (contracts/v1/AuthenticatedSupply.fst, docs/BRIDGE.md)
+    OUT=$($D run --rm --network host -e FORCE=1 -v "$DIR:/b" -w /b node:22-alpine node scripts/v1/testnet-v1-zusdc.mjs "$API" "$PW") \
+      || { echo "activation of the V1 zUSDC failed"; echo "$OUT" | tail -5; exit 1; }
+    put BRIDGE_ADDRESS "$(echo "$OUT" | sed -n 's/^BRIDGE_ADDRESS=//p')"; put BRIDGE_ID "$(echo "$OUT" | sed -n 's/^BRIDGE_ID=//p')"
+  else
+    sed "s/^let authenticatedPubKey = \"\"/let authenticatedPubKey = \"$PK\"/" src/ContractExamples/AuthenticatedSupply.fst > /tmp/AuthenticatedSupply.fst
+    activate /tmp/AuthenticatedSupply.fst BRIDGE
+  fi
+fi
 if [ -z "$(get DEX_ID)" ]; then echo "-- ZenDex"; activate src/ContractExamples/Dex.fst DEX; fi
 put ORACLE_CONTRACT "$(get ORACLE_ADDRESS)"
 put BRIDGE_CONTRACT "$(get BRIDGE_ADDRESS)"; put BRIDGE_ASSET "$(get BRIDGE_ID)"
