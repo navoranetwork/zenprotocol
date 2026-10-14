@@ -9,7 +9,10 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 ## Unreleased
 
-Nothing yet.
+### Changed
+- Errors cannot be missed: a red box with an icon, the main point in bold and the details under it, larger text, a
+  short shake when it appears (not when the system asks for reduced motion), the screen moves to it; the field it is
+  about is outlined in red (the Bitcoin addresses of an offer). Warnings are larger too.
 
 ## 0.9.0 — 2026-10-14
 

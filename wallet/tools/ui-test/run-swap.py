@@ -59,6 +59,8 @@ with sync_playwright() as p:
     ok('already received bitcoin' in pg.inner_text('.sheet'), 'an address that already received bitcoin is refused')
     pg.fill('textarea[name=addrs]', 'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3'); pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(800)
     ok('is used by an offer in the market' in pg.inner_text('.sheet'), 'an address another offer uses is refused')
+    ok(pg.query_selector('.sheet .err b') is not None and pg.query_selector('textarea[name=addrs][aria-invalid=true]') is not None, 'the error is a bold box, and the address field is marked')
+    pg.screenshot(path=f'{OUT}/s1c-error.png')
     ok('make a new receive address for each line' in pg.inner_text('.sheet'), 'the form explains: a new address per line, not a fixed one')
     pg.fill('textarea[name=addrs]', 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'); pg.click('form[data-form=offer] button.primary')
     pg.wait_for_selector('button[data-act=confirm-offer]'); t = pg.inner_text('.sheet')

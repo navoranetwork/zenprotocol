@@ -325,14 +325,24 @@ async function ccTry(v) {
   } finally { T.running = false; render(); }
 }
 
-function fail(e) { S.error = e?.message || String(e); S.busy = false; render(); $app.querySelector('.modal .err, .err')?.scrollIntoView?.({ block: 'center' }); }   // the message may sit below the button that was pressed
+function fail(e) {
+  S.error = e?.message || String(e); S.errField = e?.field || null; S.busy = false; render();
+  const box = $app.querySelector('.modal .err, .err'); box?.scrollIntoView?.({ block: 'center' }); box?.focus?.({ preventScroll: true });
+}   // the message may sit below the button that was pressed
 
 // ---------------------------------------------------------------- views
 const top = () => `<div class="top"><span class="brand">ZP Wallet</span>
   <span class="row" data-s="fixed gap6">${net() === 'test' ? '<span class="pill test">TESTNET</span>' : ''}
   <span class="pill" title="${esc(S.settings.nodes[net()])}"><span class="dot ${S.nodeOk === true ? 'ok' : S.nodeOk === false ? 'bad' : ''}"></span>${S.nodeOk === false ? 'Node offline' : S.tip ? 'Block ' + esc(S.tip.toLocaleString('en-US')) : 'Connecting…'}</span></span></div>`;
 const backBar = (title, to = 'home') => `<div class="back"><button class="iconbtn" data-go="${to}" aria-label="Back">${I.back}</button><h1>${esc(title)}</h1></div>`;
-const errBox = () => S.error ? `<div class="err" role="alert">${esc(S.error)}</div>` : '';
+// an error is a box that cannot be missed: an icon, its first part in bold ("Use a new Bitcoin address for each line"),
+// the details under it; the field it is about is marked too (S.errField, from an Error's .field)
+const errBox = () => {
+  if (!S.error) return '';
+  const i = S.error.indexOf(': '), head = i > 0 && i < 80 ? S.error.slice(0, i) : S.error, rest = i > 0 && i < 80 ? S.error.slice(i + 2) : '';
+  return `<div class="err" role="alert" tabindex="-1"><span class="err-ic" aria-hidden="true">!</span><div><b>${esc(head)}</b>${rest ? `<div class="err-more">${esc(rest)}</div>` : ''}</div></div>`;
+};
+const fieldError = (message, field) => Object.assign(new Error(message), { field });
 const nav = cur => `<nav class="nav">${[['home', 'Wallet', I.home], ['markets', 'Markets', I.chart], ['vote', 'Vote', I.vote], ['contracts', 'Contracts', I.doc], ['settings', 'Settings', I.gear]]
   .map(([k, l, i]) => `<button data-go="${k}" class="${cur === k ? 'on' : ''}">${i}${l}</button>`).join('')}</nav>`;
 
@@ -790,6 +800,7 @@ function render() {
     if (s.focus) { el.focus(); try { el.setSelectionRange(s.from, s.to); } catch { /* checkbox */ } }
   }
   if (S.modal?.type === 'offer') syncOffer();   // the price line after any re-render (an error, a mode change)
+  if (S.error && S.errField) { const el = $app.querySelector(`form[data-form] [name="${S.errField}"]`); if (el) { el.classList.add('invalid'); el.setAttribute('aria-invalid', 'true'); } }
 }
 
 // ---------------------------------------------------------------- data
@@ -1219,13 +1230,13 @@ $app.addEventListener('submit', async e => {
         if (amount <= 0n) throw new Error('Enter the ZP to sell');
         const sats = offerTotal(f, amount);
         const addrs = v.addrs.split(/[\s,]+/).map(x => x.trim()).filter(Boolean);
-        if (!addrs.length || addrs.length > MAX_SCRIPTS) throw new Error(`Give 1 to ${MAX_SCRIPTS} Bitcoin addresses`);
-        const scripts = addrs.map((x, i) => { try { return btcScript(x, S.swap?.btcNet === 'test' ? 'test' : 'main'); } catch (e) { throw new Error(`Bitcoin address ${i + 1}: ${e.message}`); } });
-        if (new Set(scripts).size !== scripts.length) throw new Error('Each Bitcoin address must be different');
+        if (!addrs.length || addrs.length > MAX_SCRIPTS) throw fieldError(`Give 1 to ${MAX_SCRIPTS} Bitcoin addresses`, 'addrs');
+        const scripts = addrs.map((x, i) => { try { return btcScript(x, S.swap?.btcNet === 'test' ? 'test' : 'main'); } catch (e) { throw fieldError(`Bitcoin address ${i + 1}: ${e.message}`, 'addrs'); } });
+        if (new Set(scripts).size !== scripts.length) throw fieldError('Each Bitcoin address must be different', 'addrs');
         if (!S.swap?.swapId) throw new Error('The swap contract is not running on this network');
         const market = S.swap.offers.flatMap(o => Array.isArray(o.scriptList) ? o.scriptList : []);
         const fresh = await checkFresh(scripts, addrs, { known: usedScripts(), market, api: BTC_API[S.swap?.btcNet === 'test' ? 'test' : 'main'] });
-        if (fresh.bad.length) throw new Error('Use a new Bitcoin address for each line: ' + fresh.bad.join('; ') + '.');
+        if (fresh.bad.length) throw fieldError('Use a new Bitcoin address for each line: ' + fresh.bad.join('; ') + '.', 'addrs');
         const a = active(); await refreshWallet(a.id);
         const d = S.data.get(a.id); if (!d?.state || d.error) throw new Error('Could not read the balance from the node');
         const offerId = newOfferId();
