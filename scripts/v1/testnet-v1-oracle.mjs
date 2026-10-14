@@ -48,7 +48,8 @@ if (MODE === 'activate') {
 } else if (MODE === 'attest') {
   const c = await active();
   if (!c) throw new Error(`the V1 Oracle ${contractId} is not active`);
-  const r = await (await fetch(ORACLE + '/rounds/latest')).json();
+  const raw = await (await fetch(ORACLE + '/rounds/latest')).json();
+  const r = { tx: raw.tx ?? raw.Tx, root: raw.root ?? raw.Root, timestamp: raw.timestamp ?? raw.Timestamp };   // the service writes Tx, Root, Timestamp
   if (!r.tx) throw new Error('the latest round was not sent to a contract: ' + JSON.stringify(r).slice(0, 200));
   const ts = Buffer.alloc(8); ts.writeBigUInt64BE(BigInt(r.timestamp));
   const commit = sha3(Buffer.from(r.root, 'hex'), ts);              // what the service committed: SHA3(root ‖ timestamp)
