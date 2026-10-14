@@ -15,8 +15,9 @@
 //
 // Differences from V0 (none observable): Zen.PublicKey.compress replaces the local copy (V0's read the key with
 // Zen.Array.item, which V1 does not allow in code that runs; same bytes, same cost 305); no `module` line; tuple
-// type with `&`; `|>` after `>>=` chains in parentheses (V1-SPEC 4.3); `dataAttest'` renamed `dataAttestInner`;
-// the record pattern in `dataCommit`'s `let!` became a field access.
+// type with `&`; `|>` after `>>=` chains in parentheses (V1-SPEC 4.3); `dataAttest'` renamed `dataAttestInner`.
+// Keep every expression's shape as in V0: the `val`s declare V0's exact costs, and a different shape (even a field
+// access instead of a record pattern) changes the elaborated cost and fails the type check.
 //
 // Cost (cf): Commit 2650, Attest 5081 + 128 per coin in the contract's wallet (Tx.fromWallet walks it), any other
 // command 8; as V0. Each Commit adds one coin, so Attest grows by 128 gas per round committed: about 7,700 rounds
@@ -277,10 +278,10 @@ val dataCommit :
     -> commitData
     -> txSkeleton `cost` 2292
 let dataCommit txSkel cid args = // 14
-    let! assets = mkAssets cid args in // 2150
+    let! ({commitment = commitment}) = mkAssets cid args in // 2150
     ret txSkel
-    >>= TX.mint 1UL assets.commitment               // 64
-    >>= TX.lockToContract assets.commitment 1UL cid // 64
+    >>= TX.mint 1UL commitment               // 64
+    >>= TX.lockToContract commitment 1UL cid // 64
 
 val commit :
   contractId
