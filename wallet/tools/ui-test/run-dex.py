@@ -64,7 +64,8 @@ with sync_playwright() as p:
     # cancel the own order: signed
     pg.click('button[data-act=dex-cancel]'); pg.wait_for_selector('text=Cancel order', timeout=15000)
     ok('2 ZP' in pg.inner_text('.sheet'), 'cancel: 2 ZP back')
-    pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=The cancel is on its way', timeout=15000)
+    pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Order cancelled', timeout=15000)
+    ok('2 ZP comes back to your balance with the next block' in pg.inner_text('.sheet'), 'cancel: "Order cancelled", and the 2 ZP come back with the next block')
     w = witness(get('/__published')[-1]); ok(get('/__lastdex') == {'command': 'Cancel', 'signed': True} and w.get('signed') is True, 'Cancel signed by the maker key'); pg.click('button[data-act=close]')
     # a limit order from the book's form: sell 5 ZP at 0.0980 crosses the best bid (0.0990): warned, still possible
     pg.click('button[data-act=dex-side][data-v=sell]'); pg.fill('form[data-form=dex-limit] input[name=price]', '0.098'); pg.fill('form[data-form=dex-limit] input[name=amount]', '5'); pg.wait_for_timeout(150)

@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.29.1 — 2026-10-16
+
+### Changed
+- Cancelling a Dex order says "Cancelled: Order cancelled: it is off the book now. 25 ZP comes back to your balance
+  with the next block, about 4 minutes." (the amount of the order).
+
 ## 0.29.0 — 2026-10-16
 
 ### Changed

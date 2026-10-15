@@ -1333,8 +1333,8 @@ function modalHtml() {
     ${(m.warn || []).map(x => `<div class="warn small">${esc(x)}</div>`).join('')}
     <p class="muted small">Checked before signing: the Dex pays exactly this, and nothing goes to anyone else.</p>${errBox()}
     <div class="row"><button class="btn" data-act="close">Back</button><button class="btn primary" data-act="dex-send" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
-  if (m.type === 'dex-sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
-    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the book now, marked as waiting for its block (about 4 minutes); then anyone can take it.' : 'The cancel is on its way. Your coins come back in the next block.'}</p>
+  if (m.type === 'dex-sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">${m.kind === 'cancel' ? 'Cancelled' : 'Sent'}</h2>
+    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the book now, marked as waiting for its block (about 4 minutes); then anyone can take it.' : `Order cancelled: it is off the book now. ${esc(m.back || 'Your coins')} come${m.back ? 's' : ''} back to your balance with the next block, about 4 minutes.`}</p>
     <div class="card small"><div class="between"><span class="muted">Transaction</span><button type="button" class="chip mini" data-act="copy" data-text="${esc(m.hash)}">Copy</button></div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'token') {
@@ -1817,7 +1817,7 @@ $app.addEventListener('click', async e => {
       const m = S.modal, hash = await publish(node(), m.prepared);
       if (m.kind !== 'make') { dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling'); if (m.kind === 'cancel') dropDexMade([m.o.tx]); }
       else addDexMade({ tx: hash, net: net(), at: Date.now(), under_asset: m.o.underAsset, under_amount: String(m.o.underAmount), pair_asset: m.o.pairAsset, pair_total: String(m.o.pairTotal), maker: myPub() });
-      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
+      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash, back: m.kind === 'cancel' ? withUnit(m.o.underAsset, m.o.underAmount) : null }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
       render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
     }
     if (act === 'token') { S.modal = { type: 'token', asset: t.dataset.asset }; return render(); }
