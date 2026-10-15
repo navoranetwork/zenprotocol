@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.2 — 2026-10-16
+
+### Fixed
+- Selling ZP for bitcoin: more ZP than the wallet has is said at once, as you type, and refused on Review with the
+  amount that fits (the fee is 1 kalapa); a Max button fills it. Before, the form took any amount and failed later.
+
 ## 0.27.1 — 2026-10-15
 
 ### Fixed

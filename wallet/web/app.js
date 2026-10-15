@@ -1225,7 +1225,7 @@ function modalHtml() {
   if (m.type === 'offer') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>New offer</h2>
     <form data-form="offer" class="screen" data-s="flush">
     <label class="field">ZP to sell<input name="zp" inputmode="decimal" autocomplete="off" value="${esc(m.zp || '')}" required></label>
-    <p class="muted small">From ${esc(active().name)}: ${m.balance === null ? '–' : formatZP(m.balance) + ' ZP'} spendable.</p>
+    <p class="muted small row" data-s="between"><span>From ${esc(active().name)}: ${m.balance === null ? '–' : formatZP(m.balance) + ' ZP'} spendable.</span>${m.balance ? '<button type="button" class="chip mini" data-s="fixed" data-act="offer-max">Max</button>' : ''}</p>
     <div class="small">Price</div>
     <div class="tabs3" role="group" aria-label="How to give the price">${[['usd', '$ per ZP'], ['total', 'Total in BTC'], ['sat', 'sat per ZP']].map(([k, l]) =>
       `<button type="button" class="chip ${(m.mode || 'total') === k ? 'on' : ''}" data-act="price-mode" data-v="${k}" ${k === 'usd' && !btcUsd() ? 'disabled title="No Bitcoin price from the oracle right now"' : ''}>${l}</button>`).join('')}</div>
@@ -1569,8 +1569,9 @@ function offerTotal(f, kalapas) {
 function syncOffer() {
   const f = $app.querySelector('form[data-form=offer]'), note = $app.querySelector('#offer-rate'); if (!f || !note) return;
   let z = null, b = null, err = ''; try { z = parseZP(f.zp.value.trim()); } catch { /* not yet */ }
+  const bal = S.modal?.balance; if (z && bal != null && z > bal) err = `More than you have: ${formatZP(bal)} ZP spendable`;
   const typed = (f.btc || f.per)?.value.trim();
-  if (z && z > 0n && typed) { try { b = offerTotal(f, z); } catch (e) { err = e.message; } }
+  if (!err && z && z > 0n && typed) { try { b = offerTotal(f, z); } catch (e) { err = e.message; } }
   note.className = 'small ' + (err ? 'bad' : 'muted');
   note.textContent = err || (z && b ? ((S.modal?.mode || 'total') === 'total' ? '' : `Total ${formatBTC(b)} BTC · `) + rateText(b, z) : '');
 }
@@ -1750,6 +1751,7 @@ $app.addEventListener('click', async e => {
       } finally { S.busy = false; }
       render(); setTimeout(loadSwap, 10000); return;
     }
+    if (act === 'offer-max') { const i = $app.querySelector('form[data-form=offer] input[name=zp]'), bal = S.modal?.balance; if (i && bal) { i.value = formatZP(bal > 1n ? bal - 1n : 0n).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
     if (act === 'addr-src') { keepOffer(); S.modal.src = t.dataset.v; S.error = ''; freshScreen = true; render(); return syncOffer(); }
     if (act === 'addr-count') { keepOffer(); S.modal.count = Number(t.dataset.v); render(); return syncOffer(); }
     if (act === 'btc-acc-change') { keepOffer(); S.modal.newKey = true; render(); syncOffer(); return $app.querySelector('input[name=xpub]')?.focus(); }
@@ -1932,7 +1934,8 @@ $app.addEventListener('submit', async e => {
       case 'offer': {
         const m = S.modal; Object.assign(m, { zp: v.zp, btc: v.btc, per: v.per, addrs: v.addrs ?? m.addrs, xpub: v.xpub ?? m.xpub });
         const raw = v.zp.trim(), amount = parseZP(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw);
-        if (amount <= 0n) throw new Error('Enter the ZP to sell');
+        if (amount <= 0n) throw fieldError('Enter the ZP to sell', 'zp');
+        if (m.balance != null && amount > m.balance) throw fieldError(`You have ${formatZP(m.balance)} ZP to sell; the fee is 1 kalapa, so at most ${formatZP(m.balance > 1n ? m.balance - 1n : 0n)} ZP`, 'zp');
         const sats = offerTotal(f, amount);
         if (!S.swap?.swapId) throw new Error('The swap contract is not running on this network');
         const market = S.swap.offers.flatMap(o => Array.isArray(o.scriptList) ? o.scriptList : []), known = usedScripts(), src = m.src || 'key';
