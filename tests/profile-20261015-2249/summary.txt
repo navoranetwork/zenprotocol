@@ -1,0 +1,2 @@
+[2026-10-15 22:49] profile of ours at 300/min; Release + LOCALCHAIN, 10 s blocks
+[2026-10-15 22:49] B: ac632a07 Throughput measurement switches: ZP_VERIFIED_SIGNATURES=0 tur; load tool: zenprotocol 0177b104 ZP Wallet 0.28.1: the large balance shows
