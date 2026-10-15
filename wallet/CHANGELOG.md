@@ -11,6 +11,22 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.21.0 — 2026-10-15
+
+### Added
+- Buying ZP with bitcoin: the network fee to pay with, Bitcoin's next-block rate in sat/vB from the Esplora service,
+  so the payment confirms while the reservation holds (a slower one may not release the ZP). Shown on the pay step
+  and before "Pay with <wallet>", and passed to wallets that take a fee rate (UniSat, OKX).
+
+### Fixed
+- Selling: addresses from the account key stay within the gap limit of Bitcoin wallets (20 unused addresses after
+  the last one that received bitcoin). Before, every offer took new addresses past the last one handed out, so after a
+  few offers a payment could go to an address the seller's Bitcoin wallet does not watch (not lost, but it looked
+  unpaid). Now the search starts after the last address used on Bitcoin, refuses past the gap and says why, and an
+  offer taken back before anyone reserved it gives its addresses back. New offers default to 2 reservations.
+- When a payment arrives on a sale, the steps say which receive address of the account it went to, and to raise the
+  gap limit if the Bitcoin wallet does not show it.
+
 ## 0.20.0 — 2026-10-15
 
 ### Added

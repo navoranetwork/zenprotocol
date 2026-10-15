@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HDKey } from '@scure/bip32';
 import { mnemonicToSeedSync } from '@scure/bip39';
-import { parseAccount, accountAddress, freshAddresses, confsFor, afterPayMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet } from '../src/btc.js';
+import { parseAccount, accountAddress, freshAddresses, fetchFeeRate, confsFor, afterPayMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet } from '../src/btc.js';
 import { btcScript } from '../src/swap.js';
 
 const ABANDON = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -36,18 +36,37 @@ test('account keys: private keys, wrong network and wrong depth are refused', ()
   assert.throws(() => parseAccount('zpub123'), /Not a valid/);
 });
 
-test('fresh addresses skip used, market and funded ones, and continue from where they stopped', async () => {
+test('fresh addresses skip used, market and funded ones; a funded one moves the window', async () => {
   const acc = parseAccount(ZPUB);
   const s = i => btcScript(accountAddress(acc, i));
   const funded = accountAddress(acc, 3);
   const fetchFn = async url => ({ ok: true, json: async () => ({ chain_stats: { funded_txo_count: url.endsWith(funded) ? 1 : 0 }, mempool_stats: { funded_txo_count: 0 } }) });
-  const r = await freshAddresses(acc, { count: 3, start: 0, known: [s(0)], market: [s(2)], fetchFn, api: 'x' });
+  const r = await freshAddresses(acc, { count: 3, known: [s(0)], market: [s(2)], fetchFn, api: 'x' });
   assert.deepEqual(r.list.map(x => x.index), [1, 4, 5]);
-  assert.equal(r.next, 6); assert.equal(r.checked, true);
-  const again = await freshAddresses(acc, { count: 1, start: r.next, fetchFn, api: 'x' });
+  assert.equal(r.lastUsed, 3); assert.equal(r.checked, true);
+  const again = await freshAddresses(acc, { count: 1, lastUsed: r.lastUsed, known: [s(0), s(1), s(2), s(4), s(5)], fetchFn, api: 'x' });
   assert.equal(again.list[0].index, 6);
-  const down = await freshAddresses(acc, { count: 1, start: 0, fetchFn: async () => { throw new Error('offline'); }, api: 'x' });
+  const down = await freshAddresses(acc, { count: 1, fetchFn: async () => { throw new Error('offline'); }, api: 'x' });
   assert.equal(down.checked, false);
+});
+
+test('the gap limit: 6 offers of 4 addresses, none paid -> the 6th is refused; a take-back frees its addresses', async () => {
+  const acc = parseAccount(ZPUB), never = async () => ({ ok: true, json: async () => ({ chain_stats: { funded_txo_count: 0 }, mempool_stats: { funded_txo_count: 0 } }) });
+  let known = [];
+  for (let k = 0; k < 5; k++) { const r = await freshAddresses(acc, { count: 4, known, fetchFn: never, api: 'x' }); known = [...known, ...r.list.map(x => x.script)]; assert.equal(r.list.at(-1).index, k * 4 + 3); }
+  await assert.rejects(freshAddresses(acc, { count: 4, known, fetchFn: never, api: 'x' }), e => e.gap === true && /would not see payments beyond this: 20 addresses/.test(e.message) && /gap limit/.test(e.message));
+  const r = await freshAddresses(acc, { count: 4, known: known.slice(4), fetchFn: never, api: 'x' });   // the first offer taken back unreserved
+  assert.deepEqual(r.list.map(x => x.index), [0, 1, 2, 3]);
+  const paid = accountAddress(acc, 7), some = async u => ({ ok: true, json: async () => ({ chain_stats: { funded_txo_count: u.endsWith(paid) ? 1 : 0 }, mempool_stats: { funded_txo_count: 0 } }) });
+  const moved = await freshAddresses(acc, { count: 4, known, fetchFn: some, api: 'x' });   // address 7 was paid: the window reaches 27
+  assert.deepEqual(moved.list.map(x => x.index), [20, 21, 22, 23]); assert.equal(moved.lastUsed, 7);
+});
+
+test('the network fee: next-block rate from Esplora, rounded up', async () => {
+  const f = j => async () => ({ ok: true, json: async () => j });
+  assert.equal(await fetchFeeRate('x', f({ 1: 12.2, 2: 9 })), 13);
+  assert.equal(await fetchFeeRate('x', f({ 2: 4.5 })), 5);
+  assert.equal(await fetchFeeRate('x', async () => { throw new Error('down'); }), null);
 });
 
 test('waiting times follow the contract', () => {
@@ -78,7 +97,7 @@ test('Bitcoin wallets: WBIP004 providers with their icon, UniSat and OKX without
     ],
     XverseProviders: { BitcoinProvider: xverse }, LeatherProvider: leather,
     unisat: { requestAccounts: async () => ['tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'], sendBitcoin: async () => 'cc'.repeat(32) },
-    okxwallet: { bitcoin: { connect: async () => ({ address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu' }), sendBitcoin: async (to, s) => { calls.push(['okx', to, s]); return 'dd'.repeat(32); } } },
+    okxwallet: { bitcoin: { connect: async () => ({ address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu' }), sendBitcoin: async (to, s, o) => { calls.push(['okx', to, s, o]); return 'dd'.repeat(32); } } },
   };
   const ws = findBtcWallets(win);
   assert.deepEqual(ws.map(w => w.name), ['Xverse Wallet', 'Leather', 'UniSat', 'OKX Wallet']);
@@ -92,8 +111,8 @@ test('Bitcoin wallets: WBIP004 providers with their icon, UniSat and OKX without
   assert.deepEqual(calls.find(c => c[0] === 'sendTransfer' && c[1].recipients[0].amount === 90000)[1], { recipients: [{ address: to, amount: 90000 }] });
   await payWithWallet(ws[1], { to, sats: 90000 });
   assert.deepEqual(calls.filter(c => c[0] === 'sendTransfer')[1][1], { recipients: [{ address: to, amount: '90000' }], network: 'mainnet' });
-  await payWithWallet(ws[3], { to, sats: 90000 });
-  assert.deepEqual(calls.at(-1), ['okx', to, 90000]);
+  await payWithWallet(ws[3], { to, sats: 90000, feeRate: 13 });
+  assert.deepEqual(calls.at(-1), ['okx', to, 90000, { feeRate: 13 }]);
   await assert.rejects(payWithWallet(ws[0], { to: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx', sats: 1 }), /testnet/);
   const refuse = { ...ws[0], send: async () => { throw Object.assign(new Error('User rejected'), { code: 4001 }); } };
   await assert.rejects(payWithWallet(refuse, { to, sats: 5 }), /cancelled/);

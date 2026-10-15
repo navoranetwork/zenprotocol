@@ -227,3 +227,4 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .wtile { display: flex; align-items: center; gap: 10px; padding: 12px; text-align: left; }
 .wicon { border-radius: 6px; flex: none; } .wicon.blank { display: inline-flex; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--line); color: var(--ink2); font-weight: 700; }
 .btn .wicon { margin-right: 2px; }
+.fee { background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }

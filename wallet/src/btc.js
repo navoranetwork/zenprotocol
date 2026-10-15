@@ -64,20 +64,33 @@ export function accountAddress(acc, i) {
   return base58check.encode(Uint8Array.from([acc.net === 'main' ? 0x05 : 0xc4, ...hash160(redeem)]));
 }
 // The next `count` addresses that are new: not used by this browser, by any offer in the market, nor on Bitcoin.
-// start: the first index not handed out before (kept per account by the caller). checked: false when Bitcoin
-// could not be asked (the caller then says so).
-export async function freshAddresses(acc, { count, start = 0, known = [], market = [], api, fetchFn, max = 40 } = {}) {
-  const out = [], seen = new Set([...known, ...market]); let i = start, checked = true;
-  while (out.length < count && i < start + max) {
-    const addr = accountAddress(acc, i), script = btcScript(addr, acc.net); i++;
-    if (seen.has(script)) continue;
-    const r = await checkFresh([script], [addr], { api, fetchFn });
-    if (r.bad.length) continue;
-    if (!r.checked) checked = false;
-    out.push({ addr, script, index: i - 1 });
+// Bitcoin wallets (Sparrow, Electrum, BlueWallet…) watch only GAP unused addresses after the last one that received
+// bitcoin: a payment beyond that does not show in the seller's wallet (not lost, but it looks unpaid). So the search
+// starts after the last address seen used (lastUsed) and never hands out one past lastUsed + GAP. Addresses already
+// handed out (known, market) are asked about too: one that was paid since moves the window on.
+// checked: false when Bitcoin could not be asked (the caller then says so).
+export const GAP = 20;
+export async function freshAddresses(acc, { count, lastUsed = -1, known = [], market = [], api, fetchFn, gap = GAP } = {}) {
+  const out = [], taken = new Set([...known, ...market]); let checked = true, handed = 0;
+  const funded = async (addr, script) => { const r = await checkFresh([script], [addr], { api, fetchFn }); if (!r.checked) checked = false; return r.bad.length > 0; };
+  for (let i = lastUsed + 1; out.length < count; i++) {
+    if (i > lastUsed + gap) throw Object.assign(new Error(`Your Bitcoin wallet would not see payments beyond this: ${handed} addresses of your account are already in offers after the last one that received bitcoin, and Bitcoin wallets look only ${gap} ahead. Take back offers nobody reserved (their addresses come back), or raise the gap limit in your Bitcoin wallet (Sparrow, Electrum: Wallet → Settings) and paste addresses instead`), { gap: true });
+    const addr = accountAddress(acc, i), script = btcScript(addr, acc.net);
+    if (await funded(addr, script)) { lastUsed = i; handed = 0; continue; }
+    if (taken.has(script)) { handed++; continue; }
+    out.push({ addr, script, index: i });
   }
-  if (out.length < count) throw new Error(`Found only ${out.length} new addresses in ${max} tries: your account has many used addresses. Paste addresses instead`);
-  return { list: out, next: i, checked };
+  return { list: out, lastUsed, checked };
+}
+
+// The network fee for paying a reservation: Bitcoin's next-block rate (sat/vB, rounded up) from the Esplora service,
+// so the payment confirms while the reservation holds. null when it could not be asked.
+export async function fetchFeeRate(api, fetchFn = (...a) => globalThis.fetch(...a)) {
+  try {
+    const r = await fetchFn(`${api}/fee-estimates`, { cache: 'no-store' }); if (!r.ok) return null;
+    const j = await r.json(), v = Number(j?.['1'] ?? j?.['2'] ?? j?.['3']);
+    return v > 0 && v < 10000 ? Math.ceil(v) : null;
+  } catch { return null; }
 }
 
 // ---------------------------------------------------------------- Bitcoin wallets in the browser
@@ -106,10 +119,10 @@ export function findBtcWallets(win = globalThis) {
       send: async (to, sats) => (await rpc(p, 'sendTransfer', { recipients: [{ address: to, amount: leather ? String(sats) : Number(sats) }], ...(leather ? { network: 'mainnet' } : {}) }))?.txid || null });
   }
   if (win.unisat?.requestAccounts && !names.has('UniSat')) out.push({ id: 'unisat', name: 'UniSat', icon: null,
-    address: async () => (await win.unisat.requestAccounts())?.[0] || null, send: async (to, sats) => win.unisat.sendBitcoin(to, Number(sats)) });
+    address: async () => (await win.unisat.requestAccounts())?.[0] || null, send: async (to, sats, feeRate) => win.unisat.sendBitcoin(to, Number(sats), feeRate ? { feeRate } : undefined) });
   const okx = win.okxwallet?.bitcoin;
   if (okx?.connect && !names.has('OKX Wallet')) out.push({ id: 'okx', name: 'OKX Wallet', icon: null,
-    address: async () => (await okx.connect())?.address || null, send: async (to, sats) => okx.sendBitcoin(to, Number(sats)) });
+    address: async () => (await okx.connect())?.address || null, send: async (to, sats, feeRate) => okx.sendBitcoin(to, Number(sats), feeRate ? { feeRate } : undefined) });
   return out;
 }
 // Asks the wallet for its address and checks it is on the right Bitcoin network.
@@ -123,9 +136,10 @@ export async function connectBtcWallet(wallet, net = 'main') {
   return a;
 }
 // "Send X sats to Y" in the wallet's own confirm screen. Returns the Bitcoin transaction id when the wallet gives it.
-export async function payWithWallet(wallet, { to, sats, net = 'main' }) {
+// feeRate (sat/vB) is passed to wallets that take one (UniSat, OKX); others pick their own, and the page shows the rate.
+export async function payWithWallet(wallet, { to, sats, net = 'main', feeRate = null }) {
   btcScript(to, net);
   if (!Number.isSafeInteger(Number(sats)) || Number(sats) <= 0) throw new Error('Invalid amount');
-  try { return await wallet.send(to, Number(sats)); }
+  try { return await wallet.send(to, Number(sats), feeRate); }
   catch (e) { if (e?.code === 4001 || /reject|cancel|denied/i.test(e?.message || '')) throw new Error('You cancelled in your Bitcoin wallet. Nothing was sent.'); throw new Error(`${wallet.name}: ${e?.message || 'the payment failed'}`); }
 }

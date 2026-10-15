@@ -21,6 +21,7 @@ with sync_playwright() as p:
     ctx.add_init_script("localStorage.setItem('zp-wallet.settings.v1', JSON.stringify({network:'test', nodes:{test:'%s/node', main:'%s/node'}, mtab:'swap'}))" % (NODE, NODE))
     ctx.add_init_script("""window.__sent = []; window.FakeBtc = { request: async (m, p) => m === 'getAddresses' ? { result: { addresses: [{ address: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu', purpose: 'payment' }] } } : m === 'sendTransfer' ? (window.__sent.push(p), { result: { txid: 'ab'.repeat(32) } }) : { error: { message: 'no' } } };
       window.btc_providers = [{ id: 'FakeBtc', name: 'Fake Wallet', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMCAxMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZjkwIi8+PC9zdmc+' }];""")
+    ctx.route('https://mempool.space/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'Access-Control-Allow-Origin': '*'}, body=json.dumps({'1': 12.2, '2': 9})))
     pg = ctx.new_page(); errors = []; pg.on('pageerror', lambda e: errors.append(str(e)))
     mock(tip=2100, zp=10, utxo=0, reset=1)
     pg.goto(APP); pg.wait_for_selector('form[data-form=create-vault]')
@@ -38,6 +39,7 @@ with sync_playwright() as p:
     addr = get('/__addr')['wallet']; ok(True, 'reserved for this wallet (' + addr[:12] + '…)')
     mock(buystage=1); pg.evaluate('document.dispatchEvent(new Event("visibilitychange"))'); pg.wait_for_selector("text=Pay 0.00090000 BTC", timeout=20000)
     t = pg.inner_text('main'); ok(SELLER in t and 'Pay within' in t and pg.query_selector('.card.buy .qr svg') is not None and pg.query_selector(f'a[href="bitcoin:{SELLER}?amount=0.0009"]') is not None, 'payment screen: amount, address, QR, time to pay, a bitcoin: link')
+    ok('at least 13 sat/vB' in t and 'may not be released' in t, 'the network fee to pay with: the next-block rate, and why')
     ok('Reserved for you' in t and 'Bitcoin confirmations 0 of 2' in t and 'ZP received' in t, 'the steps of the purchase, with their times')
     pg.screenshot(path=f'{OUT}/b1-pay.png', full_page=True)
     if PAY:

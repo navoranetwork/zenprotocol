@@ -29,7 +29,7 @@ const fund = () => [{ outpoint: { txHash: 'ab'.repeat(32), index: st.utxo }, loc
   ...(st.zusdc ? [{ outpoint: { txHash: 'ad'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: ZUSDC, amount: '2000000' } }] : [])];
 const ZUSDC = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';   // the testnet's V1 zUSDC (6 decimals)
 const offers = () => [
-  { id: 'o-mine1', zp: 3, amount: '300000000', sats: 60000, confs: 2, state: 'open', until: null, buyer: null, seller: hex(key0.publicKey), scripts: 2, used: 0, canReserve: true, payment: null },
+  { id: 'o-mine1', zp: 3, amount: '300000000', sats: 60000, confs: 2, state: 'open', until: null, buyer: null, seller: hex(key0.publicKey), scripts: 2, scriptList: ['0014' + '11'.repeat(20), '0014' + '22'.repeat(20)], used: 0, canReserve: true, payment: null },
   { id: 'o-mine2', zp: 1, amount: '100000000', sats: 20000, confs: 2, state: 'reserved', until: st.tip + 50, buyer: 'cd'.repeat(32), seller: hex(key0.publicKey), scripts: 2, used: 1, canReserve: false, payment: null },
   { id: 'o-mine3', zp: 2, amount: '200000000', sats: 30000, confs: 2, state: 'expired', until: st.tip - 3, buyer: 'cd'.repeat(32), seller: hex(key0.publicKey), scripts: 2, used: 1, canReserve: true, payment: null },
   // the buyer's side (buy=…): reserved for this wallet once its reservation is "in a block" (stage 1), then paid with 0..2 confirmations, then proved; gone when bought

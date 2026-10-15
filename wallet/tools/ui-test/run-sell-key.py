@@ -48,6 +48,7 @@ with sync_playwright() as p:
     pg.fill('input[name=xpub]', 'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi')
     pg.click('form[data-form=offer] button.primary'); pg.wait_for_timeout(500)
     ok('private key' in pg.inner_text('.sheet') and pg.query_selector('input[name=xpub].invalid, input[name=xpub][aria-invalid=true]') is not None, 'a private key is refused, and the field is marked')
+    ok(pg.query_selector('button[data-act=addr-count][data-v="2"].on') is not None, 'an offer has 2 reservations by default (the gap limit)')
     pg.fill('input[name=xpub]', ZPUB); pg.click('button[data-act=addr-count][data-v="2"]')
     ok(pg.input_value('input[name=zp]') == '2' and pg.input_value('input[name=btc]') == '0.0004', 'choosing the number of reservations keeps what was typed')
     pg.screenshot(path=f'{OUT}/k1-account-key.png')
@@ -58,7 +59,7 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/k2-confirm.png')
     pg.click('button[data-act=confirm-offer]'); pg.wait_for_selector('h2:has-text("Broadcast successfully")')
     ok(len(published()) == 1, 'offer published')
-    acc = pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.btc-account.v1')).main"); ok(acc['key'] == ZPUB and acc['next'] == 3, f'the key is kept on this device with the next index 3 ({acc})')
+    acc = pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.btc-account.v1')).main"); ok(acc['key'] == ZPUB and acc['lastUsed'] == 1, f'the key is kept on this device, with the last address used on Bitcoin (1) ({acc})')
     pg.click('button[data-act=close]')
     # 2. after a reload the next offer continues at index 3; the key is not asked again
     mock(utxo=1)
