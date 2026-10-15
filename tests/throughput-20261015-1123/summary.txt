@@ -5,3 +5,6 @@
 [2026-10-15 11:24] B-t0s0: node up, block 321, senders 1 and 2 funded
 [2026-10-15 11:24] B-t0s0: load, 18 steps of 6 min
 [2026-10-15 13:16] B-t0s0: done at block 946
+[2026-10-15 13:16] B-t0: node up, block 322, senders 1 and 2 funded
+[2026-10-15 13:16] B-t0: load, 18 steps of 6 min
+[2026-10-15 15:08] B-t0: done at block 860
