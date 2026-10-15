@@ -84,7 +84,7 @@ print(f'{run}: median (min-max) over the runs of each rate; first {WARMUP} s of 
 names = {'A': 'A = original (upstream a0191cbc)', 'B': 'B = ours'}
 dirs = sorted((d for d in os.listdir(run) if os.path.isdir(os.path.join(run, d)) and (d in names or d.startswith('B-'))),
               key=lambda d: (d != 'A', d))
-for K, name in ((d, names.get(d, f'{d} = ours, ZP_TEMPLATE_INTERVAL_MS={d[3:]}' if d.startswith('B-t') else d)) for d in dirs):
+for K, name in ((d, names.get(d, (f"{d} = ours, template at most every {d[3:].removesuffix('s0')} ms" + (", remembered signatures off" if d.endswith('s0') else "")) if d.startswith('B-t') else d)) for d in dirs):
     steps = node(K)
     if not steps: print(f'\n{name}: no data'); continue
     print(f'\n{name}  (senders: {steps[0]["senders"]})')

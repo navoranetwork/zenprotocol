@@ -23,7 +23,8 @@
 #     bash /opt/zp-lab/scripts/lab-throughput.sh
 # Settings: RATES (total per minute, default 300,600,1500,3000,6000,15000), RUNS (3), STEP_MIN (6), BLOCK_S (10),
 # SEED (1), ONLY=A|B, PROFILE=1.
-# VARIANTS="t0 t500 t1000 t2000": run B once per variant, tN = ZP_TEMPLATE_INTERVAL_MS=N (results in B-tN; default: one
+# VARIANTS="t0s0 t0 t1000s0 t1000": run B once per variant, tN = ZP_TEMPLATE_INTERVAL_MS=N, s0 = ZP_VERIFIED_SIGNATURES=0
+#   (t0s0 = the node as before both changes; results in B-<variant>; default: one
 #   run of B as built). REALISTIC=1: the local chain's easiest target is POW_LIMIT (default 0x1e0bfbd5: ~2 s of one miner
 #   thread; the difficulty rule then holds blocks near BLOCK_S) in both trees, so blocks come from real hashing.
 # PROFILE=1 (PROFILE_RATE, PROFILE_ENV) also takes the finalizer queue (dotnet-dump), a heap report (dotnet-gcdump) and GC counters (dotnet-counters).
@@ -197,7 +198,9 @@ run_one() {
 [ "${ONLY:-}" != B ] && run_one A
 if [ "${ONLY:-}" != A ]; then
   if [ -z "$VARIANTS" ]; then run_one B
-  else for v in $VARIANTS; do NODE_ENV="-e ZP_TEMPLATE_INTERVAL_MS=${v#t}"; run_one "B-$v"; done; NODE_ENV=""; fi
+  else for v in $VARIANTS; do   # tN[s0]: template interval N ms; s0 = remembered signatures off
+    n=${v#t}; n=${n%s0}; NODE_ENV="-e ZP_TEMPLATE_INTERVAL_MS=$n"; case $v in *s0) NODE_ENV="$NODE_ENV -e ZP_VERIFIED_SIGNATURES=0";; esac
+    run_one "B-$v"; done; NODE_ENV=""; fi
 fi
 python3 "$DIR/scripts/throughput-report.py" "$OUT" > "$OUT/report.txt" 2>&1 || log "report failed (report.txt)"
 log "done"; publish "done"
