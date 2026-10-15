@@ -9,3 +9,4 @@
 [2026-10-15 00:47] B: node up, block 320, senders 1 and 2 funded
 [2026-10-15 00:47] B: load, 18 steps of 6 min
 [2026-10-15 02:38] B: done at block 945
+[2026-10-15 02:38] done
