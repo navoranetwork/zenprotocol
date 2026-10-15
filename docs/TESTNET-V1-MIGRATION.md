@@ -198,6 +198,21 @@ installer makes the key. Fund the market maker with V1 zUSDC at that address for
 The Dex page, the explorer's Dex API and the wallet's Markets tab read ZEN_DEX through the explorer, so they follow.
 The index's trade history keeps the V0 Dex's old trades (the table has no contract column).
 
+**Order book, 2026-10-15 evening** (the wallet session's brief "Dex order book"):
+- Market maker with levels (`site/marketmaker/levels.mjs`): 3 per side, 0.5% apart, 1% from the price; one step of
+  price moves one level per side. Starting price **1 USD per ZP** (`MM_PRICE=1`), `MM_SIZE_ZP=40`; the orders at
+  0.10 were cancelled. Live since 18:39 Israel time: asks 1.01/1.015/1.02, bids 0.99/0.985/0.98, 40 ZP each.
+  Six Makes in a row from the node wallet (3 s apart) all went through. `MM_WAIT` is 3600 s: at 1800 s it would
+  have re-made orders the index (10 blocks, about 40 min) had not shown yet.
+- Funding: Alon's 90 USDC sent from the funder address (`0xd0c6…b9db`) was a reserve top-up (no zUSDC); issued
+  afterwards to the market maker with `bridge.mjs credit` (docs/BRIDGE.md), plus 30 zUSDC from Alon's wallet. The
+  bridge: 132 USDC held, 132 zUSDC out.
+- Explorer (`site/dex-fresh.mjs`): `/dex/orders` shows an order one block after its Make (`confirmations`;
+  `?pending=1` adds the mempool), `/dex/book?base=00&quote=<zUSDC>`, `/dex/trades?base=&quote=` (fills only, with
+  side, price, size). Checked on the testnet: the book showed the six orders at 3 confirmations.
+- Open: several Takes in one transaction are not tested (take sequentially); rows newer than the index are hints,
+  re-read before signing.
+
 **State 2026-10-14 17:00: ported, waits for the next node image.** The market maker's orders on the V0 Dex are
 cancelled (`MM_CANCEL_ALL=1`, 0 open; Alon had none) and the `marketmaker` service stays stopped. `contracts/v1/Dex.fst`
 (V0 shapes; `takeInner`'s failure pads with `RT.autoFailw`, since V0's `RT.incFailw (W.size w * 256 + 6978)` computes
