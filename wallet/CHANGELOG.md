@@ -16,6 +16,9 @@ Nothing yet.
 ### Added
 - Try it: when a call would pay out more than goes in (the engine's `unbalanced`), the result says "A node would reject this transaction" with the amount, is marked "Not valid", and the next call does not build on it.
 
+### Fixed
+- zUSDC shows with its own 6 decimals in the Tokens card and the contract forms' asset picker (was shown with ZP's 8).
+
 ### Changed
 - When a node would refuse a contract and the checker can only guess the line, it says "near line N" (was "line N").
 
