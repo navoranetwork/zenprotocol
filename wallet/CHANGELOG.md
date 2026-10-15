@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.25.2 — 2026-10-15
+
+### Changed
+- Order book: each side is labelled, "Asks · selling ZP: tap to buy" and "Bids · buying ZP: tap to sell".
+
 ## 0.25.1 — 2026-10-15
 
 ### Fixed

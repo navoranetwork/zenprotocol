@@ -79,10 +79,12 @@ function bookView(m, me, spendable) {
   const last = d.last && Number(d.last.price) > 0 ? `Last ${Number(d.last.price).toFixed(4)}` : '';
   return `<div class="card book"><div class="row" data-s="between"><h2 class="tname">${zpLogo(20)}ZP / ${tokenIcon(d.q, 20)}zUSDC</h2><span class="small muted" data-s="fixed">${last}${last && d.asOf ? ' · ' : ''}${d.asOf ? 'block ' + d.asOf.toLocaleString('en-US') : ''}</span></div>
     <div class="bookhead"><span>Price (zUSDC)</span><span>Size (ZP)</span><span>Total (ZP)</span></div>
+    <div class="sidelbl ask">Asks · selling ZP: tap to buy</div>
     <div class="asks">${la.length ? la.map((l, i) => row(l, 'ask', i)).reverse().join('') : '<p class="muted small">No one is selling ZP.</p>'}</div>
     <div class="spreadrow">${esc(spread)}</div>
+    <div class="sidelbl bid">Bids · buying ZP: tap to sell</div>
     <div class="bids">${lb.length ? lb.map((l, i) => row(l, 'bid', i)).join('') : '<p class="muted small">No one is buying ZP.</p>'}</div>
-    <p class="muted small" data-s="mt10">${spendable ? 'Tap a price to buy (red) or sell (green) at it; you can take part of an order.' : 'Open a wallet that can sign to trade.'} Orders waiting for their block show as pending.</p></div>
+    <p class="muted small" data-s="mt10">${spendable ? 'You can take part of an order.' : 'Open a wallet that can sign to trade.'} Orders waiting for their block show as pending.</p></div>
     ${spendable ? limitForm(d, ba, bb) : ''}${tradesCard(m)}`;
 }
 function limitForm(d, ba, bb) {
