@@ -262,3 +262,4 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 .offer.buy .olbl:first-child { color: var(--accent); } .offer.sell .olbl:first-child { color: var(--bad); }
 .afilter { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; } .afilter .chip { flex: none; }
 .afilter { gap: 4px; } .afilter .chip.mini { padding: 4px 8px; }
+.card h2 + .afilter { margin-top: 8px; }

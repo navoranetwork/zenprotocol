@@ -31,6 +31,11 @@ with sync_playwright() as p:
     pg.wait_for_selector('[data-go=markets]'); pg.wait_for_timeout(800)
     pg.click('nav >> text=Markets'); pg.wait_for_selector('[data-mtab=oracle][aria-selected=true]'); pg.wait_for_timeout(800)
     ok('BTC' in pg.inner_text('main') and pg.query_selector('.book') is None, 'Markets opens on the Oracle tab, prices only')
+    chips = [e.inner_text() for e in pg.query_selector_all('button[data-act=ocat]')]
+    ok(chips == ['Crypto', 'Commodities'] and 'Bitcoin' in pg.inner_text('main') and 'GOLD' not in pg.inner_text('main'), f'Oracle by market: only groups that have prices ({chips}); Crypto first')
+    pg.click('button[data-act=ocat][data-v=commodities]'); pg.wait_for_timeout(200)
+    ok('GOLD' in pg.inner_text('main') and 'Bitcoin' not in pg.inner_text('main') and 'End-of-day' in pg.inner_text('main'), 'Commodities: gold, end-of-day close')
+    pg.click('button[data-act=ocat][data-v=crypto]')
     pg.screenshot(path=f'{OUT}/m1-oracle.png', full_page=True)
     pg.click('[data-mtab=dex]'); pg.wait_for_timeout(300); ok(pg.query_selector('.book') is not None and 'Spread' in pg.inner_text('.book'), 'Dex tab shows the order book')
     pg.screenshot(path=f'{OUT}/m2-dex.png', full_page=True)

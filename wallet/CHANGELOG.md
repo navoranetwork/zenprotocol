@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.31.0 — 2026-10-16
+
+### Changed
+- Markets → Oracle is grouped by market: Crypto, Forex, Stocks, Commodities (and Other for a ticker not yet known),
+  showing only the groups that have prices; each price has its name (Bitcoin, Euro, Apple, gold…). The group is kept.
+
 ## 0.30.0 — 2026-10-16
 
 ### Added

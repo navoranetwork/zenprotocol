@@ -203,7 +203,7 @@ const S = {
 function loadSettings() {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { /* default */ }
-  return { mtab: ['oracle', 'dex', 'swap'].includes(s.mtab) ? s.mtab : 'oracle', stab: s.stab === 'sell' ? 'sell' : 'buy', afilter: typeof s.afilter === 'string' ? s.afilter : 'all', btcApi: typeof s.btcApi === 'string' && /^https?:\/\//.test(s.btcApi) ? s.btcApi : '', network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
+  return { mtab: ['oracle', 'dex', 'swap'].includes(s.mtab) ? s.mtab : 'oracle', stab: s.stab === 'sell' ? 'sell' : 'buy', afilter: typeof s.afilter === 'string' ? s.afilter : 'all', ocat: typeof s.ocat === 'string' ? s.ocat : 'crypto', btcApi: typeof s.btcApi === 'string' && /^https?:\/\//.test(s.btcApi) ? s.btcApi : '', network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
            voteWallets: { main: Array.isArray(s.voteWallets?.main) ? s.voteWallets.main : null, test: Array.isArray(s.voteWallets?.test) ? s.voteWallets.test : null } };
 }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S.settings)); } catch { /* private mode */ } }
@@ -231,6 +231,13 @@ const rateText = (sats, kalapas) => {
   const usd = btcUsd() ? per / 1e8 * btcUsd() : null;
   return `${(per / 1e8).toFixed(8)} BTC per ZP (${per.toLocaleString('en-US', { maximumFractionDigits: per < 10 ? 2 : 0 })} sat)${usd ? ` ≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: usd < 1 ? 4 : 2 })}` : ''}`;
 };
+// oracle tickers by market, and their names (a ticker not listed goes under Other)
+const ORACLE_CATS = [['crypto', 'Crypto'], ['forex', 'Forex'], ['stocks', 'Stocks'], ['commodities', 'Commodities'], ['other', 'Other']];
+const TICKER_CAT = { BTC: 'crypto', ETH: 'crypto', SOL: 'crypto', EUR: 'forex', GBP: 'forex', JPY: 'forex', CHF: 'forex', AUD: 'forex', CAD: 'forex', CNY: 'forex', ILS: 'forex',
+  SPY: 'stocks', QQQ: 'stocks', AAPL: 'stocks', MSFT: 'stocks', NVDA: 'stocks', GOOGL: 'stocks', AMZN: 'stocks', TSLA: 'stocks', XAU: 'commodities', GOLD: 'commodities', XAG: 'commodities', OIL: 'commodities', WTI: 'commodities' };
+const TICKER_NAMES = { BTC: 'Bitcoin', ETH: 'Ether', EUR: 'Euro', GBP: 'British pound', JPY: 'Japanese yen', CHF: 'Swiss franc', AUD: 'Australian dollar', CAD: 'Canadian dollar', ILS: 'Israeli shekel',
+  SPY: 'S&P 500 ETF', QQQ: 'Nasdaq-100 ETF', AAPL: 'Apple', MSFT: 'Microsoft', NVDA: 'Nvidia', XAU: 'Gold, troy ounce', GOLD: 'Gold', XAG: 'Silver, troy ounce' };
+const tickerCat = t => TICKER_CAT[t] || 'other';
 // the large balance: two decimals, cut (never rounded up past what is there); the exact amount on hover and in Send
 const balShort = k => { const n = BigInt(k), c = n / 1000000n * 1000000n, f = formatZP(c); return (f.includes('.') ? f.replace(/(\.\d)$/, '$10') : f + '.00'); };
 const zpStr = v => Number.isFinite(v) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '–';
@@ -969,15 +976,18 @@ const views = {
     const errCard = S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : '';
     let body = '';
     if (tab === 'oracle') {
-      const rows = (m?.round?.tickers || []).map((t, i) => {
+      const cat = ORACLE_CATS.some(([k]) => k === S.settings.ocat) ? S.settings.ocat : 'crypto';
+      const all = (m?.round?.tickers || []).map((t, i) => [t, i]), present = new Set(all.map(([t]) => tickerCat(t)));
+      const chips = `<div class="afilter" role="tablist" aria-label="Markets">${ORACLE_CATS.filter(([k]) => present.has(k) || k === cat).map(([k, l]) => `<button type="button" class="chip mini ${cat === k ? 'on' : ''}" role="tab" aria-selected="${cat === k}" data-act="ocat" data-v="${k}">${l}</button>`).join('')}</div>`;
+      const rows = all.filter(([t]) => tickerCat(t) === cat).map(([t, i]) => {
         const e = m.evidence[t] || {}, names = Object.keys(e.sources || {}), dropped = e.dropped || [];
         const src = !names.length ? '1 source' : `${names.length - dropped.length} of ${names.length} sources agree`;
         const day = e.asOf && m.day && e.asOf !== m.day ? 'close ' + e.asOf : '';
         const tip = names.map(n => n + ' = ' + e.sources[n]).join('\n') + (dropped.length ? '\ndropped: ' + dropped.join(', ') : '');
-        return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b></div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
+        return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b>${TICKER_NAMES[t] ? ` <span class="muted small">${esc(TICKER_NAMES[t])}</span>` : ''}</div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
       }).join('');
-      body = `${errCard}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices yet.</p>'}</div>
-        <p class="muted small" data-s="mt10">Several sources must agree; stocks and gold are end-of-day closes.</p></div>`;
+      body = `${errCard}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2>${chips}<div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices in this group yet.</p>'}</div>
+        <p class="muted small" data-s="mt10">${cat === 'forex' ? 'US dollars for one unit of each currency.' : cat === 'stocks' || cat === 'commodities' ? 'End-of-day closes.' : 'Live prices.'} Several sources must agree.</p></div>`;
     } else if (tab === 'dex') {
       body = errCard + dexView(m, base, loading);
     } else body = swapCard();
@@ -1668,6 +1678,7 @@ $app.addEventListener('click', async e => {
   const act = t.dataset.act; if (!act) return;
   try {
     if (act === 'refresh') return refreshAll(true);
+    if (act === 'ocat') { S.settings.ocat = t.dataset.v; saveSettings(); return render(); }
     if (act === 'afilter') { S.settings.afilter = t.dataset.v; saveSettings(); render(); const a = active(); return loadTxInfo(a, S.data.get(a.id)?.history || []); }
     if (act === 'hist-more') {
       const a = active(), d = S.data.get(a.id), w = S.open.get(a.id); if (!d?.history || !w) return;
