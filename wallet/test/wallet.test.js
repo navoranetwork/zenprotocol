@@ -89,3 +89,17 @@ test('extending a contract pays code length x blocks to an ExtensionSacrifice ou
   assert.throws(() => prepareExtend(w, { tip: 100, utxos }, id, code, 10 ** 9), /Not enough funds|number of blocks/);
   assert.throws(() => prepareExtend(w, { tip: 100, utxos: [] }, id, code, 5), /Not enough funds/);
 });
+
+test('send a token: only that token is spent, change in the same token, the asset as the node names it', () => {
+  const w = openWallet({ id: 't', name: 'T', network: 'test', kind: 'mnemonic' }, WORDS);
+  const ZUSDC = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';
+  const mine = deriveKey(acct, 0, 0).pkHash, out = (n, asset, amount) => ({ outpoint: { txHash: Buffer.from(txid(n), 'hex'), index: 0 }, lock: { type: 'PK', hash: mine }, spend: { asset, amount } });
+  const st = { tip: 100, utxos: [out(1, '00', parseZP('3')), out(2, ZUSDC, 2_000_000n)] };
+  const p = prepareSend(w, st, encodeAddress(deriveKey(acct, 0, 5).pkHash, 'test'), 1_500_000n, ZUSDC);
+  assert.equal(p.tx.inputs.length, 1);
+  assert.equal(hex(p.tx.inputs[0].outpoint.txHash), txid(2));
+  const amounts = p.tx.outputs.map(o => [o.spend.asset.contract.version, hex(o.spend.asset.contract.hash), o.spend.amount]);
+  assert.deepEqual(amounts, [[1, ZUSDC.slice(8), 1_500_000n], [1, ZUSDC.slice(8), 500_000n]]);
+  assert.throws(() => prepareSend(w, st, encodeAddress(deriveKey(acct, 0, 5).pkHash, 'test'), 3_000_000n, ZUSDC), /Not enough funds/);
+  assert.throws(() => prepareSend(w, st, OTHER.replace('zen1', 'tzn1'), 1n, 'zz'), /Not an asset id|valid/);
+});

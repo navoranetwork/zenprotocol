@@ -3,7 +3,7 @@
 // - computes the contract id from the source itself and refuses to sign when it differs from the engine's report,
 // - builds and signs the activation with the user's key (wallet.js prepareActivateV1).
 import { sha3_256 } from '@noble/hashes/sha3.js';
-import { hex, unhex, Writer, Reader, Data, Asset } from './serialize.js';
+import { hex, unhex, Writer, Reader, Data, Asset, assetFromId } from './serialize.js';
 
 export const MAX_V1_SOURCE = 65536;   // TransactionValidation.fs maxV1SourceBytes
 const enc = new TextEncoder();
@@ -176,7 +176,7 @@ export class EngineClient {
 // a wallet asset (the node's hex form, "00" for ZP) as the engine names it: zp, or v<version>:<contract hash>[:<subtype>]
 export function engineAsset(walletAsset) {
   if (walletAsset === '00') return 'zp';
-  const a = Asset.read(new Reader(unhex(walletAsset)));
+  const a = assetFromId(walletAsset);   // the node's JSON form: BE32 version + contract hash [+ subtype]
   const sub = hex(a.subtype);
   return /^0*$/.test(hex(a.contract.hash)) && /^0*$/.test(sub) ? 'zp' : `v${a.contract.version}:${hex(a.contract.hash)}${/^0*$/.test(sub) ? '' : ':' + sub}`;
 }

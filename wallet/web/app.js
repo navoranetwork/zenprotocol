@@ -19,8 +19,22 @@ const WALLET_VERSION = typeof __WALLET_VERSION__ === 'string' ? __WALLET_VERSION
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const shortAddr = a => a ? a.slice(0, 10) + '…' + a.slice(-6) : '';
-// a token's amount as its users read it: zUSDC has 6 decimals (as USDC), other tokens are shown in whole units of 1e-8 like ZP
-const tokenAmount = (asset, units) => S.assetNames[asset] === 'zUSDC' ? (Number(BigInt(units)) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 6 }) : formatZP(units);
+const BUILTIN_NAMES = typeof __ASSET_NAMES__ === 'object' && __ASSET_NAMES__ ? __ASSET_NAMES__ : {};
+// a token's amount as its users read it: zUSDC has 6 decimals (as USDC), other tokens are shown in units of 1e-8 like ZP
+const decimalsOf = asset => asset !== '00' && /^zUSDC\b/.test(S.assetNames[asset] || '') ? 6 : 8;
+const unitOf = asset => asset === '00' ? 'ZP' : (S.assetNames[asset] || 'Token ' + String(asset).slice(8, 16) + '…');
+function fmtUnits(units, dec) {
+  const v = BigInt(units), neg = v < 0n, a = neg ? -v : v, d = 10n ** BigInt(dec), whole = (a / d).toLocaleString('en-US');
+  let frac = (a % d).toString().padStart(dec, '0').replace(/0+$/, ''); if (dec === 6 && frac.length < 2) frac = frac.padEnd(2, '0');
+  return (neg ? '-' : '') + whole + (frac ? '.' + frac : '');
+}
+const tokenAmount = (asset, units) => asset === '00' ? formatZP(units) : fmtUnits(units, decimalsOf(asset));
+const withUnit = (asset, units) => tokenAmount(asset, units) + ' ' + unitOf(asset);
+function parseUnits(text, dec) {   // "1,234.5" with thousands separators only; at most `dec` decimals
+  const raw = String(text).trim(), t = /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw;
+  const m = t.match(new RegExp(`^(\\d+)(?:\\.(\\d{1,${dec}}))?$`)); if (!m) throw new Error(`Invalid amount (at most ${dec} decimals)`);
+  return BigInt(m[1]) * 10n ** BigInt(dec) + BigInt((m[2] || '').padEnd(dec, '0'));
+}
 const ago = ms => { const s = (Date.now() - ms) / 1000; return s < 90 ? 'just now' : s < 5400 ? Math.round(s / 60) + ' min ago' : s < 172800 ? Math.round(s / 3600) + ' h ago' : new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const icon = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I = {
@@ -35,7 +49,7 @@ const I = {
 // ---------------------------------------------------------------- state
 const S = {
   vault: storage.load(), key: null, open: new Map(), data: new Map(),
-  screen: null, tab: 'new', assetNames: {}, draft: {}, error: '', busy: false, modal: null, nodeOk: null, tip: null, cgp: null,
+  screen: null, tab: 'new', assetNames: { ...BUILTIN_NAMES }, draft: {}, error: '', busy: false, modal: null, nodeOk: null, tip: null, cgp: null,
   settings: loadSettings(), lastActivity: Date.now(),
 };
 function loadSettings() {
@@ -200,7 +214,7 @@ function assetOptions() {
   const a = active(), st = a && S.data.get(a.id)?.state;
   const toks = (st?.assets || []).filter(x => x.asset !== '00' && x.spendable + x.maturing > 0n).map(x => {
     let v; try { v = engineAsset(x.asset); } catch { return null; }
-    return { v, label: S.assetNames[x.asset] || 'Token ' + x.asset.slice(8, 16) + '…', bal: S.assetNames[x.asset] === 'zUSDC' ? tokenAmount(x.asset, x.spendable + x.maturing) + ' zUSDC' : (x.spendable + x.maturing).toLocaleString('en-US') };
+    return { v, label: S.assetNames[x.asset] || 'Token ' + x.asset.slice(8, 16) + '…', bal: decimalsOf(x.asset) === 6 ? withUnit(x.asset, x.spendable + x.maturing) : (x.spendable + x.maturing).toLocaleString('en-US') };
   }).filter(Boolean);
   return [{ v: 'zp', label: 'ZP' }, ...toks];
 }
@@ -596,10 +610,12 @@ const views = {
   },
 
   send: () => {
-    const a = active(), zp = S.data.get(a.id)?.state?.assets.find(x => x.asset === '00');
-    return `${backBar('Send ZP')}<form data-form="send" class="screen">
+    const a = active(), assets = (S.data.get(a.id)?.state?.assets || []).filter(x => x.asset === '00' || x.spendable > 0n);
+    const asset = assets.some(x => x.asset === S.draft.asset) ? S.draft.asset : '00', held = assets.find(x => x.asset === asset), u = unitOf(asset);
+    return `${backBar(asset === '00' ? 'Send ZP' : 'Send ' + esc(u))}<form data-form="send" class="screen">
+      ${assets.length > 1 ? `<label class="field">What<select name="asset" data-act="send-asset">${assets.map(x => `<option value="${esc(x.asset)}" ${x.asset === asset ? 'selected' : ''}>${esc(unitOf(x.asset))} · ${esc(tokenAmount(x.asset, x.spendable))}</option>`).join('')}</select></label>` : ''}
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
-      <label class="field"><span class="row" data-s="between"><span>Amount (ZP)</span><span data-s="right">Available ${formatZP(zp?.spendable || 0n)}</span></span>
+      <label class="field"><span class="row" data-s="between"><span>Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
       <div class="card small"><div class="kv"><span class="muted">From</span><span>${esc(a.name)}</span></div><div class="kv"><span class="muted">Network fee</span><span>None</span></div><div class="kv"><span class="muted">Change returns to</span><span class="mono">${esc(shortAddr(receiveAddress(S.open.get(a.id))))}</span></div></div>
       <p class="muted small">Signed on this device. The node only receives the signed transaction.</p>
@@ -638,7 +654,7 @@ const views = {
 
   markets: () => {
     const m = S.markets, base = siteBase(), tab = S.settings.mtab || 'oracle', loading = !m && !S.marketsError;
-    const unit = (asset, v) => { const big = BigInt(v); return asset === '00' ? formatZP(big) + ' ZP' : (S.assetNames[asset] === 'zUSDC' ? (Number(big) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 6 }) + ' zUSDC' : big.toString() + ' ' + (S.assetNames[asset] || shortAddr(asset))); };
+    const unit = (asset, v) => withUnit(asset, BigInt(v));
     const tabs = [['oracle', 'Oracle'], ['dex', 'Dex'], ['swap', 'ZP ⇄ BTC']];
     const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>`;
     const errCard = S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : '';
@@ -761,7 +777,7 @@ function activityRow(h, w) {
         what = inn ? 'Received from' : 'Sent to';
         who = name ? esc(name.replace(/^the /, 'The ')) : `<span class="mono" title="${esc(o.address)}">${esc(shortAddr(o.address))}</span>`;
         const copy = `<button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address)}">Copy</button>`;
-        back = (inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}">Send back</button>` : !inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}">Send again</button>` : '') + (o.kind !== 'Contract' ? copy : '');
+        back = (inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}" data-asset="${esc(h.asset)}">Send back</button>` : !inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}" data-asset="${esc(h.asset)}">Send again</button>` : '') + (o.kind !== 'Contract' ? copy : '');
       }
     }
   } else if (mineVote && !inn) { what = 'CGP ballot'; who = esc(mineVote.kind + ': ' + mineVote.label); }
@@ -769,7 +785,7 @@ function activityRow(h, w) {
   return `<div class="item act"><div class="act-main"><div>${what}${who ? ` <span class="act-who">${who}</span>` : ''}</div>
       <div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'}</div>
       ${back ? `<div class="row" data-s="mt4">${back}</div>` : ''}</div>
-    <div class="amt ${inn ? 'in' : ''}">${inn ? '+' : '−'}${h.asset === '00' ? formatZP(inn ? amt : -amt) + ' ZP' : esc(String(inn ? amt : -amt))}</div></div>`;
+    <div class="amt ${inn ? 'in' : ''}">${inn ? '+' : '−'}${esc(withUnit(h.asset, inn ? amt : -amt))}</div></div>`;
 }
 
 // ---------------------------------------------------------------- CGP ballots
@@ -849,7 +865,7 @@ function modalHtml() {
     <button class="btn" data-act="close">Cancel</button></div></div>`;
   const m = S.modal; if (!m) return '';
   if (m.type === 'confirm-send') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm transfer</h2>
-    <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt">${formatZP(m.amount)} ZP</span></div>
+    <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt">${esc(withUnit(m.asset || '00', m.amount))}</span></div>
     <div class="kv"><span class="muted">To</span><span class="mono small">${esc(m.to)}</span></div>
     <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div>
     <div class="kv"><span class="muted">Fee</span><span>None</span></div></div>
@@ -944,7 +960,7 @@ function modalHtml() {
     <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
   if (m.type === 'sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
-    <p>${formatZP(m.amount)} ZP is on its way. It appears in the next block, about 4 minutes.</p>
+    <p>${esc(withUnit(m.asset || '00', m.amount))} is on its way. It appears in the next block, about 4 minutes.</p>
     <div class="card small"><div class="muted">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'reveal') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Backup · ${esc(m.name)}</h2>
@@ -1021,7 +1037,7 @@ async function refreshExtras() {
       if (ra.ok) {
         const j = await ra.json(), names = {};
         for (const x of Array.isArray(j?.assets) ? j.assets : []) if (typeof x?.asset === 'string' && typeof x?.name === 'string') names[x.asset] = x.name.slice(0, 40);
-        S.assetNames = names;
+        S.assetNames = { ...BUILTIN_NAMES, ...names };
       }
     }
   } catch { /* optional */ }
@@ -1331,9 +1347,9 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
-    if (act === 'send-back') { S.draft = { ...S.draft, to: t.dataset.to }; return go('send'); }
+    if (act === 'send-back') { S.draft = { ...S.draft, to: t.dataset.to, asset: t.dataset.asset || '00', amount: '' }; return go('send'); }
     if (act === 'copy') { await navigator.clipboard.writeText(t.dataset.text); t.innerHTML = I.copy + 'Copied'; return; }
-    if (act === 'max') { const zp = S.data.get(active().id)?.state?.assets.find(x => x.asset === '00'); $app.querySelector('[name=amount]').value = formatZP(zp?.spendable || 0n).replace(/,/g, ''); return; }
+    if (act === 'max') { const as = $app.querySelector('[name=asset]')?.value || S.draft.asset || '00', h = S.data.get(active().id)?.state?.assets.find(x => x.asset === as); $app.querySelector('[name=amount]').value = tokenAmount(as, h?.spendable || 0n).replace(/,/g, ''); return; }
     if (act === 'node-default') { S.settings.nodes[net()] = defaultNode(net()); saveSettings(); render(); return refreshAll(); }
     if (act === 'reveal') { const r = S.vault.wallets.find(w => w.id === t.dataset.id); S.modal = { type: 'reveal', id: r.id, name: r.name, kind: r.kind }; S.error = ''; return render(); }
     if (act === 'remove') { const r = S.vault.wallets.find(w => w.id === t.dataset.id); S.modal = { type: 'confirm', title: `Remove ${r.name}?`, text: 'It is deleted from this browser. Without its 24 words or key you cannot get it back.', ok: 'Remove', act: 'do-remove', id: r.id }; return render(); }
@@ -1352,7 +1368,7 @@ $app.addEventListener('click', async e => {
     if (act === 'confirm-send') {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
-      S.busy = false; S.modal = { type: 'sent', amount: m.amount, hash }; S.draft = {};
+      S.busy = false; S.modal = { type: 'sent', amount: m.amount, asset: m.asset || '00', hash }; S.draft = {};
       S.screen = 'home'; render(); setTimeout(() => refreshAll(), 1500); return;
     }
   } catch (err) { fail(err); }
@@ -1360,6 +1376,7 @@ $app.addEventListener('click', async e => {
 
 $app.addEventListener('input', e => {
   const t = e.target; S.lastActivity = Date.now();
+  if (t.name === 'asset' && t.closest('[data-form=send]')) { S.draft = { ...S.draft, asset: t.value, to: $app.querySelector('[name=to]')?.value || '', amount: '' }; S.error = ''; return render(); }
   if (t.name === 'pct') syncAlloc(t.value, 'field');
   else if (t.name === 'pctr') syncAlloc(t.value, 'slider');
   else if (t.name === 'to' && t.closest('[data-form=vote-nom]')) syncTo();
@@ -1400,16 +1417,15 @@ $app.addEventListener('submit', async e => {
         go('home'); return refreshAll(true);
       }
       case 'send': {
-        const to = v.to.trim(); S.draft = { to, amount: v.amount };
+        const asset = v.asset || S.draft.asset || '00', to = v.to.trim(); S.draft = { to, amount: v.amount, asset };
         if (!isValidAddress(to, net())) { decodeAddress(to); throw new Error('Not a valid address for this network'); }
-        const raw = v.amount.trim();
-        const amount = parseZP(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw);   // only thousands separators; "1,5" is refused
+        const amount = asset === '00' ? parseZP((r => /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(r) ? r.replace(/,/g, '') : r)(v.amount.trim())) : parseUnits(v.amount, decimalsOf(asset));   // only thousands separators; "1,5" is refused
         if (amount <= 0n) throw new Error('Enter an amount');
         const a = active(); await refreshWallet(a.id);
         const d = S.data.get(a.id);
         if (!d?.state || d.error) throw new Error('Could not read the balance from the node' + (d?.error ? ': ' + d.error : ''));
-        const prepared = prepareSend(S.open.get(a.id), S.data.get(a.id).state, to, amount);
-        S.modal = { type: 'confirm-send', to, amount, prepared }; S.error = ''; return render();
+        const prepared = prepareSend(S.open.get(a.id), S.data.get(a.id).state, to, amount, asset);
+        S.modal = { type: 'confirm-send', to, amount, asset, prepared }; S.error = ''; return render();
       }
       case 'vote-alloc': {
         S.draft.pct = v.pct; const pct = Number(v.pct.trim());

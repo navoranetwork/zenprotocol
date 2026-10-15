@@ -134,6 +134,14 @@ export const Asset = {
     return { contract: { version: version >>> 0, hash: cHash }, subtype };
   },
 };
+// An asset as the node's JSON names it (Consensus Asset.toString): "00" for ZP, else BE32 version + contract hash
+// (72 hex), + a 32-byte subtype (136 hex).
+export function assetFromId(id) {
+  const s = String(id).toLowerCase();
+  if (s === '00') return ZEN_ASSET;
+  if (!/^[0-9a-f]{72}([0-9a-f]{64})?$/.test(s)) throw new Error('Not an asset id: ' + id);
+  return { contract: { version: parseInt(s.slice(0, 8), 16) >>> 0, hash: unhex(s.slice(8, 72)) }, subtype: s.length === 136 ? unhex(s.slice(72)) : ZERO32 };
+}
 export const assetToString = a => {
   const w = new Writer(); Asset.write(w, a);
   return isZero(a.contract.hash) && isZero(a.subtype) ? '00' : hex(w.out());

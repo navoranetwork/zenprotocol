@@ -108,7 +108,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   </li>
   <li class="step" id="s4">
     <h3>Withdraw back to USDC</h3>
-    <p>Send zUSDC from your linked ZP address to the bridge's ZP address (below), then paste that transaction here. The bridge destroys the zUSDC and pays USDC to your EVM address. The ZP Wallet cannot send tokens other than ZP yet, so the transfer itself is made from a node wallet for now (<a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/docs/BRIDGE.md">how</a>).</p>
+    <p>Send zUSDC from your linked ZP address to the bridge's ZP address (below), then paste that transaction here. The bridge destroys the zUSDC and pays USDC to your EVM address. In the <a href="/wallet/">ZP Wallet</a>: Send, choose zUSDC, paste the bridge's ZP address; the transaction id shows when it is sent.</p>
     <form class="row" id="wdf" autocomplete="off">
       <input id="wtx" placeholder="ZP transaction id (64 hex characters)" spellcheck="false" required aria-label="ZP transaction id">
       <input id="wevm" placeholder="0x… EVM address to pay" spellcheck="false" required aria-label="EVM address to pay">

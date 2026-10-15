@@ -3,7 +3,7 @@
 // and builds, signs and publishes transfers. Secrets stay in memory only while unlocked.
 import { accountFromMnemonic, deriveKey, encodeAddress, decodeAddress, parsePrivateKey } from './keys.js';
 import { buildTransaction, maturityFor, MAX_AMOUNT } from './tx.js';
-import { unhex, hex, ZEN_ASSET, Writer, Outpoint, Output, Data, VarInt, ContractId, Str, assetToString, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
+import { unhex, hex, ZEN_ASSET, assetFromId, Writer, Outpoint, Output, Data, VarInt, ContractId, Str, assetToString, deserializeTx, serializeTx, txHash, witnessesHash, bytesEqual } from './serialize.js';
 import { offerBody, cancelBody } from './swap.js';
 import { v1SourceBytes, v1ContractId, activationCost } from './engine.js';
 import { sha3_256 } from '@noble/hashes/sha3.js';
@@ -123,20 +123,22 @@ export async function readHistory(w, node, skip = 0, take = 30) {
     && (h.timestamp === undefined || h.timestamp === null || Number.isFinite(h.timestamp)));
 }
 
-// Build and sign a transfer of `amount` (kalapas) of ZP to `to`; returns { hash, hex } without publishing.
-export function prepareSend(w, state, to, amount) {
+// Build and sign a transfer of `amount` (smallest units) of `asset` (the node's id, '00' = ZP) to `to`; returns
+// { hash, hex } without publishing. Transfers pay no fee, so a token transfer spends only that token.
+export function prepareSend(w, state, to, amount, asset = '00') {
   if (!canSpend(w)) throw new Error('This is a watch-only wallet');
   const d = decodeAddress(to);
   if (d.chain !== w.network) throw new Error(`That is a ${d.chain === 'main' ? 'mainnet' : 'testnet'} address`);
   if (d.contract) throw new Error('Sending to contract addresses is done from the Contracts screen');
+  const assetObj = assetFromId(asset);
   const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
   const utxos = state.utxos
-    .filter(u => u.spend.asset === '00' && keyFor(u))
-    .map(u => ({ ...u, spend: { asset: ZEN_ASSET, amount: u.spend.amount }, key: keyFor(u) }));
+    .filter(u => u.spend.asset === asset && keyFor(u))
+    .map(u => ({ ...u, spend: { asset: assetObj, amount: u.spend.amount }, key: keyFor(u) }));
   const changeHash = decodeAddress(receiveAddress(w)).hash;
   return buildTransaction({
     utxos, tipBlockNumber: state.tip, maturity: maturityFor(w.network),
-    payments: [{ lock: { type: 'PK', hash: d.hash }, spend: { asset: ZEN_ASSET, amount } }],
+    payments: [{ lock: { type: 'PK', hash: d.hash }, spend: { asset: assetObj, amount } }],
     changeLock: { type: 'PK', hash: changeHash },
   });
 }

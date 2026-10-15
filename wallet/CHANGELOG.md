@@ -11,6 +11,21 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.15.0 — 2026-10-15
+
+### Added
+- Send tokens, not only ZP: when the wallet holds a token, Send asks what to send (ZP or the token, with its balance);
+  the unit, Available and Max follow the choice; zUSDC with its 6 decimals. Only that token is spent (no fee); the
+  change stays in the token. Used to withdraw from the USDC bridge: send zUSDC to the bridge's ZP address.
+- Token names known when the wallet is built (the site's asset-names.json), so the testnet's zUSDC is named even
+  where the site publishes no assets.json.
+
+### Fixed
+- Activity: a token received or sent shows its amount and unit ("+2.00 zUSDC", was "+2000000"); Send back and Send
+  again keep the token.
+- Contract forms: a token chosen from the wallet was read in the wrong form and could be taken for ZP; it is now read
+  as the node names it (version, then contract hash).
+
 ## 0.14.0 — 2026-10-15
 
 ### Added

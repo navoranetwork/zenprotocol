@@ -96,11 +96,12 @@ test('try: sourceId first, the source again when the engine no longer has it', a
 });
 
 test('a wallet asset as the engine names it: zp, or v<version>:<contract hash>[:<subtype>]; /try takes the hash form', () => {
-  const s = a => { const w = new Writer(); Asset.write(w, a); return hex(w.out()); };
+  // the node's JSON form (Consensus Asset.toString): BE32 version + contract hash [+ 32-byte subtype], e.g. the testnet's zUSDC
   assert.equal(engineAsset('00'), 'zp');
   const h = 'ee'.repeat(32), sub = '01'.padEnd(64, '0');
-  assert.equal(engineAsset(s({ contract: { version: 1, hash: unhex(h) }, subtype: new Uint8Array(32) })), 'v1:' + h);
-  assert.equal(engineAsset(s({ contract: { version: 0, hash: unhex(h) }, subtype: unhex(sub) })), `v0:${h}:${sub}`);
+  assert.equal(engineAsset('00000001' + h), 'v1:' + h);
+  assert.equal(engineAsset('00000000' + h + sub), `v0:${h}:${sub}`);
+  assert.equal(engineAsset('000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577'), 'v1:5ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577');
   assert.equal(checkParam('asset', { type: 'asset' }, 'v1:' + h), 'v1:' + h);
   assert.throws(() => checkParam('asset', { type: 'asset' }, 'nothex'), /contract hash/);
   assert.equal(tryAsset('v1:' + h), h); assert.equal(tryAsset('zp'), 'zp');
