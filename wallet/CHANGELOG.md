@@ -11,6 +11,17 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.24.0 — 2026-10-15
+
+### Changed
+- Buying ZP with bitcoin says first how long it takes when paid at once: "About 30 min in all" (2 confirmations;
+  40, 50 or 70 min for larger amounts), on each offer and on the reserve screen, with the steps and their times. The
+  longest times (up to 32 min to pay, held 1 h 20 min) are one small line. The price shows in dollars too.
+
+### Added
+- One click: with a Bitcoin wallet that can pay (when switched on), the button reads "Reserve and pay", and once the
+  reservation is in a block the wallet's pay screen opens by itself (once; the QR code stays).
+
 ## 0.23.0 — 2026-10-15
 
 ### Added

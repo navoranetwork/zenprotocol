@@ -8,7 +8,7 @@ import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationB
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel } from '../src/dex.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
-import { BLOCK_MIN, holdOf, payOf, confsFor, afterPayMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
+import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
 import { hex } from '../src/serialize.js';
@@ -185,6 +185,7 @@ async function loadSwap() {
     if (!j || !/^[0-9a-f]{72}$/.test(j.swapId || '') || !Array.isArray(j.offers)) throw new Error('not running');
     S.swap = j;
     const b = myBuy(); if (b && !b.btcTx && !b.paid) S.feeRate = await fetchFeeRate(btcApi());   // a purchase to pay: the fee that confirms in time
+    autoPay();
   } catch { S.swap = null; S.swapError = 'The ZP ⇄ BTC contract is not running on this network yet.'; }
   render();
 }
@@ -230,6 +231,13 @@ function offerAddrs(m) {
     : btcWallets().length ? `${btcTiles('btcw-sell')}<p class="muted small">The wallet only tells its address; it signs nothing here.</p>` : '<p class="muted small">No Bitcoin wallet found in this browser. Use your account key, or type addresses.</p>'}`;
   return `${chips}<label class="field">Your Bitcoin addresses, one per line (1 to ${MAX_SCRIPTS})<textarea name="addrs" rows="4" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${btcNet() === 'test' ? 'tb1q…' : 'bc1q…'}" required>${esc(m.addrs || '')}</textarea></label>
     <p class="muted small">Each reservation uses the next one, so a late payment can never be taken by the next buyer. <b>Each line must be a new address that never received bitcoin</b>: most wallets show the same one until it is paid. An exchange deposit address is not suitable.</p>`;
+}
+// one click: once the reservation is in a block, the pay screen of the chosen Bitcoin wallet opens by itself (once)
+function autoPay() {
+  const b = myBuy(); if (!WALLET_PAY || !b || b.prompted || b.btcTx || b.paid || S.modal || !chosenBtc()) return;
+  const o = S.swap?.offers.find(x => x.id === b.id);
+  if (payCheck({ offer: o, buy: b, zpTip: S.swap?.zpTip ?? 0, cap: WALLET_PAY_CAP })) return;
+  setBuy({ ...b, prompted: true }); try { btcPayOpen(); } catch { /* the pay step shows why */ }
 }
 // pays the reservation from the chosen Bitcoin wallet, after a screen that shows it matches the reservation
 function btcPayOpen() {
@@ -313,7 +321,7 @@ function buyView() {
   const cards = list.map(o => {
     const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(Number(o.until) - (S.swap.zpTip ?? 0))}` : o.state === 'closing' ? 'Being taken back by the seller' : '';
     return `<div class="offer">${offerHead(o)}
-      <div class="row" data-s="between mt6"><span class="badge" data-s="fixed">⏱ about ${afterPayMin(o.sats)} min after you pay</span>
+      <div class="row" data-s="between mt6"><span class="badge" data-s="fixed">⏱ about ${buyMin(o.sats)} min in all</span>
       ${b?.id === o.id ? '<span class="muted small" data-s="fixed">Yours</span>' : `<button class="btn primary mini" data-s="fixed" data-act="buy" data-id="${esc(o.id)}" ${o.canReserve && !b ? '' : 'disabled'}>Buy</button>`}</div>
       ${status ? `<div class="muted small" data-s="mt4">${esc(status)}</div>` : ''}</div>`;
   }).join('');
@@ -1203,12 +1211,15 @@ function modalHtml() {
   if (m.type === 'buy') {
     const o = S.swap?.offers.find(x => x.id === m.id); if (!o) return '';
     const to = receiveAddress(S.open.get(active().id));
+    const usd = btcUsd() ? o.sats / 1e8 * btcUsd() : null, oneClick = WALLET_PAY && !!chosenBtc() && o.sats <= WALLET_PAY_CAP;
     return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Buy ${esc(formatZP(BigInt(o.amount)))} ZP</h2>
-    <div class="card"><div class="kv"><span class="muted">You pay</span><span class="amt">${btcAmt(o.sats)}</span></div><div class="kv"><span class="muted">Price</span><span class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</span></div>
+    <div class="lead">⏱ About <b>${buyMin(o.sats)} min</b> in all, if you pay as soon as it is reserved.</div>
+    <div class="card"><div class="kv"><span class="muted">You pay</span><span class="amt">${btcAmt(o.sats)}${usd ? ` <span class="muted small">≈ $${usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div><div class="kv"><span class="muted">Price</span><span class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</span></div>
       <div class="kv"><span class="muted">ZP to</span><span class="mono small">${esc(active().name)} · ${esc(shortAddr(to))}</span></div></div>
-    <ol class="small steps-list"><li>Reserve: the offer is held for you about <b>${hm(holdOf(o.sats))}</b> (no fee for you).</li><li>Pay the bitcoin within the first <b>${hm(payOf(o.sats))}</b>, from any Bitcoin wallet.</li><li>After ${o.confs} Bitcoin confirmations (about ${o.confs * 10} min) the contract releases the ZP here by itself: about <b>${afterPayMin(o.sats)} min</b> after you pay.</li></ol>
+    <ol class="small steps-list"><li>Reserved for you: about ${BLOCK_MIN} min (no fee for you).</li><li>You pay from ${oneClick ? esc(chosenBtc().name) + ', which opens by itself' : 'your Bitcoin wallet'}.</li><li>${o.confs} Bitcoin confirmations: about ${o.confs * 10} min.</li><li>The ZP arrives here by itself: about ${PROOF_MIN} min later.</li></ol>
+    <p class="muted small">You have up to ${hm(payOf(o.sats))} to pay; the offer stays held for you ${hm(holdOf(o.sats))} in all.</p>
     ${realBanner('buy')}
-    ${errBox()}<div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="buy-reserve" data-id="${esc(o.id)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Reserve'}</button></div></div></div>`;
+    ${errBox()}<div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="buy-reserve" data-id="${esc(o.id)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : oneClick ? 'Reserve and pay' : 'Reserve'}</button></div></div></div>`;
   }
   if (m.type === 'dex-take') {
     const o = m.o, have = S.data.get(active().id)?.state?.assets.find(x => x.asset === o.pairAsset)?.spendable || 0n, v = S.draft.dtake ?? '';

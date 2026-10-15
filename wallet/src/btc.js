@@ -18,6 +18,7 @@ export const holdOf = sats => sats <= 1e6 ? 20 : sats <= 1e7 ? 30 : 60;         
 export const payOf = sats => sats <= 1e6 ? 8 : sats <= 1e7 ? 11 : 15;              // ... of which the buyer has these to pay
 export const PROOF_MIN = 6;                                                         // proof and its ZP block, about
 export const afterPayMin = sats => confsFor(sats) * 10 + PROOF_MIN;                 // from paying to holding the ZP
+export const buyMin = sats => Math.round((BLOCK_MIN + afterPayMin(sats)) / 5) * 5;  // the whole purchase, paying as soon as it is reserved
 
 // The buyer may still pay when the reservation leaves time for the confirmations: blocks left > hold - pay.
 // Before a Bitcoin wallet is asked to send, the payment must match the reservation exactly.
