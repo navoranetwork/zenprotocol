@@ -11,7 +11,7 @@ The aim: a fresh Ubuntu 24.04 x86 server (8 GB RAM) becomes a working testnet no
 | node mines | `curl -s 127.0.0.1:31567/blockchain/info` | `blocks` grows, ~1-2 min per block |
 | oracle publishes | `curl -s 127.0.0.1:8085/rounds/latest` | a round with a `Tx` (after the first interval) |
 | index catches up | `docker compose ... logs --tail 3 index` | `block N of M (synced)`, trails the node by ~10 blocks |
-| Dex | `curl -s 127.0.0.1:11581/explorer/api/dex/orders` | `dex` is the contract id; orders appear ~10 blocks after a Make |
+| Dex | `curl -s 127.0.0.1:11581/explorer/api/dex/orders` | `dex` is the contract id; orders appear one block after a Make (`confirmations`; `?pending=1` adds the mempool). Also `/dex/book?base=00&quote=<asset>` and `/dex/trades?base=00&quote=<asset>` |
 | bridge | `curl -s 127.0.0.1:8090/status` | `contract` and `asset` set, `evm: mock` |
 | oracle sources | `docker run --rm --network host --env-file testnet-stack.env -v "$PWD:/r:ro" zen-tools dotnet /app/zen-oracle.dll probe` | every ticker `ok` with 2-3 sources listed (stocks need `TWELVEDATA_KEY`) |
 | market maker | `docker compose ... logs --tail 5 marketmaker` | `make ask` / `make bid` once, then quiet |

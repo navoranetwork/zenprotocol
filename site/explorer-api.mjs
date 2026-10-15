@@ -11,12 +11,20 @@
 //   GET /explorer/api/find/blocks?from=&to=&minTxs=&maxTxs=&minZp=&maxZp=&miner=&order=&page=&take=
 //   GET /explorer/api/find/txs?address=&from=&to=&minZp=&maxZp=&asset=&kind=&order=&page=&take=
 //                                                       dates are YYYY-MM-DD (UTC), amounts are in ZP, order/kind: see below
+//   GET /explorer/api/dex/orders?pending=1              open Dex orders: indexed and in the newest blocks (`confirmations`), and with
+//                                                       pending=1 those in the mempool (`pending`); `pendingTake` / `pendingCancel` on an order a mempool call acts on
+//   GET /explorer/api/dex/book?base=00&quote=<asset>&qdec=6   the book of one market: asks and bids (price quote per base, size in base units,
+//                                                       mempool orders included as `pending`), last fill
+//   GET /explorer/api/dex/trades?base=00&quote=<asset>&limit=&since=<block>&qdec=6   fills (Takes) only, newest first, with side, price, size
+//   GET /explorer/api/dex/trades                        (no base/quote) every Dex call, as before
+//   Rows newer than the index (the newest blocks and the mempool) are hints for display: re-read an order before signing.
 //
 // Blocks not indexed yet (the index fills from genesis) are read from the node directly; near
 // the tip that is fast. Run by the zen-explorer service (setup-site.sh).
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { encodeAddress } from '../wallet/src/keys.js';
+import { rowsOfRawBlock, rowsOfMempool, openOrders, fills, book } from './dex-fresh.mjs';
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : def; };
 const NODE = arg('api', 'http://127.0.0.1:11567'), PORT = Number(arg('port', 11580));
@@ -181,6 +189,28 @@ async function address(addr, query) {
            ...findTxs(query, addr) };
 }
 
+// the Dex's calls newer than the index: the blocks after it (cached per tip) and the mempool (cached 10 s)
+const NET = arg('net', process.env.ZEN_NET || 'main');
+const MARKET_ASSET = /^(00|[0-9a-f]{72}([0-9a-f]{64})?)$/;
+let recentCache = { tip: -1, indexed: -1, rows: [] }, mempoolCache = { at: 0, rows: [] };
+async function dexFresh(t, indexed) {
+  if (recentCache.tip !== t || recentCache.indexed !== indexed) {
+    const take = Math.max(0, Math.min(50, t - indexed));
+    let rows = [];
+    if (take > 0) {
+      const got = await node(`/blockchain/blocks?blockNumber=${t}&take=${take}`, 60000);
+      for (const b of got) if (b.blockNumber > indexed) rows.push(...rowsOfRawBlock(b.blockNumber, b.rawBlock, DEX, NET));
+    }
+    recentCache = { tip: t, indexed, rows };
+  }
+  if (Date.now() - mempoolCache.at > 10000) {
+    let rows = [];
+    try { rows = rowsOfMempool(await node('/blockchain/mempool', 20000), DEX, NET); } catch { /* the mempool is a hint; the book still answers */ }
+    mempoolCache = { at: Date.now(), rows };
+  }
+  return { recent: recentCache.rows, mempool: mempoolCache.rows };
+}
+
 async function handle(p, query) {
   const t = await tip();
   const indexed = open() ? Number(q.last.get()?.v || 0) : 0;
@@ -242,14 +272,32 @@ async function handle(p, query) {
     if (!ready()) throw Object.assign(new Error('the address index is being built'), { status: 503 });
     return { tip: t, indexedTo: indexed, ...(await address(m[1], query)) };
   }
-  if (p === '/dex/orders' || p === '/dex/trades') {
+  if (p === '/dex/orders' || p === '/dex/trades' || p === '/dex/book') {
     if (!open()) throw Object.assign(new Error('index not ready'), { status: 503 });
-    if (!DEX) return { dex: null, orders: [], trades: [] };
-    if (p === '/dex/trades') return { tip: t, trades: db.prepare("SELECT tx, block, time, command, under_asset, under_amount, pair_asset, pair_total, maker, payout, provided FROM dex ORDER BY block DESC, tx LIMIT 100").all() };
-    // an order is open while its 1-unit order asset is still held by the contract
+    if (!DEX) return { dex: null, orders: [], trades: [], asks: [], bids: [] };
+    const base = query.get('base'), quote = query.get('quote'), qdec = Math.min(18, Math.max(0, Number(query.get('qdec') ?? 6) || 0));
+    const market = base != null || quote != null;
+    if (market && !(MARKET_ASSET.test(base || '') && MARKET_ASSET.test(quote || '') && base !== quote)) throw bad('base and quote: two different asset ids (00 is ZP)');
+    if (p === '/dex/trades' && !market) return { tip: t, trades: db.prepare("SELECT tx, block, time, command, under_asset, under_amount, pair_asset, pair_total, maker, payout, provided FROM dex ORDER BY block DESC, tx LIMIT 100").all() };
+    const fresh = await dexFresh(t, indexed);
+    if (p === '/dex/trades') {
+      const limit = Math.min(500, Math.max(1, Number(query.get('limit')) || 50)), since = Number(query.get('since')) || 0;
+      const rows = db.prepare("SELECT tx, block, time, command, under_asset, under_amount, pair_asset, pair_total, maker, payout, provided FROM dex WHERE command='Take' AND block>? AND ((under_asset=? AND pair_asset=?) OR (under_asset=? AND pair_asset=?)) ORDER BY block DESC, tx LIMIT ?")
+        .all(since, base, quote, quote, base, limit);
+      const newer = [...fresh.mempool, ...fresh.recent.filter(r => r.block > since).sort((a, b) => b.block - a.block)];
+      return { tip: t, indexedTo: indexed, base, quote, trades: fills([...newer, ...rows], { base, quote, qdec, tip: t }).slice(0, limit) };
+    }
+    // an order is open while its 1-unit order asset is still held by the contract (live from the node)
     const held = new Set((await nodePost('/addressdb/balance', { addresses: [dexAddress()] })).map(x => x.asset));
     const rows = db.prepare("SELECT * FROM dex WHERE order_asset IS NOT NULL ORDER BY block DESC").all();
-    return { tip: t, dex: DEX, orders: rows.filter(r => held.has(r.order_asset)).map(r => ({ ...r, open: true })) };
+    const orders = openOrders({ indexed: rows, recent: fresh.recent, mempool: fresh.mempool, held, tip: t });
+    // orders still in the mempool only on request (?pending=1): a client that takes orders from this list must not take one not yet mined
+    if (p === '/dex/orders') return { tip: t, indexedTo: indexed, dex: DEX, orders: query.get('pending') === '1' ? orders : orders.filter(o => !o.pending) };
+    if (!market) throw bad('base and quote are required');
+    const mine = orders.filter(o => (o.under_asset === base && o.pair_asset === quote) || (o.under_asset === quote && o.pair_asset === base));
+    const lastRow = db.prepare("SELECT * FROM dex WHERE command='Take' AND ((under_asset=? AND pair_asset=?) OR (under_asset=? AND pair_asset=?)) ORDER BY block DESC, tx LIMIT 1").get(base, quote, quote, base);
+    const last = fills([...fresh.recent.sort((a, b) => b.block - a.block), ...(lastRow ? [lastRow] : [])], { base, quote, qdec, tip: t })[0] || null;
+    return { tip: t, indexedTo: indexed, base, quote, ...book(mine, { base, quote, qdec }), last };
   }
   if (p === '/find/blocks') { if (!open()) throw Object.assign(new Error('index not ready'), { status: 503 }); return { tip: t, indexedTo: indexed, ...findBlocks(query) }; }
   if (p === '/find/txs') {
