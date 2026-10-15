@@ -260,3 +260,5 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 .offer.buy { border-left: 3px solid var(--accent); } .offer.sell { border-left: 3px solid var(--bad); }
 .olbl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .offer.buy .olbl:first-child { color: var(--accent); } .offer.sell .olbl:first-child { color: var(--bad); }
+.afilter { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; } .afilter .chip { flex: none; }
+.afilter { gap: 4px; } .afilter .chip.mini { padding: 4px 8px; }

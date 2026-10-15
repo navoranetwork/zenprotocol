@@ -203,7 +203,7 @@ const S = {
 function loadSettings() {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { /* default */ }
-  return { mtab: ['oracle', 'dex', 'swap'].includes(s.mtab) ? s.mtab : 'oracle', stab: s.stab === 'sell' ? 'sell' : 'buy', btcApi: typeof s.btcApi === 'string' && /^https?:\/\//.test(s.btcApi) ? s.btcApi : '', network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
+  return { mtab: ['oracle', 'dex', 'swap'].includes(s.mtab) ? s.mtab : 'oracle', stab: s.stab === 'sell' ? 'sell' : 'buy', afilter: typeof s.afilter === 'string' ? s.afilter : 'all', btcApi: typeof s.btcApi === 'string' && /^https?:\/\//.test(s.btcApi) ? s.btcApi : '', network: s.network === 'test' ? 'test' : 'main', nodes: { main: s.nodes?.main || DEFAULT_NODES.main[0], test: s.nodes?.test || '' }, active: s.active || null,
            voteWallets: { main: Array.isArray(s.voteWallets?.main) ? s.voteWallets.main : null, test: Array.isArray(s.voteWallets?.test) ? s.voteWallets.test : null } };
 }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S.settings)); } catch { /* private mode */ } }
@@ -914,7 +914,7 @@ const views = {
         <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
       ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<button type="button" class="item tokrow" data-act="token" data-asset="${esc(x.asset)}"><span class="tname" title="${esc(x.asset)}">${tokenIcon(x.asset)}${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)} <span class="muted">›</span></span></button>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
-      <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => activityRow(h, a)).join('')}</div></div>${nav('home')}`;
+      ${actFilter(d)}</div>${nav('home')}`;
   },
 
   send: () => {
@@ -1068,11 +1068,37 @@ async function txInfo(hash, w) {
     return info;
   } catch { return null; }
 }
+// the filter chips and the rows they keep; moves within the wallet show under All only
+function actFilter(d) {
+  if (!d.history) return '<div class="list"><p class="muted small">Loading…</p></div>';
+  if (!d.history.length) return '<div class="list"><p class="muted small">No transactions yet.</p></div>';
+  const f = ACT_KINDS.some(([k]) => k === S.settings.afilter) ? S.settings.afilter : 'all', a = active();
+  const rows = f === 'all' ? d.history : d.history.filter(h => actKind(h) === f), unknown = f !== 'all' && d.history.some(h => h.txHash && !S.txInfo.get(h.txHash) && BigInt(h.amount) !== 0n);
+  return `<div class="afilter" role="tablist" aria-label="Show">${ACT_KINDS.map(([k, l]) => `<button type="button" class="chip mini ${f === k ? 'on' : ''}" role="tab" aria-selected="${f === k}" data-act="afilter" data-v="${k}">${l}</button>`).join('')}</div>
+    <div class="list">${rows.length ? rows.map(h => activityRow(h, a)).join('') : `<p class="muted small">None in the last ${d.history.length} transactions.</p>`}</div>
+    ${unknown ? '<p class="muted small"><span class="spin"></span> Looking up the transactions…</p>' : ''}
+    ${d.more !== false ? `<button type="button" class="btn small" data-s="mt10" data-act="hist-more" ${S.busy ? 'disabled' : ''}>Show older</button>` : ''}`;
+}
 let txInfoBusy = false;
 async function loadTxInfo(w, rows) {
   if (txInfoBusy) return; txInfoBusy = true;
-  try { let any = false; for (const h of rows.slice(0, 20)) if (h.txHash && !S.txInfo.has(h.txHash)) { await txInfo(h.txHash, w); any = true; } if (any && !S.modal && S.screen === 'home') render(); }
+  try { let any = false; for (const h of rows.filter(h => h.txHash && !S.txInfo.has(h.txHash) && BigInt(h.amount) !== 0n && !h.lock?.Coinbase).slice(0, 60)) { await txInfo(h.txHash, w); any = true; } if (any && !S.modal && S.screen === 'home') render(); }
   finally { txInfoBusy = false; }
+}
+// Activity filters: what a row is, from the amount and the transaction (txInfo, looked up in the background)
+const ACT_KINDS = [['all', 'All'], ['received', 'Received'], ['sent', 'Sent'], ['mining', 'Mining'], ['trading', 'Trading'], ['votes', 'Votes']];
+function actKind(h) {
+  const amt = BigInt(h.amount), inn = amt > 0n, info = h.txHash ? S.txInfo.get(h.txHash) : null;
+  if (amt === 0n) return 'internal';
+  if (h.lock?.Coinbase) return 'mining';
+  if ((S.myVotes ||= loadVotes()).some(v => v.hash === h.txHash)) return 'votes';
+  if (info) {
+    if (!inn && (info.vote || (amt === -1n && !info.to))) return 'votes';
+    const o = inn ? info.from : info.to;
+    if (o?.kind === 'Contract' && o.id && knownContract(o.id)) return 'votes';
+    if (o?.kind === 'Contract' || (S.bridge && (o?.address === S.bridge.zp || info.mintAsset === S.bridge.asset))) return 'trading';
+  }
+  return inn ? 'received' : 'sent';
 }
 function activityRow(h, w) {
   const amt = BigInt(h.amount), inn = amt > 0n, info = h.txHash ? S.txInfo.get(h.txHash) : null;
@@ -1458,7 +1484,7 @@ async function refreshWallet(id, full, onState) {
     if (full || !d.discovered) { await discover(w, n); d.discovered = true; }
     d.state = await readState(w, n); d.error = '';
     S.data.set(id, d); if (onState) onState();                   // balance first: the history follows
-    d.history = await readHistory(w, n);
+    d.history = await readHistory(w, n); d.more = d.history.length >= 30;
     loadTxInfo(S.vault.wallets.find(x => x.id === id) || active(), d.history);
   } catch (e) { d.error = e.message; d.history ||= []; }
   S.data.set(id, d);
@@ -1642,6 +1668,13 @@ $app.addEventListener('click', async e => {
   const act = t.dataset.act; if (!act) return;
   try {
     if (act === 'refresh') return refreshAll(true);
+    if (act === 'afilter') { S.settings.afilter = t.dataset.v; saveSettings(); render(); const a = active(); return loadTxInfo(a, S.data.get(a.id)?.history || []); }
+    if (act === 'hist-more') {
+      const a = active(), d = S.data.get(a.id), w = S.open.get(a.id); if (!d?.history || !w) return;
+      S.busy = true; render();
+      try { const more = await readHistory(w, node(), d.history.length, 50); d.history = [...d.history, ...more]; d.more = more.length === 50; } finally { S.busy = false; }
+      render(); return loadTxInfo(a, d.history);
+    }
     if (act === 'vote-toggle' || act === 'vote-all' || act === 'vote-none') {
       const all = walletsHere().filter(w => w.kind !== 'watch').map(w => w.id);
       let sel = voters().map(w => w.id);

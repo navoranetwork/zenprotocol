@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.30.0 — 2026-10-16
+
+### Added
+- Activity filters: All, Received, Sent, Mining, Trading (the Dex, ZP ⇄ BTC, the bridge and other contracts) and Votes
+  (CGP ballots). Moves within the wallet show under All only. The choice is kept; "Show older" loads 50 more.
+
 ## 0.29.1 — 2026-10-16
 
 ### Changed

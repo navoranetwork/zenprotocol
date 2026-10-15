@@ -17,7 +17,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 390, 'height': 860})
     ctx.add_init_script("localStorage.setItem('zp-wallet.settings.v1', JSON.stringify({network:'test', nodes:{test:'%s/node', main:'%s/node'}}))" % (NODE, NODE))
     pg = ctx.new_page(); errors = []; pg.on('pageerror', lambda e: errors.append(str(e)))
-    mock(tip=2100, zp=10, utxo=0, reset=1, zusdc=1, bridge=1)
+    mock(tip=2100, zp=10, utxo=0, reset=1, zusdc=1, bridge=1, hist=1)
     pg.goto(APP); pg.wait_for_selector('form[data-form=create-vault]')
     pg.fill('input[name=p1]', 'password123'); pg.fill('input[name=p2]', 'password123'); pg.click('form[data-form=create-vault] button.primary')
     pg.wait_for_selector('form[data-form=add-wallet]'); pg.click('button[data-tab=phrase]'); pg.fill('textarea[name=words]', PHRASE); pg.click('form[data-form=add-wallet] button.primary')
@@ -26,6 +26,17 @@ with sync_playwright() as p:
     pg.wait_for_selector('text=the USDC bridge (deposit)', timeout=15000)
     t = pg.inner_text('main'); ok('+2.00 zUSDC' in t and pg.query_selector('.tname img.ticon') is not None and pg.evaluate("[...document.querySelectorAll('img.ticon')].every(i => i.naturalWidth > 0)"), 'activity: the deposit is named, +2.00 zUSDC, the icon loads (inside app.js)')
     pg.screenshot(path=f'{OUT}/st0-home.png')
+    # Activity filters
+    def shown(k):
+        pg.click(f'button[data-act=afilter][data-v={k}]'); pg.wait_for_timeout(250)
+        return [e.inner_text().split('\n')[0] for e in pg.query_selector_all('.item.act .act-main')]
+    ok(len(shown('all')) == 5 and any('Moved within this wallet' in x for x in shown('all')), 'All: every row, the move within the wallet too')
+    ok(shown('mining') == ['Mining reward'], 'Mining: the mining reward only')
+    ok(len(shown('received')) == 1 and len(shown('sent')) == 1, 'Received and Sent: one each, the move within the wallet in neither')
+    ok(any('USDC bridge' in x for x in shown('trading')) and len(shown('trading')) == 1, 'Trading: the bridge deposit')
+    ok(pg.evaluate("JSON.parse(localStorage.getItem('zp-wallet.settings.v1')).afilter") == 'trading', 'the chosen filter is kept')
+    pg.screenshot(path=f'{OUT}/st0b-filter.png')
+    shown('all')
     # the token's sheet: balance, Send, Receive, Withdraw (the bridge's token), its own activity
     pg.click('button[data-act=token]'); pg.wait_for_selector('.sheet .tokbal')
     t = pg.inner_text('.sheet'); ok('2.00' in pg.inner_text('.tokbal') and 'Withdraw' in t and 'Deposit USDC' in t and 'the USDC bridge (deposit)' in t, 'token sheet: balance, Withdraw, Deposit USDC, its activity')

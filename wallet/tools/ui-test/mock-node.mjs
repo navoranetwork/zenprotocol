@@ -47,7 +47,7 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; st.hist = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'hist') st.hist = v === '1'; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
         case '/explorer/api/dex/orders':
         case '/explorer/api/dex/book':
@@ -141,7 +141,15 @@ http.createServer((req, res) => {
         case '/contract/active': return send(res, 200, [{ contractId: VOTING, address: encodeAddress(unhex(VOTING), NET, true), expire: st.tip + 90000, code: '// voting contract\n'.padEnd(4000, 'x') }]);
         case '/addressdb/outputs': return send(res, 200, body.addresses?.includes(addr0) ? fund() : []);
         case '/addressdb/balance': return send(res, 200, body.addresses?.includes(CGP_ADDR) ? [{ asset: '00', balance: '100000000000' }] : body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }, ...(st.tokens ? [{ asset: TOKEN, balance: '250' }] : [])] : []);
-        case '/addressdb/transactions': return send(res, 200, st.zusdc && body.addresses?.includes(addr0) ? [{ txHash: 'ad'.repeat(32), asset: ZUSDC, amount: '2000000', confirmations: 3, timestamp: Date.now() - 60000, lock: { PK: { hash: hex(key0.pkHash), address: addr0 } } }] : []);
+        case '/addressdb/transactions': {   // hist=1 adds a mining reward, a payment out, one in, and a move within the wallet
+          const pk = { PK: { hash: hex(key0.pkHash), address: addr0 } }, t0 = Date.now();
+          const rows = [...(st.zusdc ? [{ txHash: 'ad'.repeat(32), asset: ZUSDC, amount: '2000000', confirmations: 3, timestamp: t0 - 60000, lock: pk }] : []),
+            ...(st.hist ? [{ txHash: 'c4'.repeat(32), asset: '00', amount: '300000000', confirmations: 4, timestamp: t0 - 120000, lock: pk },
+              { txHash: 'c3'.repeat(32), asset: '00', amount: '0', confirmations: 5, timestamp: t0 - 180000, lock: pk },
+              { txHash: 'c2'.repeat(32), asset: '00', amount: '-100000000', confirmations: 6, timestamp: t0 - 240000, lock: pk },
+              { txHash: 'c0'.repeat(32), asset: '00', amount: '5000000000', confirmations: 90, timestamp: t0 - 900000, lock: { Coinbase: { blockNumber: st.tip - 90, pkHash: hex(key0.pkHash), address: addr0 } } }] : [])];
+          return send(res, 200, body.addresses?.includes(addr0) ? rows : []);
+        }
         case '/addressdb/discovery': return send(res, 200, (body.addresses || []).map(a => ({ address: a, hasBalance: a === addr0, hasTxs: a === addr0 })));
         case '/blockchain/contract/execute': {
           const r = new Reader(unhex(body.tx)), n = VarInt.read(r), inputs = [];
