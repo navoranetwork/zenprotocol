@@ -1,2 +1,6 @@
 [2026-10-15 02:38] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
 [2026-10-15 02:38] B: fe456127 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 45c75c6b Testnet V1 migration: CGP and voting cont
+[2026-10-15 02:38] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-15 02:39] B: node up, block 314, senders 1 and 2 funded
+[2026-10-15 02:39] profile: load 3000/min (two senders), trace 60 s at minute 2
+[2026-10-15 02:47] profile done: busy samples (weight): 0  threads by busy samples: 

@@ -1,0 +1,7 @@
+busy samples (weight): 0
+
+threads by busy samples:
+
+top 30 frames by SELF time:
+
+top 30 ZP frames by INCLUSIVE time (Consensus/Blockchain/Api/Wallet/Miner/Infrastructure/AddressDB):

@@ -1,0 +1,33 @@
+{
+  "node": "http://127.0.0.1:20000",
+  "started": "2026-10-15T02:39:43.026Z",
+  "stopReason": "time limit (6 minutes)",
+  "steps": [
+    {
+      "rate_per_min": 1500,
+      "achieved_per_min": 365,
+      "start": "2026-10-15T02:40:59.658Z",
+      "end": "2026-10-15T02:45:48.531Z",
+      "sent": 1755,
+      "accepted": 1755,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 4116,
+        "p95": 9169,
+        "max": 12440
+      },
+      "mempool": {
+        "avg": 972,
+        "max": 1820
+      },
+      "blocks": 6,
+      "txs_per_block": {
+        "avg": 563.7,
+        "max": 1103
+      },
+      "ours_in_blocks": 1755,
+      "block_seconds_avg": 76
+    }
+  ]
+}
