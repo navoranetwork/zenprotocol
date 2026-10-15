@@ -7,138 +7,154 @@
 <meta name="description" content="Move test USDC from Base Sepolia to the ZP testnet as zUSDC and back. Live reserves and your own deposits.">
 <link rel="stylesheet" href="/shell/shell.css">
 <style>
-  .zp .health { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 18px 20px; margin: 22px 0 14px; }
-  .zp .health .dot { width: 12px; height: 12px; flex: none; }
-  .zp .health b { font-size: 18px; }
-  .zp .health span.sub { color: var(--s-muted); font-size: 15px; flex-basis: 100%; margin-left: 26px; }
-  .zp .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; align-items: center; background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 18px 20px; }
-  .zp .pair .side .k { font-size: 13px; color: var(--s-muted); } .zp .pair .side .v { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .zp .pair .side small { display: block; color: var(--s-muted); font-size: 13px; }
-  .zp .pair .eq { font-size: 22px; color: var(--s-muted); }
-  .zp .counts { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--s-muted); font-size: 14px; margin: 10px 2px 0; }
-  .zp .counts b { color: var(--s-ink); font-variant-numeric: tabular-nums; }
-  .zp .steps { counter-reset: s; display: grid; gap: 14px; margin: 16px 0; padding: 0; list-style: none; max-width: none; }
-  .zp .step { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 18px 20px; margin: 0; }
-  .zp .step h3 { display: flex; align-items: center; gap: 10px; font-size: 17px; margin: 0 0 6px; }
-  .zp .step h3::before { counter-increment: s; content: counter(s); display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--s-accent); color: var(--s-accent-ink); font-size: 14px; flex: none; }
-  .zp .step.done h3::before { content: "✓"; }
-  .zp .step p { color: var(--s-muted); font-size: 15px; }
-  .zp .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
-  .zp input { flex: 1 1 260px; min-width: 0; font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 10px 12px; border: 1px solid var(--s-line); border-radius: 8px; background: var(--s-bg); color: var(--s-ink); }
-  .zp input.amt { flex: 0 1 140px; font-family: inherit; font-size: 16px; }
+  .zp main { max-width: 640px; }
+  .zp .lead { margin-bottom: 10px; }
+  .zp .health { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--s-muted); margin: 0 0 18px; }
+  .zp .health .dot { width: 10px; height: 10px; flex: none; }
+  .zp .health b { color: var(--s-ink); font-weight: 600; }
+  .zp .card { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 16px; padding: 18px; }
+  .zp .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--s-bg); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+  .zp .tabs button { background: none; color: var(--s-muted); border-radius: 9px; padding: 10px 8px; font-size: 15px; }
+  .zp .tabs button[aria-selected="true"] { background: var(--s-card); color: var(--s-ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .zp .tabs small { display: block; font-weight: 400; font-size: 12px; color: var(--s-muted); }
+  .zp .wbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--s-line); border-radius: 12px; margin-bottom: 14px; font-size: 14px; }
+  .zp .wbar img { width: 22px; height: 22px; border-radius: 6px; }
+  .zp .wbar .grow { flex: 1; min-width: 0; }
+  .zp .wbar code { font-size: 13px; }
+  .zp label.k, .zp .k { display: block; font-size: 13px; color: var(--s-muted); margin: 12px 0 6px; }
+  .zp .amtbox { display: flex; align-items: center; gap: 8px; border: 1px solid var(--s-line); border-radius: 12px; padding: 6px 6px 6px 14px; background: var(--s-bg); }
+  .zp .amtbox input { border: 0; background: none; font-family: inherit; font-size: 24px; font-weight: 600; line-height: 1.2; padding: 6px 0; flex: 1; min-width: 0; color: var(--s-ink); }
+  .zp .amtbox input:focus-visible { outline: none; } .zp .amtbox:focus-within { border-color: var(--s-accent); }
+  .zp .amtbox .unit { font-weight: 600; color: var(--s-muted); }
+  .zp .amtbox button { padding: 6px 12px; font-size: 13px; }
+  .zp .sub { font-size: 13px; color: var(--s-muted); margin-top: 6px; }
+  .zp .big { box-sizing: border-box; width: 100%; margin-top: 14px; padding: 14px; font-size: 16px; border-radius: 12px; }
+  .zp .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .zp input { flex: 1 1 220px; min-width: 0; font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 11px 12px; border: 1px solid var(--s-line); border-radius: 10px; background: var(--s-bg); color: var(--s-ink); }
   .zp input:focus-visible, .zp button:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 1px; }
-  .zp button { font: inherit; font-weight: 600; background: var(--s-accent); color: var(--s-accent-ink); border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+  .zp button { font: inherit; font-weight: 600; background: var(--s-accent); color: var(--s-accent-ink); border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
   .zp button.ghost { background: none; color: var(--s-accent); border: 1px solid var(--s-line); }
-  .zp button[disabled] { opacity: .55; cursor: not-allowed; }
-  .zp .msg { margin-top: 12px; padding: 10px 14px; border-radius: 8px; overflow-wrap: anywhere; font-size: 15px; }
+  .zp button.link { background: none; border: 0; padding: 0; color: var(--s-accent); text-decoration: underline; font-weight: 500; }
+  .zp button[disabled] { opacity: .5; cursor: not-allowed; }
+  .zp .to { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--s-muted); margin-top: 10px; } .zp .to code { color: var(--s-ink); }
+  .zp .time { font-size: 14px; color: var(--s-muted); margin-top: 10px; }
+  .zp .steps3 { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 12px; counter-reset: s; }
+  .zp .steps3 li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; font-size: 15px; }
+  .zp .steps3 li::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--s-bg); border: 1px solid var(--s-line); font-size: 13px; font-weight: 600; }
+  .zp .copyaddr { display: flex; gap: 8px; align-items: center; margin-top: 6px; background: var(--s-bg); border: 1px solid var(--s-line); border-radius: 10px; padding: 8px 8px 8px 12px; }
+  .zp .copyaddr code { flex: 1; min-width: 0; word-break: break-all; font-size: 12.5px; }
+  .zp .copyaddr button { padding: 6px 12px; font-size: 13px; flex: none; }
+  .zp .msg { margin-top: 12px; padding: 10px 14px; border-radius: 10px; overflow-wrap: anywhere; font-size: 14px; }
   .zp .msg.ok { background: rgba(31, 154, 85, .12); } .zp .msg.err { background: rgba(196, 48, 48, .1); } .zp .msg.info { background: var(--s-bg); }
-  .zp .addr { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--s-line); }
-  .zp .addr:last-child { border-bottom: 0; }
-  .zp .addr .k { color: var(--s-muted); font-size: 14px; }
-  .zp .addr code { word-break: break-all; font-size: 13.5px; }
-  .zp .addr a, .zp .addr button { font-size: 13px; padding: 5px 10px; }
-  .zp .box { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 12px; padding: 6px 20px; }
-  .zp .acct { font-size: 14px; color: var(--s-muted); margin-top: 8px; } .zp .acct code { color: var(--s-ink); }
-  .zp .hist { width: 100%; font-size: 14px; margin-top: 10px; } .zp .hist td, .zp .hist th { padding: 6px 8px; }
+  .zp .track { margin-top: 18px; display: grid; gap: 10px; }
+  .zp .track h3 { font-size: 14px; color: var(--s-muted); margin: 0; font-weight: 600; }
+  .zp .job { border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; }
+  .zp .job .top { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
+  .zp .bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 10px 0 6px; }
+  .zp .bar span { height: 5px; border-radius: 3px; background: var(--s-line); }
+  .zp .bar span.on { background: var(--s-accent); }
+  .zp .bar span.now { background: linear-gradient(90deg, var(--s-accent) var(--p, 30%), var(--s-line) var(--p, 30%)); }
+  .zp .job .st { font-size: 13px; color: var(--s-muted); }
+  .zp .recent { width: 100%; font-size: 14px; } .zp .recent td { padding: 6px 4px; border-top: 1px solid var(--s-line); } .zp .recent td:last-child { text-align: right; }
   .zp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-  .zp details { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; max-width: 68ch; }
-  .zp summary { cursor: pointer; font-weight: 600; }
-  .zp details p, .zp details ul { margin: 10px 0 2px; color: var(--s-muted); font-size: 15px; }
-  @media (max-width: 600px) {
-    .zp .pair { grid-template-columns: 1fr; } .zp .pair .eq { display: none; }
-    .zp .addr { grid-template-columns: 1fr auto; } .zp .addr .k { grid-column: 1 / -1; }
-    .zp .health span.sub { margin-left: 0; }
-  }
-.pick[hidden] { display: none; }
-.zp .pick { flex-direction: column; align-items: stretch; gap: 8px; max-width: 360px; }
-.zp .pick p { margin: 0; color: var(--s-muted); font-size: 14px; }
-.zp .pick button { display: flex; align-items: center; gap: 12px; background: var(--s-card); color: var(--s-ink); border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; text-align: left; font-weight: 600; }
-.zp .pick button:hover, .zp .pick button:focus-visible { border-color: var(--s-accent); }
-.zp .pick img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
-.zp .pick .noicon { width: 32px; height: 32px; border-radius: 8px; flex: none; background: var(--s-line); }
-.zp .wait { font-size: 14px; background: var(--s-bg); border-left: 3px solid var(--s-accent); padding: 8px 12px; border-radius: 6px; }
-.zp details.claim { margin-top: 10px; } .zp details.claim summary { cursor: pointer; color: var(--s-muted); font-size: 14px; }
-button.link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+  .zp .pick[hidden] { display: none; }
+  .zp .pick { display: grid; gap: 8px; margin-bottom: 14px; }
+  .zp .pick p { margin: 0; color: var(--s-muted); font-size: 14px; }
+  .zp .pick button { display: flex; align-items: center; gap: 12px; background: var(--s-card); color: var(--s-ink); border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; text-align: left; }
+  .zp .pick button:hover, .zp .pick button:focus-visible { border-color: var(--s-accent); }
+  .zp .pick img, .zp .pick .noicon { width: 32px; height: 32px; border-radius: 8px; flex: none; } .zp .pick .noicon { background: var(--s-line); }
+  .zp details { border-top: 1px solid var(--s-line); padding: 12px 2px; }
+  .zp details:last-of-type { border-bottom: 1px solid var(--s-line); }
+  .zp summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+  .zp details p { margin: 10px 0 2px; color: var(--s-muted); font-size: 14px; }
+  .zp .addr { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; padding: 8px 0; font-size: 13px; }
+  .zp .addr .kk { color: var(--s-muted); } .zp .addr code { word-break: break-all; }
+  .zp .addr button { font-size: 12px; padding: 4px 10px; }
+  .zp .more { margin-top: 26px; }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) { .zp .addr { grid-template-columns: 1fr auto; } .zp .addr .kk { grid-column: 1 / -1; } .zp .card { padding: 14px; } }
 </style>
 <script src="/shell/shell.js" defer></script>
 </head>
 <body class="zp">
 <main>
-<h1>Bridge: USDC ⇄ zUSDC</h1>
-<p class="lead">Bring test USDC from Base Sepolia onto the ZP testnet as <b>zUSDC</b>, one for one, and take it back whenever you want. Every zUSDC is backed by a USDC the bridge holds.</p>
+<h1>Bridge</h1>
+<p class="lead">Move test USDC to the ZP testnet as <b>zUSDC</b>, one for one, and back.</p>
+<div class="health" id="health" aria-live="polite"><span class="dot"></span>Checking the bridge…</div>
 
-<div class="health" id="health" aria-live="polite"><span class="dot"></span><b>Checking the bridge…</b></div>
-<p class="sub" id="live" style="margin: 4px 0 0; font-size: 13px; color: var(--s-muted)"></p>
+<div class="card">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="t-dep" aria-selected="true">Deposit<small>USDC → zUSDC</small></button>
+    <button type="button" role="tab" id="t-wd" aria-selected="false">Withdraw<small>zUSDC → USDC</small></button>
+  </div>
 
-<div class="pair">
-  <div class="side"><div class="k">USDC held by the bridge</div><div class="v" id="res">–</div><small id="resnet">on the EVM test network</small></div>
-  <div class="eq" id="eq" aria-hidden="true"></div>
-  <div class="side"><div class="k">zUSDC in circulation</div><div class="v" id="out">–</div><small>on the ZP testnet</small></div>
+  <div class="pick" id="pick" hidden></div>
+  <div class="wbar" id="wbar" hidden></div>
+  <div id="connectbox"><button class="big" id="connect" type="button" style="margin-top:0">Connect wallet</button>
+    <p class="sub">MetaMask or any browser wallet, on Base Sepolia. Test USDC is free from the <a href="https://faucet.circle.com/" rel="noopener">Circle faucet</a>.</p></div>
+  <div class="msg" id="m1" hidden></div>
+
+  <section id="p-dep">
+    <div id="linkbox" hidden>
+      <label class="k" for="zpaddr">Where should your zUSDC go? Your ZP testnet address</label>
+      <form class="row" id="linkf" autocomplete="off">
+        <input id="zpaddr" placeholder="tzn1…" spellcheck="false" required>
+        <button id="linkb" type="submit">Link</button>
+      </form>
+      <p class="sub">Once per wallet: you sign a message, no fee. No ZP address yet? Open the <a href="/wallet/">ZP Wallet</a> → Receive.</p>
+      <div class="msg" id="m2" hidden></div>
+    </div>
+    <form id="depf" autocomplete="off" hidden>
+      <label class="k" for="amt">Amount</label>
+      <div class="amtbox"><input id="amt" inputmode="decimal" placeholder="0.00" required><span class="unit">USDC</span><button type="button" class="ghost" id="max">Max</button></div>
+      <p class="sub" id="bal"></p>
+      <div class="to" id="dto"></div>
+      <button class="big" id="depb" type="submit">Deposit</button>
+      <div class="time">⏱ Arrives as zUSDC in about 5 minutes.</div>
+      <div class="msg" id="m3" hidden></div>
+    </form>
+  </section>
+
+  <section id="p-wd" hidden>
+    <ol class="steps3">
+      <li><span>In the <a href="/wallet/">ZP Wallet</a>, tap <b>Send</b> and choose <b>zUSDC</b>.</span></li>
+      <li><span>Send it to the bridge:
+        <span class="copyaddr"><code id="bzp">…</code><button type="button" class="ghost" id="cpbzp">Copy</button></span></span></li>
+      <li><span>That's all. USDC arrives <span id="wto">at your linked wallet</span> by itself.</span></li>
+    </ol>
+    <div class="time">⏱ About 8 to 10 minutes (<span id="zpconf">2</span>&nbsp;ZP blocks).</div>
+    <a class="btn big" href="/wallet/" style="display:block;text-align:center;text-decoration:none">Open ZP Wallet</a>
+    <details class="claim" id="claimbox"><summary>Not paid after 20 minutes?</summary>
+      <p>Claim it with the ZP transaction id (Copy id in the wallet's activity).</p>
+      <form class="row" id="wdf" autocomplete="off" style="margin-top:8px">
+        <input id="wtx" placeholder="ZP transaction id" spellcheck="false" required>
+        <input id="wevm" placeholder="0x… EVM address" spellcheck="false" required>
+        <button id="wdb" type="submit">Claim</button>
+      </form>
+      <div class="msg" id="m4" hidden></div>
+    </details>
+  </section>
+
+  <div class="track" id="track" hidden></div>
 </div>
-<div class="counts" id="counts"></div>
 
-<h2>Use the bridge</h2>
-<p>You need a browser wallet such as MetaMask with a little test ETH and test USDC on Base Sepolia (free: <a href="https://faucet.circle.com/" rel="noopener">Circle faucet</a> for USDC), and a ZP testnet address (<a href="/wallet/">ZP Wallet</a>, test ZP from the <a href="/faucet.html">faucet</a>).</p>
-
-<ol class="steps">
-  <li class="step" id="s1">
-    <h3>Connect your EVM wallet</h3>
-    <p>The page asks your wallet to switch to Base Sepolia. Nothing is sent in this step.</p>
-    <div class="row"><button id="connect" type="button">Connect wallet</button></div>
-    <div class="row pick" id="pick" hidden></div>
-    <div class="acct" id="acct" hidden></div>
-    <div class="msg" id="m1" hidden></div>
-  </li>
-  <li class="step" id="s2">
-    <h3>Link it to your ZP address</h3>
-    <p>You sign a message (no fee) that tells the bridge where to send your zUSDC. Do this once per EVM address.</p>
-    <form class="row" id="linkf" autocomplete="off">
-      <input id="zpaddr" placeholder="tzn1… your ZP testnet address" spellcheck="false" required aria-label="ZP testnet address">
-      <button id="linkb" type="submit" disabled>Sign and link</button>
-    </form>
-    <div class="msg" id="m2" hidden></div>
-  </li>
-  <li class="step" id="s3">
-    <h3>Deposit USDC</h3>
-    <p>Send USDC to the bridge. After <span id="conf">12</span> confirmations on Base Sepolia (about half a minute) the same amount of zUSDC is issued to your linked ZP address.</p>
-    <p class="wait"><b>How long:</b> about 5 minutes in all: half a minute on Base Sepolia, then the zUSDC is in the next ZP block (about 4 minutes, sometimes longer on the testnet). Your activity below shows each step.</p>
-    <form class="row" id="depf" autocomplete="off">
-      <input class="amt" id="amt" inputmode="decimal" placeholder="Amount" required aria-label="USDC amount">
-      <button id="depb" type="submit" disabled>Send USDC</button>
-      <span class="acct" id="bal"></span>
-    </form>
-    <div class="msg" id="m3" hidden></div>
-  </li>
-  <li class="step" id="s4">
-    <h3>Withdraw back to USDC</h3>
-    <p>Send zUSDC from your linked ZP address to the bridge's ZP address (below). That is all: the bridge sees it, destroys the zUSDC and pays the same amount of USDC to your EVM address by itself. In the <a href="/wallet/">ZP Wallet</a>: Send, choose zUSDC, paste the bridge's ZP address.</p>
-    <p class="wait"><b>How long:</b> the bridge waits for <span id="zpconf">2</span> ZP blocks after your transfer, about 8 to 10 minutes (longer when testnet blocks are slow), then pays at once. Your activity below shows "confirming 1 of 2" meanwhile.</p>
-    <details class="claim"><summary>Not paid after 20 minutes, or your ZP address is linked to several EVM addresses? Claim with the transaction id</summary>
-    <form class="row" id="wdf" autocomplete="off">
-      <input id="wtx" placeholder="ZP transaction id (64 hex characters)" spellcheck="false" required aria-label="ZP transaction id">
-      <input id="wevm" placeholder="0x… EVM address to pay" spellcheck="false" required aria-label="EVM address to pay">
-      <button id="wdb" type="submit">Claim USDC</button>
-    </form></details>
-    <div class="msg" id="m4" hidden></div>
-  </li>
-</ol>
-
-<h2>Your activity</h2>
-<p>Deposits and withdrawals of one EVM address. Filled in automatically after you connect.</p>
-<form class="row" id="lkf" autocomplete="off">
-  <input id="lkevm" placeholder="0x… EVM address" spellcheck="false" required aria-label="EVM address">
-  <button class="ghost" type="submit">Look up</button>
-</form>
-<div id="lk"></div>
-
-<h2>Bridge addresses</h2>
-<div class="box" id="addrs"><div class="addr"><span class="k">Loading…</span></div></div>
-
-<h2>Good to know</h2>
+<div class="more">
+<details id="lkd"><summary>Your history</summary>
+  <form class="row" id="lkf" autocomplete="off" style="margin-top:10px">
+    <input id="lkevm" placeholder="0x… EVM address" spellcheck="false" required>
+    <button class="ghost" type="submit">Look up</button>
+  </form>
+  <div id="lk"></div>
+</details>
+<details><summary>Reserves and addresses</summary>
+  <p id="resline">–</p>
+  <div id="addrs"></div>
+</details>
 <details><summary>Is this real money?</summary><p>No. Base Sepolia and the ZP testnet are test networks; their USDC, ETH and ZP have no value. Never use a wallet or key that holds real funds here.</p></details>
-<details><summary>Who holds the USDC?</summary><p>One operator key holds the reserves and is the only key that can issue or destroy zUSDC. That is fine for a prototype and not for real money: before any real use the plan is multi-signature custody decided by a community vote, limits, a pause switch and an independent audit.</p></details>
-<details><summary>I deposited before linking</summary><p>Nothing is lost. The deposit waits and is issued as soon as the sending EVM address is linked (step 2).</p></details>
-<details><summary>How can I check that zUSDC is backed?</summary><p>The two numbers at the top: USDC the bridge's address holds on Base Sepolia (read from the chain, open it on BaseScan below) and zUSDC issued minus destroyed. The first must be at least the second.</p></details>
+<details><summary>Who holds the USDC?</summary><p>One operator key holds the reserves and is the only key that can issue or destroy zUSDC. Fine for a prototype, not for real money: before any real use the plan is multi-signature custody decided by a community vote, limits, a pause switch and an independent audit.</p></details>
+<details><summary>I deposited before linking</summary><p>Nothing is lost. The deposit waits and is issued as soon as the sending wallet is linked.</p></details>
+</div>
+<p class="sub" id="live"></p>
 </main>
 <script>
 (() => {
@@ -146,14 +162,27 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const usdc = v => { try { const n = BigInt(v), w = n / 1000000n, f = String(n % 1000000n).padStart(6, '0').replace(/0+$/, '').padEnd(2, '0'); return w.toLocaleString('en-US') + '.' + f; } catch { return '–'; } };
   const toUnits = s => { const m = /^\s*(\d+)(?:\.(\d{0,6}))?\s*$/.exec(s); if (!m) return null; return BigInt(m[1]) * 1000000n + BigInt((m[2] || '').padEnd(6, '0')); };
+  const short = (a, n = 6) => a ? esc(a.slice(0, n + 4)) + '…' + esc(a.slice(-n)) : '';
   const NETS = { 84532: ['Base Sepolia', 'https://sepolia.basescan.org'], 11155111: ['Ethereum Sepolia', 'https://sepolia.etherscan.io'] };
   const BASE_SEPOLIA = { chainId: '0x14a34', chainName: 'Base Sepolia', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://sepolia.base.org'], blockExplorerUrls: ['https://sepolia.basescan.org'] };
   const show = (id, kind, html) => { const m = $(id); m.className = 'msg ' + kind; m.innerHTML = html; m.hidden = false; };
+  const hide = id => { $(id).hidden = true; };
   const errText = e => esc((e && (e.shortMessage || e.message)) || String(e)).slice(0, 240);
-  let S = null, account = null;
+  let S = null, account = null, linked = null, balUnits = null;
   const scan = () => (NETS[S?.chainId] || NETS[84532])[1];
   const evmLink = (kind, v) => `<a class="mono" href="${scan()}/${kind}/${esc(v)}" rel="noopener">${esc(v.slice(0, 10))}…</a>`;
-  const zpLink = (kind, v) => `<a class="mono" href="/explorer.html?${kind}=${encodeURIComponent(v)}">${esc(v.slice(0, 12))}…</a>`;
+  const zpLink = (kind, v) => `<a class="mono" href="/explorer.html?${kind}=${encodeURIComponent(v)}">${esc(v.slice(0, 10))}…</a>`;
+
+  // ---- tabs (remembered) --------------------------------------------------------------------
+  function tab(name) {
+    const dep = name !== 'wd';
+    $('t-dep').setAttribute('aria-selected', dep); $('t-wd').setAttribute('aria-selected', !dep);
+    $('p-dep').hidden = !dep; $('p-wd').hidden = dep;
+    try { localStorage.setItem('navora.bridge.tab', dep ? 'dep' : 'wd'); } catch { }
+  }
+  $('t-dep').onclick = () => tab('dep'); $('t-wd').onclick = () => tab('wd');
+  try { tab(localStorage.getItem('navora.bridge.tab') || (location.hash === '#withdraw' ? 'wd' : 'dep')); } catch { tab('dep'); }
+  if (location.hash === '#withdraw') tab('wd');
 
   // ---- status -------------------------------------------------------------------------------
   async function loadStatus() {
@@ -161,38 +190,38 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
       const r = await fetch('/bridge/status', { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
       S = await r.json();
     } catch (e) {
-      $('health').innerHTML = '<span class="dot bad"></span><b>The bridge service is not answering</b><span class="sub">Deposits are kept and processed when it is back.</span>';
+      $('health').innerHTML = '<span class="dot bad"></span><b>The bridge is not answering</b> · deposits are kept and processed when it is back';
       return;
     }
     const mock = S.evm === 'mock', net = mock ? 'a simulated EVM chain' : (NETS[S.chainId]?.[0] || 'the EVM test network');
     const out = BigInt(S.zusdcOutstanding || 0), res = S.reserves == null ? null : BigInt(S.reserves);
-    $('out').textContent = usdc(out); $('res').textContent = res == null ? 'unknown' : usdc(res); $('resnet').textContent = 'on ' + net;
-    $('conf').textContent = S.confirmations ?? 12; $('zpconf').textContent = S.zpConfirmations ?? 2;
-    $('eq').textContent = res == null ? '' : res >= out ? '≥' : '<';
     let h;
-    if (mock) h = ['warn', 'Running on a simulated EVM chain', 'Deposits from a browser wallet are not picked up in this mode.'];
-    else if (res == null) h = ['warn', 'Bridge running, reserves not readable right now', 'zUSDC in circulation is shown; the USDC balance could not be read from the chain.'];
-    else if (res >= out) h = ['ok', 'Running and fully backed', `Every zUSDC is covered by USDC the bridge holds on ${net}.`];
-    else h = ['bad', 'Reserves are below zUSDC in circulation', 'Do not deposit until this is resolved.'];
-    $('health').innerHTML = `<span class="dot ${h[0]}"></span><b>${esc(h[1])}</b><span class="sub">${esc(h[2])}</span>`;
-    $('counts').innerHTML = `<span><b>${S.links}</b> linked addresses</span><span><b>${S.deposits}</b> deposits</span><span><b>${S.withdrawals}</b> withdrawals</span>` +
-      (S.pendingDeposits ? `<span><b>${S.pendingDeposits}</b> deposits waiting for a link</span>` : '');
+    if (mock) h = ['warn', 'Simulated EVM chain', 'browser-wallet deposits are not picked up'];
+    else if (res == null) h = ['warn', 'Running', 'reserves not readable right now'];
+    else if (res >= out) h = ['ok', 'Fully backed', `${usdc(res)} USDC held · ${usdc(out)} zUSDC out`];
+    else h = ['bad', 'Reserves below zUSDC out', 'do not deposit until resolved'];
+    $('health').innerHTML = `<span class="dot ${h[0]}"></span><b>${esc(h[1])}</b> · ${esc(h[2])}`;
+    $('resline').textContent = `${res == null ? 'unknown' : usdc(res)} USDC held by the bridge on ${net}; ${usdc(out)} zUSDC in circulation. ${S.links} linked wallets, ${S.deposits} deposits, ${S.withdrawals} withdrawals.`;
+    $('zpconf').textContent = S.zpConfirmations ?? 2;
+    $('bzp').textContent = S.bridgeZp || '…';
     const rows = [
-      ['Send USDC here', S.bridgeEvm, mock ? '' : `${scan()}/address/${S.bridgeEvm}`],
-      ['Send zUSDC here', S.bridgeZp, S.bridgeZp ? `/explorer.html?address=${encodeURIComponent(S.bridgeZp)}` : ''],
+      ['USDC goes to', S.bridgeEvm, mock ? '' : `${scan()}/address/${S.bridgeEvm}`],
+      ['zUSDC goes to', S.bridgeZp, S.bridgeZp ? `/explorer.html?address=${encodeURIComponent(S.bridgeZp)}` : ''],
       ['USDC token', S.usdc, mock ? '' : `${scan()}/token/${S.usdc}`],
       ['zUSDC asset id', S.asset, ''],
       ['zUSDC contract', S.contract, '']
     ].filter(r => r[1]);
-    $('addrs').innerHTML = rows.map(([k, v, href], i) => `<div class="addr"><span class="k">${esc(k)}</span><code>${esc(v)}</code><span class="row" style="margin:0">` +
-      `<button class="ghost" type="button" data-copy="${i}">Copy</button>${href ? `<a class="btn ghost" href="${esc(href)}" rel="noopener">Open</a>` : ''}</span></div>`).join('');
-    $('addrs').onclick = async ev => { const b = ev.target.closest('[data-copy]'); if (!b) return; try { await navigator.clipboard.writeText(rows[+b.dataset.copy][1]); b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1500); } catch { } };
+    $('addrs').innerHTML = rows.map(([k, v, href], i) => `<div class="addr"><span class="kk">${esc(k)}</span><code>${esc(v)}</code><span class="row">` +
+      `<button class="ghost" type="button" data-copy="${i}">Copy</button>${href ? `<a class="btn ghost" href="${esc(href)}" rel="noopener" style="font-size:12px;padding:4px 10px">Open</a>` : ''}</span></div>`).join('');
+    $('addrs').onclick = ev => { const b = ev.target.closest('[data-copy]'); if (b) copy(b, rows[+b.dataset.copy][1]); };
     gate();
   }
+  async function copy(btn, text) { try { await navigator.clipboard.writeText(text); const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = t, 1500); } catch { } }
+  $('cpbzp').onclick = () => S?.bridgeZp && copy($('cpbzp'), S.bridgeZp);
 
   // ---- wallet -------------------------------------------------------------------------------
   // Several wallet extensions (MetaMask, Trust Wallet, …) each claim window.ethereum; EIP-6963 lets each announce
-  // itself, so the page asks which one to use and remembers it (per browser).
+  // itself (with its own name and icon), so the page asks which one to use and remembers it (per browser).
   const wallets = [];   // { info: { name, icon, rdns, uuid }, provider }
   let chosen = null;
   const PICK = 'navora.bridge.wallet';
@@ -204,41 +233,49 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   });
   window.dispatchEvent(new Event('eip6963:requestProvider'));
   const eth = () => chosen?.provider || (wallets.length === 1 ? wallets[0].provider : window.ethereum);
+  const icon = w => /^data:image\//.test(w?.info?.icon || '') ? `<img src="${esc(w.info.icon)}" alt="">` : '<span class="noicon"></span>';
   function choose(w) {
     chosen = w; try { localStorage.setItem(PICK, w.info.rdns || ''); } catch { }
     if (w.provider.on) { w.provider.on('accountsChanged', a => useAccount(a[0])); w.provider.on('chainChanged', () => balance()); }
     $('pick').hidden = true;
   }
-  function pickWallet() {   // resolves with the chosen wallet when there are several and none is chosen yet
+  function pickWallet() {   // resolves once a wallet is chosen, when there are several and none is chosen yet
     if (chosen || wallets.length < 2) return Promise.resolve();
     return new Promise(done => {
       const box = $('pick'); box.hidden = false;
-      box.innerHTML = '<p>Several wallets are installed. Which one?</p>' + wallets.map((w, i) => `<button type="button" data-w="${i}">${/^data:image\//.test(w.info.icon || '') ? `<img src="${esc(w.info.icon)}" alt="">` : '<span class="noicon"></span>'}<span>${esc(w.info.name || 'Wallet')}</span></button>`).join('');
+      box.innerHTML = '<p>Which wallet?</p>' + wallets.map((w, i) => `<button type="button" data-w="${i}">${icon(w)}<span>${esc(w.info.name || 'Wallet')}</span></button>`).join('');
       box.onclick = ev => { const b = ev.target.closest('[data-w]'); if (!b) return; choose(wallets[+b.dataset.w]); done(); };
     });
   }
   function gate() {
-    const ready = !!account && !!S && S.evm !== 'mock';
-    $('linkb').disabled = !ready; $('depb').disabled = !ready || !S.bridgeEvm;
+    const on = !!account;
+    $('connectbox').hidden = on; $('wbar').hidden = !on;
+    $('linkbox').hidden = !on || !!linked; $('depf').hidden = !on || !linked;
+    $('linkb').disabled = !S || S.evm === 'mock'; $('depb').disabled = !S || S.evm === 'mock' || !S.bridgeEvm;
+    $('dto').innerHTML = linked ? `To <code title="${esc(linked)}">${short(linked)}</code> · <button type="button" class="link" id="relink">change</button>` : '';
+    if ($('relink')) $('relink').onclick = () => { linked = null; gate(); $('zpaddr').focus(); };
+    $('wto').innerHTML = account && linked ? `at <code>${short(account, 4)}</code>` : 'at the wallet you linked';
   }
   async function balance() {
     if (!account || !S) return;
     try {
       const data = '0x70a08231' + account.slice(2).toLowerCase().padStart(64, '0');
-      const v = await eth().request({ method: 'eth_call', params: [{ to: S.usdc, data }, 'latest'] });
-      $('bal').textContent = 'You have ' + usdc(BigInt(v)) + ' USDC';
-    } catch { $('bal').textContent = ''; }
+      balUnits = BigInt(await eth().request({ method: 'eth_call', params: [{ to: S.usdc, data }, 'latest'] }));
+      $('bal').textContent = 'You have ' + usdc(balUnits) + ' USDC';
+    } catch { $('bal').textContent = ''; balUnits = null; }
   }
+  $('max').onclick = () => { if (balUnits != null) $('amt').value = usdc(balUnits).replace(/,/g, ''); };
   async function useAccount(a) {
-    account = a ? a.toLowerCase() : null; gate();
-    if (!account) { $('acct').hidden = true; $('s1').classList.remove('done'); return; }
-    $('s1').classList.add('done'); $('acct').hidden = false; $('acct').innerHTML = 'Connected: <code>' + esc(account) + '</code>' + (chosen ? ' with ' + esc(chosen.info.name || 'your wallet') : '') + (wallets.length > 1 ? ' <button type="button" class="link" id="other">Use another wallet</button>' : '');
+    account = a ? a.toLowerCase() : null;
+    if (!account) { linked = null; gate(); return; }
+    const w = chosen || (wallets.length === 1 ? wallets[0] : null);
+    $('wbar').innerHTML = `${w ? icon(w) : ''}<span class="grow">${w ? esc(w.info.name) + ' · ' : 'Connected · '}<code>${short(account, 4)}</code></span>` + (wallets.length > 1 ? '<button type="button" class="link" id="other">Change</button>' : '');
     if ($('other')) $('other').onclick = () => { chosen = null; try { localStorage.removeItem(PICK); } catch { } useAccount(null); $('connect').click(); };
     $('lkevm').value = account; if (!$('wevm').value) $('wevm').value = account;
-    balance(); lookup(account);
+    gate(); balance(); lookup(account);
   }
   $('connect').onclick = async () => {
-    $('m1').hidden = true;
+    hide('m1');
     if (!eth() && !wallets.length) return show('m1', 'err', 'No browser wallet found. Install <a href="https://metamask.io/" rel="noopener">MetaMask</a> (or another EVM wallet) and reload this page.');
     try {
       await pickWallet();
@@ -255,7 +292,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
 
   $('linkf').onsubmit = async ev => {
     ev.preventDefault(); const zp = $('zpaddr').value.trim();
-    if (!/^tzn1[0-9a-z]{20,}$/.test(zp)) return show('m2', 'err', 'That does not look like a ZP testnet address (it starts with <code>tzn1</code>).');
+    if (!/^tzn1[0-9a-z]{20,}$/.test(zp)) return show('m2', 'err', 'That is not a ZP testnet address (it starts with <code>tzn1</code>).');
     const message = `Link ${account} to ${zp}`;
     try {
       const hex = '0x' + Array.from(new TextEncoder().encode(message), b => b.toString(16).padStart(2, '0')).join('');
@@ -263,22 +300,19 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
       const r = await fetch('/bridge/link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evm: account, zp, message, signature }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || 'HTTP ' + r.status);
-      show('m2', 'ok', `Linked. zUSDC for deposits from <code>${esc(account.slice(0, 10))}…</code> goes to <code>${esc(zp)}</code>.`);
-      lookup(account);
-    } catch (e) { show('m2', 'err', 'Link failed: ' + errText(e)); }
+      hide('m2'); linked = zp; gate(); lookup(account);
+    } catch (e) { show('m2', 'err', 'Not linked: ' + errText(e)); }
   };
 
   $('depf').onsubmit = async ev => {
-    ev.preventDefault(); const units = toUnits($('amt').value);
-    if (!units || units <= 0n) return show('m3', 'err', 'Enter an amount, for example 5 or 0.5 (up to 6 decimals).');
+    ev.preventDefault(); hide('m3'); const units = toUnits($('amt').value);
+    if (!units || units <= 0n) return show('m3', 'err', 'Enter an amount, for example 5 or 0.5.');
+    if (balUnits != null && units > balUnits) return show('m3', 'err', `You have ${usdc(balUnits)} USDC.`);
     try {
-      const lk = await (await fetch('/bridge/lookup?evm=' + account, { cache: 'no-store' })).json();
-      if (!lk.zp) return show('m3', 'err', 'Link this EVM address to a ZP address first (step 2), otherwise the deposit waits until you do.');
       const data = '0xa9059cbb' + S.bridgeEvm.slice(2).toLowerCase().padStart(64, '0') + units.toString(16).padStart(64, '0');
       const tx = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: S.usdc, data }] });
-      show('m3', 'ok', `Sent. Transaction ${evmLink('tx', tx)}. The zUSDC arrives at <code>${esc(lk.zp.slice(0, 14))}…</code> after the confirmations; your activity below updates by itself.`);
       sentDeposits.push({ evmTx: String(tx).toLowerCase(), amount: String(units), from: account, confs: 0 });
-      $('s3').classList.add('done'); lookup(account); trackSent(); watch();
+      $('amt').value = ''; lookup(account); trackSent(); watch();
     } catch (e) { show('m3', 'err', 'Not sent: ' + errText(e)); }
   };
 
@@ -286,24 +320,23 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
     ev.preventDefault(); const zpTx = $('wtx').value.trim().toLowerCase(), evm = $('wevm').value.trim();
     if (!/^[0-9a-f]{64}$/.test(zpTx)) return show('m4', 'err', 'The transaction id is 64 hex characters.');
     if (!/^0x[0-9a-fA-F]{40}$/.test(evm)) return show('m4', 'err', 'The EVM address starts with 0x and has 40 hex characters.');
-    $('wdb').disabled = true; show('m4', 'info', 'Checking the transaction and paying out. This can take up to a minute…');
+    $('wdb').disabled = true; show('m4', 'info', 'Checking…');
     try {
       const r = await fetch('/bridge/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zpTx, evm }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
-      show('m4', 'ok', `Done: ${usdc(j.amount)} USDC paid to <code>${esc(evm.slice(0, 10))}…</code>${j.evmTx && !String(j.evmTx).startsWith('mock') ? ' in ' + evmLink('tx', j.evmTx) : ''}.`);
+      show('m4', 'ok', `Paid: ${usdc(j.amount)} USDC to <code>${short(evm, 4)}</code>${j.evmTx && !String(j.evmTx).startsWith('mock') ? ' · ' + evmLink('tx', j.evmTx) : ''}.`);
       lookup(evm); loadStatus();
     } catch (e) {
-      const t = errText(e);
-      const w = t.match(/waiting for ZP blocks: (\d+) of (\d+)/);
-      show('m4', w ? 'info' : 'err', w ? `Received. The bridge pays after ${w[2]} ZP blocks; this one has ${w[1]}. It pays by itself, no need to claim again (about ${4 * (w[2] - w[1])} more minutes).` : /not found/.test(t) ? 'This transaction is not on the ZP testnet yet. If you just sent it, wait a minute and try again; otherwise check the id.' : 'Not paid: ' + t);
+      const t = errText(e), w = t.match(/waiting for ZP blocks: (\d+) of (\d+)/);
+      show('m4', w ? 'info' : 'err', w ? `Received, ${w[1]} of ${w[2]} ZP blocks. It is paid by itself in about ${4 * (w[2] - w[1])} minutes.` : /not found/.test(t) ? 'Not on the ZP testnet yet. If you just sent it, wait a minute.' : 'Not paid: ' + t);
     } finally { $('wdb').disabled = false; }
   };
 
-  // ---- activity -----------------------------------------------------------------------------
+  // ---- progress and history -----------------------------------------------------------------
   let lastLookup = null;
-  // deposits sent from this page that the bridge has not reported yet: shown at once, with their confirmations
-  // on the EVM chain (read through the wallet), until the bridge's own row for them arrives
+  // deposits sent from this page that the bridge has not reported yet: shown at once with their confirmations on the
+  // EVM chain (read through the wallet), until the bridge's own row for them arrives
   const sentDeposits = [];
   let tracking = null;
   async function trackSent() {
@@ -320,36 +353,41 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
     } catch { }
     tracking = setTimeout(trackSent, 4000);
   }
+  // a job in three steps: sent, confirming (with its share), done
+  const job = (title, amount, step, frac, state) => `<div class="job"><div class="top"><span>${title}</span><span>${amount}</span></div>
+    <div class="bar">${[0, 1, 2].map(i => `<span class="${i < step ? 'on' : i === step ? 'now' : ''}" ${i === step ? `style="--p:${Math.round(frac * 100)}%"` : ''}></span>`).join('')}</div><div class="st">${state}</div></div>`;
+  const recentDone = new Map();   // finished during this visit: shown in progress once, as done
   async function lookup(evm) {
     lastLookup = evm;
-    const box = $('lk');
     try {
       const r = await fetch('/bridge/lookup?evm=' + encodeURIComponent(evm.toLowerCase()), { cache: 'no-store' });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
-      if (j.zp && account && evm.toLowerCase() === account) { $('s2').classList.add('done'); if (!$('zpaddr').value) $('zpaddr').value = j.zp; }
+      if (account && evm.toLowerCase() === account) { linked = j.zp || null; gate(); }
       const known = new Set([...j.waiting, ...j.deposits].map(d => String(d.evmTx).toLowerCase()));
-      for (let i = sentDeposits.length - 1; i >= 0; i--) if (known.has(sentDeposits[i].evmTx)) sentDeposits.splice(i, 1);
-      const need = S?.confirmations ?? 12;
-      const rows = [
-        ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx),
-          d.failed ? 'failed on the EVM chain' : d.confs >= need ? 'confirmed, being issued' : `confirming: ${Math.max(0, d.confs)} of ${need}`]),
-        ...j.waiting.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), j.zp ? 'being issued' : 'waiting for a link']),
-        ...j.deposits.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), 'zUSDC issued ' + zpLink('tx', d.zpTx)]),
-        ...(j.arriving || []).map(d => ['Withdrawal', usdc(d.amount), zpLink('tx', d.zpTx), `confirming: ${d.confirmations} of ${d.need} ZP blocks, then paid by itself`]),
-        ...j.withdrawals.map(d => ['Withdrawal', usdc(d.amount), zpLink('tx', d.zpTx), String(d.evmTx).startsWith('mock') ? 'USDC paid' : 'USDC paid ' + evmLink('tx', d.evmTx)])];
-      box.innerHTML = `<p class="acct">${j.zp ? 'Linked to <code>' + esc(j.zp) + '</code>' : 'Not linked to a ZP address yet.'}</p>` +
-        (rows.length ? `<div class="tw"><table class="hist"><thead><tr><th>Type</th><th>Amount</th><th>From</th><th>Result</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div>`
-          : '<p class="acct">No deposits or withdrawals yet.</p>');
-    } catch (e) { box.innerHTML = '<p class="msg err">' + errText(e) + '</p>'; }
+      for (let i = sentDeposits.length - 1; i >= 0; i--) if (known.has(sentDeposits[i].evmTx)) { recentDone.set('d' + sentDeposits[i].evmTx, true); sentDeposits.splice(i, 1); }
+      const need = S?.confirmations ?? 12, zneed = S?.zpConfirmations ?? 2;
+      const jobs = [
+        ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => d.failed ? job('Deposit', usdc(d.amount) + ' USDC', 0, 0, 'Failed on Base Sepolia') :
+          job('Deposit', usdc(d.amount) + ' USDC', 1, Math.min(1, d.confs / need), d.confs >= need ? 'Confirmed on Base · zUSDC in the next ZP block' : `Confirming on Base Sepolia: ${Math.max(0, d.confs)} of ${need}`)),
+        ...j.waiting.map(d => job('Deposit', usdc(d.amount) + ' USDC', 2, .5, j.zp ? 'Issuing zUSDC: in the next ZP block (about 4 minutes)' : 'Waiting: link a ZP address above')),
+        ...(j.arriving || []).map(d => job('Withdrawal', usdc(d.amount) + ' zUSDC', 1, d.confirmations / d.need, `Received · ZP blocks ${d.confirmations} of ${d.need} · then USDC is sent (about ${4 * Math.max(1, d.need - d.confirmations)} minutes)`)),
+        ...j.deposits.filter(d => recentDone.has('d' + String(d.evmTx).toLowerCase())).map(d => job('Deposit', usdc(d.amount) + ' USDC', 3, 1, `Done · zUSDC issued ${zpLink('tx', d.zpTx)}`)),
+        ...j.withdrawals.filter(d => recentDone.has('w' + d.zpTx)).map(d => job('Withdrawal', usdc(d.amount) + ' zUSDC', 3, 1, 'Done · USDC sent' + (String(d.evmTx).startsWith('mock') ? '' : ' ' + evmLink('tx', d.evmTx))))];
+      for (const d of j.arriving || []) recentDone.set('w' + d.zpTx, true);
+      if (evm.toLowerCase() === account) { $('track').hidden = !jobs.length; $('track').innerHTML = jobs.length ? '<h3>In progress</h3>' + jobs.join('') : ''; }
+      const hist = [...j.deposits.map(d => ['Deposit', usdc(d.amount) + ' USDC', evmLink('tx', d.evmTx)]), ...j.withdrawals.map(d => ['Withdrawal', usdc(d.amount) + ' zUSDC', zpLink('tx', d.zpTx)])];
+      $('lk').innerHTML = `<p class="sub">${j.zp ? 'Linked to <code>' + short(j.zp) + '</code>' : 'Not linked to a ZP address.'}</p>` +
+        (hist.length ? `<table class="recent"><tbody>${hist.map(h => `<tr><td>${h[0]}</td><td>${h[1]}</td><td>${h[2]}</td></tr>`).join('')}</tbody></table>` : '<p class="sub">No deposits or withdrawals yet.</p>');
+    } catch (e) { $('lk').innerHTML = '<p class="msg err">' + errText(e) + '</p>'; }
   }
   $('lkf').onsubmit = ev => { ev.preventDefault(); const v = $('lkevm').value.trim(); if (/^0x[0-9a-fA-F]{40}$/.test(v)) lookup(v); else $('lk').innerHTML = '<p class="msg err">Enter an EVM address (0x and 40 hex characters).</p>'; };
   let timer = null;
-  function watch() { clearInterval(timer); let n = 0; timer = setInterval(() => { if (++n > 40) clearInterval(timer); if (account) { lookup(account); balance(); } loadStatus(); }, 15000); }
+  function watch() { clearInterval(timer); let n = 0; timer = setInterval(() => { if (++n > 60) clearInterval(timer); if (account) { lookup(account); balance(); } loadStatus(); }, 10000); }
 
   // live: the bridge pushes an event when a deposit, withdrawal or link happens (GET /bridge/events); the page then
-  // refreshes the status and the activity shown. Polling every 60 s stays as a fallback when the stream is down.
+  // refreshes. Polling every 60 s stays as a fallback when the stream is down.
   let soon = null, live = false;
-  const liveMark = () => { const el = $('live'); if (el) el.textContent = live ? 'Live: updates appear by themselves' : 'Reconnecting… (checking every minute)'; };
+  const liveMark = () => { $('live').textContent = live ? 'Live: updates appear by themselves.' : 'Reconnecting… (checking every minute)'; };
   const refresh = () => { clearTimeout(soon); soon = setTimeout(() => { loadStatus(); if (account) { lookup(account); balance(); } else if (lastLookup) lookup(lastLookup); }, 300); };
   if ('EventSource' in window) {
     const es = new EventSource('/bridge/events');
@@ -358,8 +396,9 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
     es.onerror = () => { live = false; liveMark(); };
   }
   setInterval(() => { if (!live) refresh(); }, 60000);
+  watch();
 
-  loadStatus();
+  gate(); loadStatus();
   // reconnect silently only to a wallet already chosen here (or the only one)
   setTimeout(() => { if ((chosen || wallets.length <= 1) && eth()) eth().request({ method: 'eth_accounts' }).then(a => a[0] && useAccount(a[0])).catch(() => { }); }, 300);
 })();
