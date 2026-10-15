@@ -31,7 +31,8 @@ function fmtUnits(units, dec) {
 const tokenAmount = (asset, units) => asset === '00' ? formatZP(units) : fmtUnits(units, decimalsOf(asset));
 const withUnit = (asset, units) => tokenAmount(asset, units) + ' ' + unitOf(asset);
 // a token's icon where the wallet has one (zUSDC: Navora's own icon for the bridge token)
-const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || '') ? `<img class="ticon" src="icons/zusdc.svg" alt="" width="${size}" height="${size}">` : '';
+const ICONS = typeof __ICONS__ === 'object' && __ICONS__ ? __ICONS__ : {};
+const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
@@ -765,7 +766,8 @@ async function txInfo(hash, w) {
       const o = p && p.tx && Array.isArray(p.tx.outputs) ? lockAddr(p.tx.outputs[op.index]?.lock) : null;
       if (o && o.address) from = o;
     }
-    const info = { vote: !!vote, to: to || null, from };
+    const mint = (tx.inputs || []).map(i => i && i.mint).find(Boolean);   // tokens issued by a contract in this transaction
+    const info = { vote: !!vote, to: to || null, from, mintAsset: mint && typeof mint.asset === 'string' ? mint.asset : null };
     S.txInfo.set(hash, info);
     return info;
   } catch { return null; }
@@ -785,7 +787,10 @@ function activityRow(h, w) {
     if (!inn && (info.vote || mineVote || (amt === -1n && !info.to))) { what = 'CGP ballot'; who = mineVote ? esc(mineVote.kind + ': ' + mineVote.label) : 'vote fee (1 kalapa)'; }
     else {
       const o = inn ? info.from : info.to, name = o && o.kind === 'Contract' && o.id ? knownContract(o.id) : null;
-      if (o && o.address) {
+      if (inn && S.bridge && info.mintAsset === S.bridge.asset && h.asset === S.bridge.asset) {   // zUSDC issued for a USDC deposit
+        what = 'Received from'; who = 'the USDC bridge (deposit)';
+        back = `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(S.bridge.zp)}" data-asset="${esc(h.asset)}">Withdraw</button><button type="button" class="chip mini" data-act="copy" data-text="${esc(h.txHash)}" title="${esc(h.txHash)}">Copy id</button>`;
+      } else if (o && o.address) {
         what = inn ? 'Received from' : 'Sent to';
         who = name ? esc(name.replace(/^the /, 'The ')) : S.bridge && o.address === S.bridge.zp ? `<span title="${esc(o.address)}">the USDC bridge</span>` : `<span class="mono" title="${esc(o.address)}">${esc(shortAddr(o.address))}</span>`;
         const copy = `<button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address)}">Copy</button>`;

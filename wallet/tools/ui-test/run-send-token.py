@@ -23,7 +23,11 @@ with sync_playwright() as p:
     pg.wait_for_selector('form[data-form=add-wallet]'); pg.click('button[data-tab=phrase]'); pg.fill('textarea[name=words]', PHRASE); pg.click('form[data-form=add-wallet] button.primary')
     pg.wait_for_selector('text=Tokens', timeout=15000)
     t = pg.inner_text('main'); ok('zUSDC' in t and '2.00' in t, 'Tokens card: zUSDC by name, 2.00 (6 decimals, names built into the wallet)')
-    pg.click('text=Send'); pg.wait_for_selector('form[data-form=send]')
+    pg.wait_for_selector('text=the USDC bridge (deposit)', timeout=15000)
+    t = pg.inner_text('main'); ok('+2.00 zUSDC' in t and pg.query_selector('.tname img.ticon') is not None and pg.evaluate("[...document.querySelectorAll('img.ticon')].every(i => i.naturalWidth > 0)"), 'activity: the deposit is named, +2.00 zUSDC, the icon loads (inside app.js)')
+    pg.screenshot(path=f'{OUT}/st0-home.png')
+    pg.click('nav >> text=Wallet') if pg.query_selector('nav >> text=Wallet') else None
+    pg.click('button:has-text("Send")'); pg.wait_for_selector('form[data-form=send]')
     ok(pg.query_selector('select[name=asset]') is not None, 'Send offers a choice of ZP or a token when the wallet holds one')
     pg.select_option('select[name=asset]', ZUSDC); pg.wait_for_selector('text=Amount (zUSDC)')
     ok('Available 2.00' in pg.inner_text('main') and 'Send zUSDC' in pg.inner_text('body'), 'choosing zUSDC: title, unit and available amount follow it')

@@ -11,6 +11,14 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.16.1 — 2026-10-15
+
+### Fixed
+- The zUSDC icon showed as a broken image on the site (the site copies only the top of the wallet's build); the icons
+  are now inside app.js.
+- zUSDC issued for a USDC deposit shows as "Received from the USDC bridge (deposit)", with Withdraw (Send to the
+  bridge) and Copy id, instead of an unnamed address.
+
 ## 0.16.0 — 2026-10-15
 
 ### Added

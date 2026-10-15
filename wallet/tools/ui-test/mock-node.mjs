@@ -109,7 +109,7 @@ http.createServer((req, res) => {
         case '/contract/active': return send(res, 200, [{ contractId: VOTING, address: encodeAddress(unhex(VOTING), NET, true), expire: st.tip + 90000, code: '// voting contract\n'.padEnd(4000, 'x') }]);
         case '/addressdb/outputs': return send(res, 200, body.addresses?.includes(addr0) ? fund() : []);
         case '/addressdb/balance': return send(res, 200, body.addresses?.includes(CGP_ADDR) ? [{ asset: '00', balance: '100000000000' }] : body.addresses?.includes(addr0) ? [{ asset: '00', balance: String(st.zp) }, ...(st.tokens ? [{ asset: TOKEN, balance: '250' }] : [])] : []);
-        case '/addressdb/transactions': return send(res, 200, []);
+        case '/addressdb/transactions': return send(res, 200, st.zusdc && body.addresses?.includes(addr0) ? [{ txHash: 'ad'.repeat(32), asset: ZUSDC, amount: '2000000', confirmations: 3, timestamp: Date.now() - 60000, lock: { PK: { hash: hex(key0.pkHash), address: addr0 } } }] : []);
         case '/addressdb/discovery': return send(res, 200, (body.addresses || []).map(a => ({ address: a, hasBalance: a === addr0, hasTxs: a === addr0 })));
         case '/blockchain/contract/execute': {
           const r = new Reader(unhex(body.tx)), n = VarInt.read(r), inputs = [];
@@ -134,7 +134,9 @@ http.createServer((req, res) => {
           return send(res, 200, hex(serializeTx(tx)), 'text/plain');
         }
         case '/blockchain/transaction': {   // a published transaction: first asked it is in the mempool, then in a block
-          const h = u.searchParams.get('hash'), known = st.published.find(x => hex(txHash(deserializeTx(unhex(x)))) === h);
+          const h = u.searchParams.get('hash');
+          if (st.zusdc && h === 'ad'.repeat(32)) return send(res, 200, { tx: { inputs: [{ mint: { asset: ZUSDC, amount: '2000000' } }, { outpoint: { txHash: 'ae'.repeat(32), index: 0 } }], outputs: [{ lock: { PK: { hash: hex(key0.pkHash), address: addr0 } }, spend: { asset: ZUSDC, amount: '2000000' } }] }, confirmations: 3 });   // zUSDC issued by the bridge
+          const known = st.published.find(x => hex(txHash(deserializeTx(unhex(x)))) === h);
           if (!known) return send(res, 404, 'not found', 'text/plain');
           st.asked[h] = (st.asked[h] || 0) + 1;
           return send(res, 200, st.asked[h] <= 1 ? { hash: h, confirmations: 0 } : { hash: h, blockNumber: st.tip + 1, confirmations: 1 });
