@@ -53,6 +53,10 @@ function orderLine(o) {
 }
 // ---- the order book of ZP / zUSDC: the site's /dex/book (fresh to one block, mempool orders marked pending), or built
 // here from /dex/orders on an older site. Tap a price to take its best order; Buy / Sell makes a limit order.
+// an order made here shows in the book at once, marked as waiting for its block, until the site lists it (30 min at most)
+const DEX_MADE_KEY = 'zp-wallet.dex-made.v1';
+const dexMade = () => { try { const v = JSON.parse(localStorage.getItem(DEX_MADE_KEY)); return Array.isArray(v) ? v.filter(x => x && x.net === net() && typeof x.tx === 'string' && Date.now() - x.at < 30 * 60e3) : []; } catch { return []; } };
+const addDexMade = x => { try { localStorage.setItem(DEX_MADE_KEY, JSON.stringify([...dexMade(), x].slice(-20))); } catch { /* private mode */ } };
 const quoteId = () => Object.keys(S.assetNames).find(k => S.assetNames[k] === 'zUSDC') || null;
 function bookData(m) {
   const q = quoteId(); if (!q) return null;
@@ -61,6 +65,12 @@ function bookData(m) {
     const norm = (list, side) => list.map(r => { try { const row = bookRow(orderOf({ ...r.order, tx: r.tx }), q); return row && row.side === side ? { ...row, pending: !!r.pending, busy: r.pendingTake ? 'taking' : r.pendingCancel ? 'cancelling' : null } : null; } catch { return null; } }).filter(Boolean);
     asks = norm(m.book.asks, 'ask').sort((a, b) => a.price - b.price); bids = norm(m.book.bids, 'bid').sort((a, b) => b.price - a.price);
   } else ({ asks, bids } = bookFromOrders((m.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).filter(Boolean), q));
+  const seen = new Set([...asks, ...bids].map(r => r.o.tx));
+  for (const x of dexMade()) {
+    if (seen.has(x.tx)) continue;
+    try { const r = bookRow(orderOf(x), q); if (r) (r.side === 'ask' ? asks : bids).push({ ...r, pending: true, local: true }); } catch { /* not an order */ }
+  }
+  asks.sort((a, b) => a.price - b.price); bids.sort((a, b) => b.price - a.price);
   for (const r of [...asks, ...bids]) if (dexPending.has(r.o.tx)) r.busy = dexPending.get(r.o.tx);
   return { q, asks, bids, last: m.book?.last || null, asOf: Number(m.book?.tip) || null };
 }
@@ -72,7 +82,7 @@ function bookView(m, me, spendable) {
   const max = [...la, ...lb].reduce((a, l) => l.total > a ? l.total : a, 1n);
   const row = (l, side, i) => {
     const take = l.rows.find(r => !r.pending && !r.busy && !myOrder(r.o, me)), mineL = l.rows.some(r => myOrder(r.o, me)), pend = l.rows.every(r => r.pending), busy = l.rows.every(r => r.busy || r.pending);
-    return `<button type="button" class="lvl ${side}" data-act="dex-level" data-side="${side}" data-i="${i}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${mineL ? '<em>Yours</em> ' : pend ? '<em>pending</em> ' : busy ? '<em>being taken</em> ' : ''}${zpShort(l.total)}</span></button>`;
+    return `<button type="button" class="lvl ${side}" data-act="dex-level" data-side="${side}" data-i="${i}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${mineL && pend ? '<em>Yours · waiting for its block</em> ' : mineL ? '<em>Yours</em> ' : pend ? '<em>pending</em> ' : busy ? '<em>being taken</em> ' : ''}${zpShort(l.total)}</span></button>`;
   };
   const ba = d.asks.find(r => !r.pending), bb = d.bids.find(r => !r.pending);
   const spread = ba && bb ? `Spread ${(ba.price - bb.price).toFixed(4)} zUSDC (${((ba.price - bb.price) / ((ba.price + bb.price) / 2) * 100).toFixed(1)}%)${ba.price <= bb.price ? ' · crossed: a bid is at or above an ask' : ''}` : 'No spread yet: one side is empty';
@@ -123,7 +133,9 @@ function dexView(m, base, loading) {
   const want = S.draft.dwant && known.includes(S.draft.dwant) && S.draft.dwant !== give ? S.draft.dwant : known.find(a => a !== give) || '';
   const pick = (name, sel) => `<div class="tokpick">${known.filter(a => name === 'dwant' ? a !== give : true).map(a => `<button type="button" class="chip tokchip ${a === sel ? 'on' : ''}" aria-checked="${a === sel}" role="radio" data-act="dex-pick" data-name="${name}" data-asset="${esc(a)}">${a === '00' && !ICONS.zp ? '<span class="zpdot">ZP</span>' : tokenIcon(a, 22)}<span><b>${esc(unitOf(a))}</b></span></button>`).join('')}</div>`;
   const has = assets.find(x => x.asset === give);
-  const mineRows = list.filter(o => myOrder(o, me)).map(o => { const p = dexPending.get(o.tx); return `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div>${orderLine(o)}</div></div><div>${p ? `<span class="muted small">${p === 'taking' ? 'Being taken…' : 'Being cancelled…'}</span>` : spendable ? `<button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div></div>`; }).join('');
+  const listed = new Set(list.map(o => o.tx)), waitingMine = dexMade().filter(x => !listed.has(x.tx)).map(x => { try { return orderOf(x); } catch { return null; } }).filter(Boolean)
+    .map(o => `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div>${orderLine(o)}<div class="muted small"><span class="spin"></span> Waiting for its block (about 4 min)</div></div></div></div>`).join('');
+  const mineRows = waitingMine + list.filter(o => myOrder(o, me)).map(o => { const p = dexPending.get(o.tx); return `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div>${orderLine(o)}</div></div><div>${p ? `<span class="muted small">${p === 'taking' ? 'Being taken…' : 'Being cancelled…'}</span>` : spendable ? `<button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div></div>`; }).join('');
   return `${loading ? '<div class="card"><p class="muted small">Loading…</p></div>' : bookView(m, me, spendable)}
     ${mineRows ? `<div class="card"><h2>Your orders</h2><div class="list">${mineRows}</div></div>` : ''}
     <details class="card how" data-keep="dexall" ${S.keep?.dexall ? 'open' : ''}><summary>All orders and other pairs</summary><div class="list" data-s="mt10">${rows || '<p class="muted small">No open orders.</p>'}</div>
@@ -233,7 +245,7 @@ async function loadMarkets() {
     let evidence = {}; try { evidence = JSON.parse(round.evidence || '{}'); } catch { /* older round */ }
     if (!Array.isArray(round.tickers) || !Array.isArray(round.values)) throw new Error('unexpected oracle answer');
     const dj = await get('/explorer/api/dex/orders').catch(() => null), orders = Array.isArray(dj?.orders) ? dj.orders : [];
-    const q = quoteId(), [book, tj] = q ? await Promise.all([get(`/explorer/api/dex/book?base=00&quote=${q}&qdec=6`).catch(() => null), get(`/explorer/api/dex/trades?base=00&quote=${q}&limit=20`).catch(() => null)]) : [null, null];
+    const q = quoteId(), [book, tj] = q ? await Promise.all([get(`/explorer/api/dex/book?base=00&quote=${q}&qdec=6&pending=1`).catch(() => null), get(`/explorer/api/dex/trades?base=00&quote=${q}&limit=20`).catch(() => null)]) : [null, null];
     S.markets = { round, evidence, orders, dex: typeof dj?.dex === 'string' && /^[0-9a-f]{72}$/.test(dj.dex) ? dj.dex : null, day: new Date(round.timestamp).toISOString().slice(0, 10),
       book: book && Array.isArray(book.asks) ? book : null, trades: Array.isArray(tj?.trades) ? tj.trades : Array.isArray(tj) ? tj : [] };
   } catch (e) { S.markets = null; S.marketsError = 'Could not read the oracle: ' + e.message; }
@@ -1301,7 +1313,7 @@ function modalHtml() {
     <p class="muted small">Checked before signing: the Dex pays exactly this, and nothing goes to anyone else.</p>${errBox()}
     <div class="row"><button class="btn" data-act="close">Back</button><button class="btn primary" data-act="dex-send" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
   if (m.type === 'dex-sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
-    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the order list about 10 blocks after its block.' : 'The cancel is on its way. Your coins come back in the next block.'}</p>
+    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the book now, marked as waiting for its block (about 4 minutes); then anyone can take it.' : 'The cancel is on its way. Your coins come back in the next block.'}</p>
     <div class="card small"><div class="between"><span class="muted">Transaction</span><button type="button" class="chip mini" data-act="copy" data-text="${esc(m.hash)}">Copy</button></div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'token') {
@@ -1769,6 +1781,7 @@ $app.addEventListener('click', async e => {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
       if (m.kind !== 'make') dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling');
+      else addDexMade({ tx: hash, net: net(), at: Date.now(), under_asset: m.o.underAsset, under_amount: String(m.o.underAmount), pair_asset: m.o.pairAsset, pair_total: String(m.o.pairTotal), maker: myPub() });
       S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '' };
       render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
     }

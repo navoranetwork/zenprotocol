@@ -75,6 +75,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/d4-limit-confirm.png')
     pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your order is on its way', timeout=15000)
     ok(get('/__lastdex') == {'command': 'Make', 'signed': True}, 'the limit order is a Make signed by the maker key'); pg.click('button[data-act=close]'); pg.wait_for_timeout(200)
+    lv = [e.inner_text() for e in pg.query_selector_all('.asks .lvl')]
+    ok(any(x.startswith('0.0980') and 'waiting for its block' in x for x in lv) and 'Waiting for its block' in pg.inner_text('main'), 'the sent order shows in the book at once, "Yours · waiting for its block", and under Your orders')
     pg.click('button[data-act=dex-side][data-v=buy]'); pg.fill('form[data-form=dex-limit] input[name=price]', '0.5'); pg.fill('form[data-form=dex-limit] input[name=amount]', '0.5')
     pg.click('form[data-form=dex-limit] button.primary'); pg.wait_for_timeout(400); ok('At least 1 ZP' in pg.inner_text('main'), 'less than 1 ZP is refused')
     # any pair: give 1 ZP for 0.5 zUSDC

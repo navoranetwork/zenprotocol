@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.26.0 — 2026-10-15
+
+### Added
+- A limit order made here shows in the book at once, "Yours · waiting for its block", and under Your orders with a
+  spinner, until the site lists it (at most 30 min). The book also asks the site for mempool orders (pending=1),
+  shown as pending and never taken.
+
 ## 0.25.2 — 2026-10-15
 
 ### Changed
