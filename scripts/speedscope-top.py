@@ -2,18 +2,38 @@
 """Top frames of a dotnet-trace speedscope file (cpu-sampling): per thread the sample count, then the frames with
 the most inclusive and self samples overall and on the busiest threads. Thread-pool idle waits are dropped.
   python3 scripts/speedscope-top.py trace.speedscope.json [top N]"""
-import json, sys, collections
-d = json.load(open(sys.argv[1])); N = int(sys.argv[2]) if len(sys.argv) > 2 else 30
+import gzip, json, sys, collections
+d = json.load(gzip.open(sys.argv[1]) if sys.argv[1].endswith('.gz') else open(sys.argv[1])); N = int(sys.argv[2]) if len(sys.argv) > 2 else 30
 frames = [f['name'] for f in d['shared']['frames']]
 IDLE = ('WaitHandle', 'Monitor.Wait', 'Thread.Sleep', 'SemaphoreSlim.Wait', 'LowLevelLifoSemaphore', 'WaitOne',
         'PortableThreadPool', 'Socket.Poll', 'epoll', 'ManualResetEventSlim.Wait', 'NetMQ.Core', 'Poller')
 incl, selfc, per_thread = collections.Counter(), collections.Counter(), collections.Counter()
 thread_incl = collections.defaultdict(collections.Counter)
 total = 0
+def stacks(p):
+    """(stack of frame indexes, weight) for a sampled profile, or for an evented one (dotnet-trace's
+    speedscope: open/close events; the time between two events belongs to the stack open then)."""
+    if p.get('type') == 'evented':
+        st, last = [], p.get('startValue', 0)
+        for e in p.get('events', []):
+            if st and e['at'] > last:
+                yield list(st), e['at'] - last
+            last = e['at']
+            if e['type'] == 'O': st.append(e['frame'])
+            elif st: st.pop()
+    else:
+        yield from zip(p.get('samples', []), p.get('weights', []))
+
 for p in d['profiles']:
     name = p.get('name', '?')
-    for stack, w in zip(p.get('samples', []), p.get('weights', [])):
+    for stack, w in stacks(p):
         if not stack: continue
+        # dotnet-trace's thread-time samples end in a pseudo-frame: CPU_TIME (managed code running) or
+        # UNMANAGED_CODE_TIME (in native code, almost always waiting): count CPU_TIME, its caller as the leaf
+        if frames[stack[-1]] == 'UNMANAGED_CODE_TIME': continue
+        if frames[stack[-1]] == 'CPU_TIME':
+            stack = stack[:-1]
+            if not stack: continue
         leaf = frames[stack[-1]]
         if any(k in leaf for k in IDLE): continue
         total += w; per_thread[name] += w
