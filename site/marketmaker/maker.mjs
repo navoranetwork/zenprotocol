@@ -17,7 +17,7 @@
 //   MM_MAX_TX (6)  at most this many Make/Cancel per cycle, MM_TX_PAUSE (3 s) between them: the node wallet spends its own
 //               unconfirmed change, and a long chain of those in one block is not tested
 //   MM_EXPLORER (http://127.0.0.1:11581/explorer/api)   MM_ZO (command that runs zen-oracle, for building message bodies)
-//   MM_WAIT (1800 s)  how long a Make/Cancel is assumed to be on its way: the index trails the node by about 10 blocks, so a new order shows up in it only after that
+//   MM_WAIT (3600 s)  how long a Make/Cancel is assumed to be on its way: the index trails the node by 10 blocks (about 40 min on the testnet), so a new order shows up in it only after that
 //   MM_DRY=1    only print what it would do
 //   MM_CANCEL_ALL=1  cancel every open order of this key (each copy), print what was sent and exit; stop the service first
 import { execFileSync } from 'node:child_process';
@@ -77,7 +77,7 @@ async function myOrders(pk) {
   return [...seen.values()];
 }
 const pending = {};          // key -> time of a Make (ask0, bid2, …) or Cancel (c:<order asset>) not yet seen: do not repeat it while it waits to be mined
-const WAIT = Number(env('MM_WAIT', '1800')) * 1000, CWAIT = 240000;   // a Make is seen in the index only after ~10 blocks; a Cancel shows in the node's balance within a block or two
+const WAIT = Number(env('MM_WAIT', '3600')) * 1000, CWAIT = 240000;   // a Make is seen in the index only after ~10 blocks; a Cancel shows in the node's balance within a block or two
 const waiting = k => Date.now() - (pending[k] ?? 0) < (k.startsWith('c:') ? CWAIT : WAIT);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function cycle(pk) {
