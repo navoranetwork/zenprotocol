@@ -1,0 +1,80 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tput
+#1 DONE 0.0s
+
+#1 [internal] load build definition from Dockerfile.tput
+#1 transferring dockerfile: 2.37kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/mono:6.12
+#3 DONE 0.6s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 DONE 0.8s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [stage-1  1/12] FROM docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5
+#5 resolve docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5 0.0s done
+#5 DONE 0.0s
+
+#6 [certs 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#6 resolve docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 994.09kB 0.0s done
+#7 DONE 0.0s
+
+#8 [stage-1  7/12] COPY .paket ./.paket
+#8 CACHED
+
+#9 [stage-1  9/12] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/
+#9 CACHED
+
+#10 [stage-1  4/12] RUN cert-sync /etc/ssl/certs/ca-certificates-current.crt > /dev/null  && cp /etc/ssl/certs/ca-certificates-current.crt /etc/ssl/certs/ca-certificates.crt
+#10 CACHED
+
+#11 [stage-1 11/12] RUN sed -i "s/\r$//" /entrypoint.sh && chmod +x /entrypoint.sh
+#11 CACHED
+
+#12 [stage-1  2/12] RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g; s|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g; /buster-updates/d' /etc/apt/sources.list  && apt-get -o Acquire::Check-Valid-Until=false update  && apt-get install -y --no-install-recommends libgomp1 libstdc++6 liblmdb0 curl unzip  && rm -rf /var/lib/apt/lists/*  && command -v msbuild && command -v fsharpc
+#12 CACHED
+
+#13 [stage-1  8/12] COPY paket.dependencies paket.lock ./
+#13 CACHED
+
+#14 [certs 2/2] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+#14 CACHED
+
+#15 [stage-1  5/12] WORKDIR /src
+#15 CACHED
+
+#16 [stage-1 10/12] COPY devnet-entrypoint.sh /entrypoint.sh
+#16 CACHED
+
+#17 [stage-1  6/12] COPY src ./src
+#17 CACHED
+
+#18 [stage-1  3/12] COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates-current.crt
+#18 CACHED
+
+#19 [stage-1 12/12] WORKDIR /zen
+#19 CACHED
+
+#20 exporting to image
+#20 exporting layers done
+#20 exporting manifest sha256:498f5a580f1d5bf2fa9235f41831e390190ce415ed32b3c045bcfc65f5b5bbbd done
+#20 exporting config sha256:795f803fdff347d83403a7efdb7a7cbefad863cb1fc4b403ecc9b5a4bb2e1ad3 done
+#20 exporting attestation manifest sha256:7a5630bf807fdee4ad5b1af9415ae1fe44b702613ffbe439db3f0c5eb2997f7f done
+#20 exporting manifest list sha256:cd31ae105a982337f744ea1459d297dee83169334ee1dbd261cd141615920348
+#20 exporting manifest list sha256:cd31ae105a982337f744ea1459d297dee83169334ee1dbd261cd141615920348 done
+#20 naming to docker.io/library/zen-tput-a:latest done
+#20 unpacking to docker.io/library/zen-tput-a:latest done
+#20 DONE 0.1s
