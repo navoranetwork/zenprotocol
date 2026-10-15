@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.1 — 2026-10-15
+
+### Fixed
+- An order made here is no longer kept locally once the site lists it, and a cancel forgets it at once: before, a
+  cancelled order could come back faded for up to 30 minutes after it left the book.
+- A faded row says why on hover (new, being taken, or being cancelled) and the note under the book says so too.
+
 ## 0.27.0 — 2026-10-15
 
 ### Changed

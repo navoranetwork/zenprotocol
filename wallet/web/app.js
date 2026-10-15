@@ -56,6 +56,7 @@ function orderLine(o) {
 // an order made here shows in the book at once, marked as waiting for its block, until the site lists it (30 min at most)
 const DEX_MADE_KEY = 'zp-wallet.dex-made.v1';
 const dexMade = () => { try { const v = JSON.parse(localStorage.getItem(DEX_MADE_KEY)); return Array.isArray(v) ? v.filter(x => x && x.net === net() && typeof x.tx === 'string' && Date.now() - x.at < 30 * 60e3) : []; } catch { return []; } };
+const dropDexMade = txs => { try { localStorage.setItem(DEX_MADE_KEY, JSON.stringify(dexMade().filter(x => !txs.includes(x.tx)))); } catch { /* private mode */ } };
 const addDexMade = x => { try { localStorage.setItem(DEX_MADE_KEY, JSON.stringify([...dexMade(), x].slice(-20))); } catch { /* private mode */ } };
 const quoteId = () => Object.keys(S.assetNames).find(k => S.assetNames[k] === 'zUSDC') || null;
 function bookData(m) {
@@ -65,7 +66,8 @@ function bookData(m) {
     const norm = (list, side) => list.map(r => { try { const row = bookRow(orderOf({ ...r.order, tx: r.tx }), q); return row && row.side === side ? { ...row, pending: !!r.pending, busy: r.pendingTake ? 'taking' : r.pendingCancel ? 'cancelling' : null } : null; } catch { return null; } }).filter(Boolean);
     asks = norm(m.book.asks, 'ask').sort((a, b) => a.price - b.price); bids = norm(m.book.bids, 'bid').sort((a, b) => b.price - a.price);
   } else ({ asks, bids } = bookFromOrders((m.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).filter(Boolean), q));
-  const seen = new Set([...asks, ...bids].map(r => r.o.tx));
+  const seen = new Set([...asks, ...bids, ...(m.orders || []).map(r => ({ o: { tx: r.tx } }))].map(r => r.o.tx));
+  const listed = dexMade().filter(x => seen.has(x.tx)).map(x => x.tx); if (listed.length) dropDexMade(listed);   // the site has it: the local copy is done
   for (const x of dexMade()) {
     if (seen.has(x.tx)) continue;
     try { const r = bookRow(orderOf(x), q); if (r) (r.side === 'ask' ? asks : bids).push({ ...r, pending: true, local: true }); } catch { /* not an order */ }
@@ -82,7 +84,7 @@ function bookView(m, me, spendable) {
   const max = [...la, ...lb].reduce((a, l) => l.total > a ? l.total : a, 1n);
   const row = (l, side, i) => {
     const take = l.rows.find(r => !r.pending && !r.busy && !myOrder(r.o, me)), mineL = l.rows.some(r => myOrder(r.o, me)), pend = l.rows.every(r => r.pending), busy = !pend && l.rows.every(r => r.busy || r.pending);
-    const tip = [mineL ? (pend ? 'Your order, waiting for its block (about 4 min)' : 'Your order: cancel it under Your orders') : '', !mineL && pend ? 'Waiting for its block: it can be taken after that' : '', busy ? 'Being taken by someone' : '', take && spendable ? `Tap to ${side === 'ask' ? 'buy' : 'sell'} at ${l.price.toFixed(4)}` : ''].filter(Boolean).join('. ');
+    const tip = [mineL ? (pend ? 'Your order, waiting for its block (about 4 min)' : 'Your order: cancel it under Your orders') : '', !mineL && pend ? 'Waiting for its block: it can be taken after that' : '', busy ? (l.rows.some(r => r.busy === 'cancelling') ? 'Being cancelled: it leaves the book with the next block (about 4 min)' : 'Being taken: it leaves the book with the next block (about 4 min)') : '', take && spendable ? `Tap to ${side === 'ask' ? 'buy' : 'sell'} at ${l.price.toFixed(4)}` : ''].filter(Boolean).join('. ');
     return `<button type="button" class="lvl ${side}${mineL ? ' mine' : ''}${pend ? ' pend' : ''}${busy ? ' busy' : ''}" data-act="dex-level" data-side="${side}" data-i="${i}" title="${esc(tip)}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}${mineL ? '<i class="dot" aria-label="yours"></i>' : ''}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${zpShort(l.total)}</span></button>`;
   };
   const ba = d.asks.find(r => !r.pending), bb = d.bids.find(r => !r.pending);
@@ -94,7 +96,7 @@ function bookView(m, me, spendable) {
     <div class="asks" aria-label="Asks: people selling ZP">${la.length ? la.map((l, i) => row(l, 'ask', i)).reverse().join('') : '<p class="muted small empty">No one is selling ZP.</p>'}</div>
     ${midRow}
     <div class="bids" aria-label="Bids: people buying ZP">${lb.length ? lb.map((l, i) => row(l, 'bid', i)).join('') : '<p class="muted small empty">No one is buying ZP.</p>'}</div>
-    <p class="muted small booknote">${spendable ? 'Tap a red price to buy, a green one to sell.' : 'Open a wallet that can sign to trade.'} <i class="dot"></i> yours · faded: waiting for its block</p></div>
+    <p class="muted small booknote">${spendable ? 'Tap a red price to buy, a green one to sell.' : 'Open a wallet that can sign to trade.'} <i class="dot"></i> yours · faded: waiting for a block (a new order, or one being taken or cancelled)</p></div>
     ${spendable ? limitForm(d, ba, bb) : ''}${tradesCard(m)}`;
 }
 function limitForm(d, ba, bb) {
@@ -1780,7 +1782,7 @@ $app.addEventListener('click', async e => {
     if (act === 'dex-send') {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
-      if (m.kind !== 'make') dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling');
+      if (m.kind !== 'make') { dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling'); if (m.kind === 'cancel') dropDexMade([m.o.tx]); }
       else addDexMade({ tx: hash, net: net(), at: Date.now(), under_asset: m.o.underAsset, under_amount: String(m.o.underAmount), pair_asset: m.o.pairAsset, pair_total: String(m.o.pairTotal), maker: myPub() });
       S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
       render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
