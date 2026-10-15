@@ -1,0 +1,109 @@
+busy samples (weight): 162,109
+
+threads by busy samples:
+   35.8%  Thread (79)
+   35.0%  Thread (72)
+   26.3%  Thread (57) (.NET Finalizer Thread)
+    1.1%  Thread (70)
+    0.6%  Thread (78)
+    0.5%  Thread (69)
+    0.3%  Thread (77)
+    0.1%  Thread (73)
+
+top 30 frames by SELF time:
+   26.3%  System.Private.CoreLib!System.GC.RunFinalizers()
+   20.5%  BouncyCastle.Crypto!Org.BouncyCastle.Crypto.Digests.KeccakDigest.KeccakPermutation()
+   13.2%  Consensus!Consensus.Crypto.verify(class PublicKey,class Signature,class Hash)
+    8.1%  Blockchain!Blockchain.BlockTemplateBuilder+getUTXO@152.Invoke(class Outpoint)
+    7.2%  Miner!Miner.MiningActor.findNonceFast@85(class ChainParameters,class T,class Block,unsigned int64,unsigned int64)
+    3.6%  BouncyCastle.Crypto!Org.BouncyCastle.Crypto.Digests.KeccakDigest.PadAndSwitchToSqueezingPhase()
+    3.0%  Consensus!Consensus.Crypto+PublicKeyModule.serialize(class PublicKey)
+    2.1%  Blockchain!Blockchain.BlockTemplateBuilder+tryAddTransaction@170.Invoke(class System.Tuple`5<class MemoryState,class Microsoft.FSharp.Col...
+    1.9%  Consensus!Consensus.Crypto+PublicKeyModule.deserialize(unsigned int8[])
+    1.6%  System.Private.CoreLib!System.Runtime.CompilerServices.CastHelpers.IsInstanceOfClass(void*,class System.Object)
+    1.5%  Infrastructure!Infrastructure.BigEndianBitConverter.putUInt64(unsigned int64,unsigned int8[],int32)
+    1.3%  FSharp.Core!Microsoft.FSharp.Collections.Internal+IEnumerator+MapEnumerator`1[System.UInt32].System-Collections-IEnumerator-MoveNext()
+    1.2%  FSharp.Core!Microsoft.FSharp.Collections.MapTreeModule.collapseLHS(class Microsoft.FSharp.Collections.FSharpList`1<class Microsoft.FSharp...
+    1.1%  Blockchain!Blockchain.MemPool.add(class TransactionExtended,class Microsoft.FSharp.Collections.FSharpMap`2<class Hash,class System.Tuple`...
+    1.0%  System.Private.CoreLib!System.Threading.Thread.<PollGC>g__PollGCWorker|67_0()
+    0.5%  FSharp.Core!Microsoft.FSharp.Collections.ListModule.IterateIndexed(class Microsoft.FSharp.Core.FSharpFunc`2<int32,class Microsoft.FSharp....
+    0.4%  System.Net.Sockets!System.Net.Sockets.SocketPal.Select(class System.Collections.IList,class System.Collections.IList,class System.Collect...
+    0.3%  System.Private.CoreLib!System.Buffer.MemmoveInternal(unsigned int8&,unsigned int8&,unsigned int)
+    0.3%  System.Private.CoreLib!System.Runtime.CompilerServices.RuntimeHelpers.<GetHashCode>g__GetHashCodeWorker|15_0(class System.Object)
+    0.3%  FSharp.Core!Microsoft.FSharp.Collections.ArrayModule.Create(int32,!!0)
+    0.3%  ?!?
+    0.3%  FSharp.Core!Microsoft.FSharp.Collections.MapModule+ToSeq@713[System.__Canon,System.__Canon].Invoke(value class System.Collections.Generic...
+    0.2%  System.Runtime.Serialization.Formatters!System.Runtime.Serialization.ObjectIDGenerator.Rehash()
+    0.2%  FSharp.Core!Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericCompare(class GenericComparer,class System.Object,class System.Ob...
+    0.2%  System.Private.CoreLib!System.SpanHelpers.ClearWithoutReferences(unsigned int8&,unsigned int)
+    0.2%  FSharp.Core!Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericLessOrEqualIntrinsic(!!0,!!0)
+    0.2%  FSharp.Core!Microsoft.FSharp.Collections.MapTreeModule+mkIEnumerator@406[System.__Canon,System.__Canon].System-Collections-IEnumerator-Mo...
+    0.2%  FsPickler!MBrace.FsPickler.CompositePickler`1[System.__Canon].Read(class MBrace.FsPickler.ReadState,class System.String)
+    0.1%  Blockchain!Blockchain.BlockRepository+saveFullBlock@63-2.Invoke(class TransactionExtended)
+    0.1%  DataAccess!DataAccess.CollectionModule.tryGet(class DataAccess.Collection`2<!!0,!!1>,class DataAccess.Session,!!0)
+
+top 30 ZP frames by INCLUSIVE time (Consensus/Blockchain/Api/Wallet/Miner/Infrastructure/AddressDB):
+   37.2%  Infrastructure!Infrastructure.Actor+create@13[System.__Canon,System.__Canon,System.__Canon,System.__Canon].Invoke(class T)
+   35.8%  Miner!Miner.MiningActor+create@144.Invoke(class T)
+   34.8%  Blockchain!Blockchain.Main+updateState@117-1[System.__Canon,System.__Canon].Invoke(!0,class Microsoft.FSharp.Core.FSharpFunc`2<class Sess...
+   33.9%  Miner!Miner.MiningActor.findNonceFast@85(class ChainParameters,class T,class Block,unsigned int64,unsigned int64)
+   33.8%  Blockchain!Blockchain.Main+handleServiceBus@82-2.Invoke(class Session,unsigned int64,class State)
+   33.8%  Blockchain!Blockchain.Handler.handleRequest(class ChainParameters,class RequestId,class Request,class Session,unsigned int64,class State)
+   32.7%  Blockchain!Blockchain.Handler.handleRequest$cont@200(class ChainParameters,class RequestId,class Request,class Session,unsigned int64,cla...
+   32.3%  Consensus!Consensus.Crypto+VerifiedSignatures.using(value class Mode,class Microsoft.FSharp.Core.FSharpFunc`2<class Microsoft.FSharp.Core...
+   32.3%  Blockchain!Blockchain.BlockTemplateBuilder.makeTransactionListVerified(class ChainParameters,class Session,class State,unsigned int64)
+   31.3%  Blockchain!Blockchain.BlockTemplateBuilder+makeTransactionListVerified@221.Invoke(class Microsoft.FSharp.Collections.FSharpList`1<class S...
+   31.3%  Blockchain!Blockchain.BlockTemplateBuilder+tryAddTransaction@170.Invoke(class System.Tuple`5<class MemoryState,class Microsoft.FSharp.Col...
+   23.2%  Consensus!Consensus.TransactionValidation.validateInContext(class ChainParameters,class Microsoft.FSharp.Core.FSharpFunc`2<class Outpoint...
+   14.3%  Consensus!Consensus.TransactionValidation+validateInContextWith@423-3.Invoke(class Microsoft.FSharp.Core.Unit)
+   14.3%  Consensus!Consensus.InputValidation.StateMachine.validate(class ChainParameters,unsigned int32,unsigned int64,class T`1<class Contract>,c...
+   14.3%  Consensus!Consensus.InputValidation.StateMachine.validateInputs$cont@13(class ChainParameters,unsigned int32,unsigned int64,class Microso...
+   14.3%  Consensus!Consensus.InputValidation.StateMachine.validateNext(class ChainParameters,unsigned int32,unsigned int64,class T`1<class Contrac...
+   13.2%  Consensus!Consensus.Crypto.verify(class PublicKey,class Signature,class Hash)
+    8.1%  Blockchain!Blockchain.BlockTemplateBuilder+getUTXO@152.Invoke(class Outpoint)
+    7.9%  Consensus!Consensus.TransactionValidation.validateInContextWith(bool,class ChainParameters,class Microsoft.FSharp.Core.FSharpFunc`2<class...
+    7.9%  Consensus!Consensus.TransactionValidation.tryGetUtxos(class Microsoft.FSharp.Core.FSharpFunc`2<class Outpoint,class OutputStatus>,class M...
+    7.9%  Infrastructure!Infrastructure.Result.traverseResultA(class Microsoft.FSharp.Core.FSharpFunc`2<!!0,value class Microsoft.FSharp.Core.FShar...
+    7.9%  Infrastructure!Infrastructure.Result+traverseResultA@58[System.__Canon,System.__Canon,System.__Canon].Invoke(!0,value class Microsoft.FSh...
+    7.9%  Consensus!Consensus.UtxoSet+getUtxosResult@72.Invoke(class Outpoint)
+    5.5%  Blockchain!Blockchain.MemPool.add(class TransactionExtended,class Microsoft.FSharp.Collections.FSharpMap`2<class Hash,class System.Tuple`...
+    3.0%  Consensus!Consensus.Crypto+PublicKeyModule.serialize(class PublicKey)
+    1.9%  Consensus!Consensus.Serialization+Serialization+Transaction+write@1433-20.Invoke(class Stream,class Witness)
+    1.9%  Consensus!Consensus.Serialization+Serialization+Witness.writerFn(class Stream,class Witness)
+    1.9%  Consensus!Consensus.Serialization+Serialization+TransactionExtended.read(class Stream)
+    1.9%  Consensus!Consensus.Serialization+Serialization+Transaction.read(class TransactionSerializationMode,class Stream)
+    1.9%  Consensus!Consensus.Serialization+Serialization+Witness.read(class Stream)
+
+thread Thread (79): top inclusive ZP frames
+  100.0%  Miner!Miner.MiningActor+create@144.Invoke(class T)
+   94.7%  Miner!Miner.MiningActor.findNonceFast@85(class ChainParameters,class T,class Block,unsigned int64,unsigned int64)
+    5.2%  Consensus!Consensus.Serialization+Serialization+Block.read(class Stream)
+    5.2%  Consensus!Consensus.Serialization.deserialize(class Microsoft.FSharp.Core.FSharpFunc`2<class Stream,!!0>,unsigned int8[])
+    5.2%  Consensus!Consensus.Serialization+Serialization+TransactionExtended.read(class Stream)
+    5.2%  Consensus!Consensus.Serialization+Serialization+Transaction.read(class TransactionSerializationMode,class Stream)
+    5.2%  Consensus!Consensus.Serialization+Serialization+Witness.read(class Stream)
+    5.2%  Consensus!Consensus.Crypto+PublicKeyModule.deserialize(unsigned int8[])
+    0.1%  Consensus!Consensus.Crypto+SignatureModule.deserialize(unsigned int8[])
+    0.0%  Consensus!Consensus.Hash+Hash.CompareTo(class System.Object,class System.Collections.IComparer)
+    0.0%  Miner!Miner.Message.tryRecv(class T,int32)
+    0.0%  Miner!Miner.Message+readMessage@46-1.Invoke(class T)
+    0.0%  Miner!Miner.Message.decode(class T)
+    0.0%  Consensus!Consensus.Serialization+Serialization+Transaction+inputs@1438-1.Invoke(class Stream)
+    0.0%  Miner!Miner.Message.recv(class T)
+
+thread Thread (72): top inclusive ZP frames
+   99.4%  Blockchain!Blockchain.Main+updateState@117-1[System.__Canon,System.__Canon].Invoke(!0,class Microsoft.FSharp.Core.FSharpFunc`2<class Sess...
+   96.5%  Blockchain!Blockchain.Main+handleServiceBus@82-2.Invoke(class Session,unsigned int64,class State)
+   96.5%  Blockchain!Blockchain.Handler.handleRequest(class ChainParameters,class RequestId,class Request,class Session,unsigned int64,class State)
+   93.5%  Blockchain!Blockchain.Handler.handleRequest$cont@200(class ChainParameters,class RequestId,class Request,class Session,unsigned int64,cla...
+   92.1%  Consensus!Consensus.Crypto+VerifiedSignatures.using(value class Mode,class Microsoft.FSharp.Core.FSharpFunc`2<class Microsoft.FSharp.Core...
+   92.1%  Blockchain!Blockchain.BlockTemplateBuilder.makeTransactionListVerified(class ChainParameters,class Session,class State,unsigned int64)
+   89.4%  Blockchain!Blockchain.BlockTemplateBuilder+makeTransactionListVerified@221.Invoke(class Microsoft.FSharp.Collections.FSharpList`1<class S...
+   89.4%  Blockchain!Blockchain.BlockTemplateBuilder+tryAddTransaction@170.Invoke(class System.Tuple`5<class MemoryState,class Microsoft.FSharp.Col...
+   66.2%  Consensus!Consensus.TransactionValidation.validateInContext(class ChainParameters,class Microsoft.FSharp.Core.FSharpFunc`2<class Outpoint...
+   40.8%  Consensus!Consensus.TransactionValidation+validateInContextWith@423-3.Invoke(class Microsoft.FSharp.Core.Unit)
+   40.8%  Consensus!Consensus.InputValidation.StateMachine.validate(class ChainParameters,unsigned int32,unsigned int64,class T`1<class Contract>,c...
+   40.8%  Consensus!Consensus.InputValidation.StateMachine.validateInputs$cont@13(class ChainParameters,unsigned int32,unsigned int64,class Microso...
+   40.8%  Consensus!Consensus.InputValidation.StateMachine.validateNext(class ChainParameters,unsigned int32,unsigned int64,class T`1<class Contrac...
+   37.7%  Consensus!Consensus.Crypto.verify(class PublicKey,class Signature,class Hash)
+   23.2%  Blockchain!Blockchain.BlockTemplateBuilder+getUTXO@152.Invoke(class Outpoint)
