@@ -82,7 +82,7 @@ function bookView(m, me, spendable) {
   const max = [...la, ...lb].reduce((a, l) => l.total > a ? l.total : a, 1n);
   const row = (l, side, i) => {
     const take = l.rows.find(r => !r.pending && !r.busy && !myOrder(r.o, me)), mineL = l.rows.some(r => myOrder(r.o, me)), pend = l.rows.every(r => r.pending), busy = l.rows.every(r => r.busy || r.pending);
-    return `<button type="button" class="lvl ${side}" data-act="dex-level" data-side="${side}" data-i="${i}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${mineL && pend ? '<em>Yours · waiting for its block</em> ' : mineL ? '<em>Yours</em> ' : pend ? '<em>pending</em> ' : busy ? '<em>being taken</em> ' : ''}${zpShort(l.total)}</span></button>`;
+    return `<button type="button" class="lvl ${side}" data-act="dex-level" data-side="${side}" data-i="${i}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${mineL && pend ? '<em title="Waiting for its block, about 4 min">Yours · sent</em> ' : mineL ? '<em>Yours</em> ' : pend ? '<em>pending</em> ' : busy ? '<em>being taken</em> ' : ''}${zpShort(l.total)}</span></button>`;
   };
   const ba = d.asks.find(r => !r.pending), bb = d.bids.find(r => !r.pending);
   const spread = ba && bb ? `Spread ${(ba.price - bb.price).toFixed(4)} zUSDC (${((ba.price - bb.price) / ((ba.price + bb.price) / 2) * 100).toFixed(1)}%)${ba.price <= bb.price ? ' · crossed: a bid is at or above an ask' : ''}` : 'No spread yet: one side is empty';
@@ -1782,7 +1782,7 @@ $app.addEventListener('click', async e => {
       const m = S.modal, hash = await publish(node(), m.prepared);
       if (m.kind !== 'make') dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling');
       else addDexMade({ tx: hash, net: net(), at: Date.now(), under_asset: m.o.underAsset, under_amount: String(m.o.underAmount), pair_asset: m.o.pairAsset, pair_total: String(m.o.pairTotal), maker: myPub() });
-      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '' };
+      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
       render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
     }
     if (act === 'token') { S.modal = { type: 'token', asset: t.dataset.asset }; return render(); }

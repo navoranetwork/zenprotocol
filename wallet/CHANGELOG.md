@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.26.1 — 2026-10-15
+
+### Fixed
+- Order book: a sent order is marked "Yours · sent" so the row stays on one line; Your orders still says it waits for
+  its block.
+- The Buy / Sell form is cleared after an order is sent, so it is not sent twice by mistake.
+
 ## 0.26.0 — 2026-10-15
 
 ### Added
