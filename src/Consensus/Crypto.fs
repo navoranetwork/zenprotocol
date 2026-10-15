@@ -230,7 +230,60 @@ let sign (SecretKey secretKey) (Hash msg) =
     | Native.Result.Ok -> Signature.Signature signature
     | x -> failwithf "failed to sign %A" x
 
+/// Signatures this node has already found valid while accepting transactions into its mempool, so that building a
+/// block template (which re-validates the whole mempool on every rebuild) does not verify them again. A signature's
+/// validity depends only on (key, signature, message), so a remembered Valid is exactly what verifying again gives.
+/// Only Valid results are kept. Consulted ONLY while building our own block template (Template mode); blocks received
+/// from peers, and mempool acceptance itself, always verify (Plain / Record). Bounded: cleared when it reaches
+/// MaxEntries (the next template then verifies again and refills it through the mempool).
+module VerifiedSignatures =
+    type Mode =
+        | Plain = 0
+        | Record = 1      // mempool acceptance: verify, and remember the valid ones
+        | Template = 2    // our block template: a remembered valid signature is not verified again
+
+    type private ModeHolder() =
+        [<System.ThreadStatic; DefaultValue>]
+        static val mutable private current : int
+        static member Current with get () = enum<Mode> ModeHolder.current and set (m: Mode) = ModeHolder.current <- int m
+
+    let MaxEntries = 100_000
+    /// ZP_VERIFIED_SIGNATURES=0 turns it off (for measuring; on by default)
+    let enabled = System.Environment.GetEnvironmentVariable "ZP_VERIFIED_SIGNATURES" <> "0"
+    // key: the signature (64 bytes); value: the key and the message it was valid for
+    let private seen = System.Collections.Concurrent.ConcurrentDictionary<string, struct (byte[] * byte[])>()
+    let mutable hits = 0L
+
+    let count () = seen.Count
+    let clear () = seen.Clear()
+
+    let internal tryGet (publicKey: byte[]) (signature: byte[]) (msg: byte[]) =
+        match ModeHolder.Current with
+        | Mode.Template when enabled ->
+            match seen.TryGetValue(System.Convert.ToBase64String signature) with
+            | true, struct (pk, m) when System.Linq.Enumerable.SequenceEqual(pk, publicKey) && System.Linq.Enumerable.SequenceEqual(m, msg) ->
+                System.Threading.Interlocked.Increment &hits |> ignore
+                true
+            | _ -> false
+        | _ -> false
+
+    let internal remember (publicKey: byte[]) (signature: byte[]) (msg: byte[]) =
+        match ModeHolder.Current with
+        | Mode.Record | Mode.Template when enabled ->
+            if seen.Count >= MaxEntries then seen.Clear()
+            seen.[System.Convert.ToBase64String signature] <- struct (Array.copy publicKey, Array.copy msg)
+        | _ -> ()
+
+    /// Run f with this thread in the given mode (restored afterwards).
+    let using (mode: Mode) (f: unit -> 'a) : 'a =
+        let before = ModeHolder.Current
+        ModeHolder.Current <- mode
+        try f () finally ModeHolder.Current <- before
+
 let verify (PublicKey publicKey) (Signature signature) (Hash msg) =
+    if VerifiedSignatures.tryGet publicKey signature msg then Valid else
     match Native.secp256k1_ecdsa_verify (context, signature, msg, publicKey) with
-    | Native.Result.Ok -> Valid
+    | Native.Result.Ok ->
+        VerifiedSignatures.remember publicKey signature msg
+        Valid
     | _ -> Invalid

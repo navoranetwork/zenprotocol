@@ -1110,3 +1110,50 @@ let ``should get all the blocks in mainchain`` () =
     should equal headers.[1].header.blockNumber 10ul
     
     ()
+[<Test>]
+let ``Template from a mempool of chained transactions reuses verified signatures and its block validates``() =
+    use databaseContext = DatabaseContext.createEmpty (tempDir())
+    use session = DatabaseContext.createSession databaseContext
+    let env : Environment.Env =
+        { chainParams = chain; contractsPath = session.context.contractPath; timestamp = timestamp; session = session }
+    let _, genesisState = BlockHandler.validateBlock env None genesisBlock state |> Writer.unwrap
+    let asset, amount = TestWallet.getBalance rootAccount |> Map.toList |> List.head
+    // 20 transactions, each spending the previous one's output: accepted one by one into the mempool
+    let txs, _ =
+        List.fold (fun (txs, account) _ ->
+            let tx = TestWallet.createTransaction testParameters (publicKeyHash rootAccount) {asset=asset;amount=amount} (account, snd rootAccountData) |> Result.get
+            tx :: txs, TestWallet.addTransaction (Transaction.hash tx) tx account) ([], rootAccount) [1..20]
+    let txs = List.rev txs
+    let mempoolState =
+        txs |> List.fold (fun st tx ->
+            Writer.unwrap (Handler.handleCommand chain (Blockchain.Command.ValidateTransaction (Transaction.toExtended tx)) session (timestamp+1UL) st) |> snd) genesisState
+    MemPool.toList mempoolState.memoryState.mempool |> List.length |> should equal 20
+    let hitsBefore = Crypto.VerifiedSignatures.hits
+    let memState, validated = BlockTemplateBuilder.makeTransactionList chain session mempoolState (timestamp + 100_000UL) |> Result.get
+    // every signature in the template was verified when its transaction entered the mempool
+    Crypto.VerifiedSignatures.hits - hitsBefore |> should be (greaterThanOrEqualTo 20L)
+    List.length validated |> should equal 20
+    validated |> List.map (fun ex -> ex.txHash) |> List.distinct |> List.length |> should equal 20
+    let inputs = validated |> List.collect (fun ex -> ex.tx.inputs)
+    List.distinct inputs |> List.length |> should equal (List.length inputs)
+    // the block made from the template passes the node's full validation (which never uses the remembered signatures)
+    let ema' = EMA.add chain genesisBlock.header.timestamp ema
+    let block = Block.createTemplate chain genesisBlock.header (timestamp+1UL) ema' memState.activeContractSet CGP.empty validated Hash.zero
+    let _, after = BlockHandler.validateBlock env None block genesisState |> Writer.unwrap
+    after.tipState.tip.hash |> should equal (Block.hash block.header)
+
+[<Test>]
+let ``Remembered signatures are used only for our template, and only for the same key and message``() =
+    let secret, publicKey = Crypto.KeyPair.create ()
+    let msg = Hash.compute [| 1uy |]
+    let other = Hash.compute [| 2uy |]
+    let signature = Crypto.sign secret msg
+    Crypto.VerifiedSignatures.using Crypto.VerifiedSignatures.Mode.Record (fun () -> Crypto.verify publicKey signature msg) |> should equal Crypto.Valid
+    let hits = Crypto.VerifiedSignatures.hits
+    Crypto.VerifiedSignatures.using Crypto.VerifiedSignatures.Mode.Template (fun () -> Crypto.verify publicKey signature msg) |> should equal Crypto.Valid
+    Crypto.VerifiedSignatures.hits |> should equal (hits + 1L)
+    // the same signature for another message is verified (and fails)
+    Crypto.VerifiedSignatures.using Crypto.VerifiedSignatures.Mode.Template (fun () -> Crypto.verify publicKey signature other) |> should equal Crypto.Invalid
+    // block validation (Plain) always verifies
+    Crypto.verify publicKey signature msg |> should equal Crypto.Valid
+    Crypto.VerifiedSignatures.hits |> should equal (hits + 1L)

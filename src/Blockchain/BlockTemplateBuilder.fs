@@ -216,7 +216,7 @@ let selectOrderedTransactions (chain:Chain.ChainParameters) (session:DatabaseCon
     foldUntilUnchanged initialState transactions
 
 
-let makeTransactionList chain (session:DatabaseContext.Session) (state:State) timestamp = result {
+let private makeTransactionListVerified chain (session:DatabaseContext.Session) (state:State) timestamp = result {
     let! txs = weights session state
     let txs =
         if CGP.isPayoutBlock chain (state.tipState.tip.header.blockNumber + 1ul) then
@@ -227,3 +227,9 @@ let makeTransactionList chain (session:DatabaseContext.Session) (state:State) ti
         // by its earlier calls in the mempool, so the calls must reach the template in the order they were made
     return selectOrderedTransactions chain session state.tipState.tip.header.blockNumber timestamp state.tipState.activeContractSet state.memoryState.contractCache txs
 }
+
+/// Our own block template. Signatures already verified when their transactions entered the mempool are not verified
+/// again (Crypto.VerifiedSignatures, Template mode); everything that depends on chain state (UTXOs, contracts) is
+/// checked as before. Blocks received from peers never use this path.
+let makeTransactionList chain (session:DatabaseContext.Session) (state:State) timestamp =
+    Crypto.VerifiedSignatures.using Crypto.VerifiedSignatures.Mode.Template (fun () -> makeTransactionListVerified chain session state timestamp)

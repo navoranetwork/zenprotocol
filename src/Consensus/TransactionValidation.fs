@@ -432,5 +432,7 @@ let validateInContext chainParams getUTXO contractPath blockNumber timestamp acs
     validateInContextWith true chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex
 
 /// Validation for the mempool: V1 activations are checked but not built (see activateContract).
+/// The valid signatures it verifies are remembered for our own block templates (Crypto.VerifiedSignatures).
 let validateInContextMempool chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex =
-    validateInContextWith false chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex
+    Crypto.VerifiedSignatures.using Crypto.VerifiedSignatures.Mode.Record (fun () ->
+        validateInContextWith false chainParams getUTXO contractPath blockNumber timestamp acs contractCache set getContractState contractState ex)
