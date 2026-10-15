@@ -1,0 +1,251 @@
+diff -ru b0/src/Blockchain/BlockHandler.fs b/src/Blockchain/BlockHandler.fs
+--- b0/src/Blockchain/BlockHandler.fs	2026-10-15 22:27:34.883299273 +0000
++++ b/src/Blockchain/BlockHandler.fs	2026-10-15 22:27:34.902299207 +0000
+@@ -83,7 +83,7 @@
+     }
+ 
+ /// Undo blocks from current state in order to get the state of the forkblock
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let undoBlocks
+ #else
+ let private undoBlocks
+diff -ru b0/src/Blockchain/Tally_Voting.fs b/src/Blockchain/Tally_Voting.fs
+--- b0/src/Blockchain/Tally_Voting.fs	2026-10-15 22:27:34.884299269 +0000
++++ b/src/Blockchain/Tally_Voting.fs	2026-10-15 22:27:34.903299204 +0000
+@@ -135,7 +135,7 @@
+         else
+             byte ((bigint (uint64 l) * wl + bigint (uint64 h) * wh) / (wl + wh))
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let weightedMedianTest = weightedMedian
+ #endif
+ 
+diff -ru b0/src/Cli/Program.fs b/src/Cli/Program.fs
+--- b0/src/Cli/Program.fs	2026-10-15 22:27:34.884299269 +0000
++++ b/src/Cli/Program.fs	2026-10-15 22:27:34.902299207 +0000
+@@ -75,7 +75,7 @@
+ type Arguments =
+     | [<AltCommandLine("-p");UniqueAttribute>] Port of port:uint16
+     | [<AltCommandLine("-t")>] Test
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     | Local of uint16
+ #endif
+     | [<CliPrefix(CliPrefix.None)>] Balance of ParseResults<NoArgs>
+@@ -107,7 +107,7 @@
+     interface IArgParserTemplate with
+         member arg.Usage =
+             match arg with
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+             | Local _ -> "use local"
+ #endif
+             | Port _ -> "port of zen-node API"
+@@ -171,7 +171,7 @@
+     List.iter (function
+         | Port p -> getUri <- getUri' (string p)
+         | Test -> getUri <- getUri' "31567"
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         | Local idx -> getUri <- getURL (int idx)
+ #endif
+         | _ -> ()
+diff -ru b0/src/Consensus/Chain.fs b/src/Consensus/Chain.fs
+--- b0/src/Consensus/Chain.fs	2026-10-15 22:27:34.888299256 +0000
++++ b/src/Consensus/Chain.fs	2026-10-15 22:27:34.928299117 +0000
+@@ -214,7 +214,7 @@
+     testParameters with
+         proofOfWorkLimit=Difficulty.uncompress localPowLimit;
+         powSchedule=sha3Only (Difficulty.uncompress localPowLimit);
+-        blockInterval=2000UL;   // devnet (local chain, Debug builds only): a block every 2 s, so CI can run whole CGP cycles and contract tests quickly
++        blockInterval=10000UL;   // throughput comparison (lab-throughput.sh)   // devnet (local chain, Debug builds only): a block every 2 s, so CI can run whole CGP cycles and contract tests quickly
+         name="local"
+         genesisHashHash =
+             localGenesisHash
+diff -ru b0/src/Consensus/TransactionValidation.fs b/src/Consensus/TransactionValidation.fs
+--- b0/src/Consensus/TransactionValidation.fs	2026-10-15 22:27:34.888299256 +0000
++++ b/src/Consensus/TransactionValidation.fs	2026-10-15 22:27:34.921299141 +0000
+@@ -182,7 +182,7 @@
+         }) (Ok acs)
+ }
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let checkAmounts (txSkeleton:TxSkeleton.T) =
+ #else
+ let private checkAmounts (txSkeleton:TxSkeleton.T) =
+@@ -242,7 +242,7 @@
+     else
+         Ok tx
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let checkStructure =
+ #else
+ let private checkStructure =
+diff -ru b0/src/ContractTool/Program.fs b/src/ContractTool/Program.fs
+--- b0/src/ContractTool/Program.fs	2026-10-15 22:27:34.889299252 +0000
++++ b/src/ContractTool/Program.fs	2026-10-15 22:27:34.921299141 +0000
+@@ -22,7 +22,7 @@
+ let main argv =
+     let argv =
+         match List.ofArray argv with
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         | "--unit-testing" :: dir :: rest ->
+             ZFStar.unitTesting <- true
+             ZFStar.unitTestingDir <- dir
+diff -ru b0/src/ContractTool/ZFStar.fs b/src/ContractTool/ZFStar.fs
+--- b0/src/ContractTool/ZFStar.fs	2026-10-15 22:27:34.889299252 +0000
++++ b/src/ContractTool/ZFStar.fs	2026-10-15 22:27:34.922299138 +0000
+@@ -98,14 +98,14 @@
+         sprintf "%A\n%A" errorResult error)
+     |> Result.map (fun _ -> File.ReadAllText outputFile)
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let mutable unitTesting = false
+ let mutable unitTestingDir = ""
+ #endif
+ 
+ let initOutputDir moduleName =
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     let oDir =
+         if unitTesting then
+             unitTestingDir
+@@ -126,7 +126,7 @@
+     let elaboratedFile = changeExtention ".fst" file
+     let extractedFile = changeExtention ".fs" file
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     if unitTesting && File.Exists extractedFile then
+         File.ReadAllText extractedFile
+         |> Ok
+@@ -152,7 +152,7 @@
+                 ]
+             |> wrapFStar "extract" extractedFile)
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "extract output directory: {dir}"
+         >> setField "dir" oDir
+         |> Log.debug
+@@ -187,7 +187,7 @@
+         with _ as ex ->
+             Exception.toError "limits" ex
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "calculate metrics output: {file}"
+         >> setField "file" file
+         |> Log.debug
+@@ -201,7 +201,7 @@
+     let hintsFile = oDir / changeExtention ".fst.hints" file
+     let elaboratedFile = changeExtention ".fst" file
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     if unitTesting && File.Exists hintsFile then
+         File.ReadAllText hintsFile
+         |> Ok
+@@ -221,7 +221,7 @@
+                  ]
+             |> wrapFStar "record hints" hintsFile)
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "record hints output directory: {dir}"
+         >> setField "dir" oDir
+         |> Log.debug
+@@ -265,7 +265,7 @@
+         <@> ( Hints.total_num_queries
+               >> uint32 )
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "total queries output : {file}"
+         >> setField "file" file
+         |> Log.debug
+diff -ru b0/src/Infrastructure/ZFStar.fs b/src/Infrastructure/ZFStar.fs
+--- b0/src/Infrastructure/ZFStar.fs	2026-10-15 22:27:34.892299242 +0000
++++ b/src/Infrastructure/ZFStar.fs	2026-10-15 22:27:34.915299162 +0000
+@@ -24,7 +24,7 @@
+     | PlatformID.Unix -> "z3-linux"
+     | _ -> "z3.exe"
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let mutable unitTesting = false
+ #endif
+ 
+@@ -34,7 +34,7 @@
+ /// Run the contract tool; Ok stdout or Error stderr.
+ let private tool (args: string list) : Result<string, string> =
+     let args =
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         if unitTesting then "--unit-testing" :: (Platform.workingDirectory / "../../test-contracts") :: args else args
+ #else
+         args
+diff -ru b0/src/Node/Program.fs b/src/Node/Program.fs
+--- b0/src/Node/Program.fs	2026-10-15 22:27:34.893299238 +0000
++++ b/src/Node/Program.fs	2026-10-15 22:27:34.925299128 +0000
+@@ -25,7 +25,7 @@
+     | Ip of string
+     | Wipe of full:Wipe option
+     | Miner of threads:int option
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     // non-zero indexed nodes act as outbound nodes which connect to the zero-indexed inbound node
+     | Local of int
+ #endif
+@@ -57,7 +57,7 @@
+                 | Origin _ -> "add CORS origin"
+                 | Remote -> "automatically configure for remote usages"
+                 | Max_Reorg_Depth _ -> "refuse chain reorganizations deeper than this many blocks (default 100, 0 = no limit)"
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+                 | Local _ -> "local mode, used for debugging. specify zero value for host, other for client"
+ #endif
+ 
+@@ -87,7 +87,7 @@
+         origin: Http.Origin
+         isRemote: bool
+     }
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ module Local =
+     let addGenesis (config:MainConfig) =
+         if config.chain = Chain.Local then
+@@ -266,7 +266,7 @@
+                 | None ->
+                     origin <- Http.No
+             | Test _ -> ()
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+             | Local idx ->
+                 chain <- Chain.Local
+                 config.dataPath <- sprintf "./data/local/%i" idx
+@@ -389,7 +389,7 @@
+     /// contract tool), for trying V1 contracts on the local chain. Such a node cannot activate V0
+     /// contracts, so a release build always requires the tooling.
+     let private v1Only () =
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         System.Environment.GetEnvironmentVariable "ZP_NODE_V1_ONLY" = "1"
+ #else
+         false
+@@ -446,7 +446,7 @@
+     use addressDbActor  = Init.addressDb config
+ 
+     use minerActor      = Init.miner config
+-#if DEBUG        
++#if DEBUG || LOCALCHAIN
+     Local.addGenesis config
+ #endif
+     Testnet.addGenesis config
