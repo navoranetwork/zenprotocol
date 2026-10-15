@@ -23,12 +23,17 @@
 #     bash /opt/zp-lab/scripts/lab-throughput.sh
 # Settings: RATES (total per minute, default 300,600,1500,3000,6000,15000), RUNS (3), STEP_MIN (6), BLOCK_S (10),
 # SEED (1), ONLY=A|B, PROFILE=1.
+# VARIANTS="t0 t500 t1000 t2000": run B once per variant, tN = ZP_TEMPLATE_INTERVAL_MS=N (results in B-tN; default: one
+#   run of B as built). REALISTIC=1: the local chain's easiest target is POW_LIMIT (default 0x1e0bfbd5: ~2 s of one miner
+#   thread; the difficulty rule then holds blocks near BLOCK_S) in both trees, so blocks come from real hashing.
+# PROFILE=1 (PROFILE_RATE, PROFILE_ENV) also takes the finalizer queue (dotnet-dump), a heap report (dotnet-gcdump) and GC counters (dotnet-counters).
 set -uo pipefail
 : "${GH_TOKEN:?}"
 DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; GH="https://x-access-token:$GH_TOKEN@github.com"
 UPSTREAM=a0191cbc; BRANCH_B=${BRANCH_B:-testnet-v1}
 RATES=${RATES:-300,600,1500,3000,6000,15000}; RUNS=${RUNS:-3}; STEP_MIN=${STEP_MIN:-6}; BLOCK_S=${BLOCK_S:-10}; SEED=${SEED:-1}
 PROFILE=${PROFILE:-}; PROFILE_RATE=${PROFILE_RATE:-3000}
+VARIANTS=${VARIANTS:-}; REALISTIC=${REALISTIC:-}; POW_LIMIT=${POW_LIMIT:-0x1e0bfbd5}; NODE_ENV=""
 STAMP=$(date -u +%Y%m%d-%H%M); RUN="$([ -n "$PROFILE" ] && echo profile || echo throughput)-$STAMP"
 OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"; W=/opt/zp-tput; mkdir -p "$W"
 M1="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
@@ -55,7 +60,10 @@ patch_tree() {  # $1: tree, $2: the local chain's blockInterval line pattern (se
   local t=$1
   find "$t/src" -name '*.fs' ! -path '*Tests*' ! -name 'Log.fs' -print0 | xargs -0 sed -i 's/^\(\s*\)#if DEBUG\s*$/\1#if DEBUG || LOCALCHAIN/'
   sed -i "s/$2/blockInterval=${BLOCK_S}000UL;   \/\/ throughput comparison (lab-throughput.sh)/" "$t/src/Consensus/Chain.fs"
-  grep -q "blockInterval=${BLOCK_S}000UL;   // throughput comparison" "$t/src/Consensus/Chain.fs"
+  grep -q "blockInterval=${BLOCK_S}000UL;   // throughput comparison" "$t/src/Consensus/Chain.fs" || return 1
+  if [ -n "$REALISTIC" ]; then   # the local chain's easiest target (it occurs only there in Chain.fs, in both trees)
+    sed -i "s/0x20fffffful/${POW_LIMIT}ul/" "$t/src/Consensus/Chain.fs"; grep -q "${POW_LIMIT}ul" "$t/src/Consensus/Chain.fs"
+  fi
 }
 
 # ---- sources ----
@@ -93,11 +101,11 @@ addr_of() {
     "import { openWallet, receiveAddress } from './src/wallet.js'; console.log(receiveAddress(openWallet({id:'x',name:'x',network:'test',kind:'mnemonic'}, process.env.M)))"
 }
 
-start_node() {  # $1: A or B, $2: result folder. A fresh chain, mining, sender 2 funded, both wallets with mature coins
-  local K=$1 D=$2 IMG=zen-tput-$(echo $1 | tr AB ab)
+start_node() {  # $1: A or B (or B-<variant>), $2: result folder. A fresh chain, mining, both senders funded and mature
+  local K=$1 D=$2 IMG=zen-tput-$(echo ${1:0:1} | tr AB ab)
   docker rm -f $NODE_C zp-tput-s1 zp-tput-s2 > /dev/null 2>&1; rm -rf "$W/diag"; mkdir -p "$W/diag"
   docker run -d --name $NODE_C --cpuset-cpus 0-3 -p 127.0.0.1:20000:20000 -v "$W/diag:/tmp" -e NODES=1 -e MINER_THREADS=1 \
-    -e DEVNET_MNEMONIC="$M0" $IMG > /dev/null || stop "$K: docker run"
+    -e DEVNET_MNEMONIC="$M0" $NODE_ENV $IMG > /dev/null || stop "$K: docker run"
   local h=""; for i in $(seq 360); do sleep 5; h=$(height); [ -n "$h" ] && [ "$h" -ge 40 ] && break
     docker inspect -f '{{.State.Running}}' $NODE_C 2>/dev/null | grep -q true || break; done
   [ -n "$h" ] && [ "$h" -ge 40 ] || { docker logs --tail 50 $NODE_C > "$D/node-start.log" 2>&1; stop "$K: the node does not mine (node-start.log)"; }
@@ -146,15 +154,23 @@ collect() {  # $1: result folder, $2: stats pid
 }
 
 if [ -n "$PROFILE" ]; then
+  NODE_ENV="${PROFILE_ENV:-}"   # e.g. PROFILE_ENV="-e ZP_TEMPLATE_INTERVAL_MS=1000"
   D="$OUT/B"; mkdir -p "$D"; start_node B "$D"; SP=$(stats_loop "$D/stats.csv")
   half=$((PROFILE_RATE / 2)); log "profile: load $PROFILE_RATE/min (two senders), trace 60 s at minute 2"
-  senders "$D" "$half" 5 6
+  senders "$D" "$half" 9 10   # long enough for the trace, the counters and the dumps
   sleep 120
   pid=$(docker exec $NODE_C sh -c 'for p in /proc/[0-9]*; do [ "$p" = /proc/$$ ] && continue; case "$(tr "\0" " " < $p/cmdline 2>/dev/null)" in *dotnet*zen-node.dll*|*zen-node.dll*) basename $p;; esac; done' | head -1)
   [ -n "$pid" ] || stop "profile: no zen-node process in the container"
   docker run --rm --pid container:$NODE_C -v "$W/diag:/tmp" -v "$D:/out" mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
     "dotnet tool install -g dotnet-trace > /dev/null && /root/.dotnet/tools/dotnet-trace collect -p $pid --providers Microsoft-DotNETCore-SampleProfiler,Microsoft-Windows-DotNETRuntime:0x1:4 --duration 00:00:01:00 --format speedscope -o /out/trace.nettrace" \
     > "$D/trace.txt" 2>&1 || log "profile: dotnet-trace failed (trace.txt)"
+  # what is finalized (item 3), where the memory goes (item 4), GC pauses (item 5)
+  docker run --rm --pid container:$NODE_C --cap-add SYS_PTRACE -v "$W/diag:/tmp" -v "$D:/out" mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
+    "for t in dotnet-dump dotnet-gcdump dotnet-counters; do dotnet tool install -g \$t > /dev/null; done; T=/root/.dotnet/tools
+     \$T/dotnet-counters collect -p $pid --counters System.Runtime --refresh-interval 1 --duration 00:00:01:00 --format csv -o /out/counters.csv > /dev/null
+     \$T/dotnet-gcdump collect -p $pid -o /out/heap.gcdump > /dev/null && \$T/dotnet-gcdump report /out/heap.gcdump > /out/heap-report.txt
+     \$T/dotnet-dump collect -p $pid --type Heap -o /tmp/core.dmp > /dev/null && \$T/dotnet-dump analyze /tmp/core.dmp -c 'finalizequeue' -c exit > /out/finalizequeue.txt
+     rm -f /tmp/core.dmp /out/heap.gcdump" > "$D/diag.txt" 2>&1 || log "profile: diagnostics failed (diag.txt)"
   collect "$D" "$SP"; docker rm -f $NODE_C > /dev/null 2>&1
   [ -f "$D/trace.speedscope.json" ] && python3 "$DIR/scripts/speedscope-top.py" "$D/trace.speedscope.json" > "$D/profile-top.txt" 2>&1
   rm -f "$D/trace.nettrace"; gzip -f "$D/trace.speedscope.json" 2>/dev/null
@@ -179,6 +195,9 @@ run_one() {
   publish "$K done"
 }
 [ "${ONLY:-}" != B ] && run_one A
-[ "${ONLY:-}" != A ] && run_one B
+if [ "${ONLY:-}" != A ]; then
+  if [ -z "$VARIANTS" ]; then run_one B
+  else for v in $VARIANTS; do NODE_ENV="-e ZP_TEMPLATE_INTERVAL_MS=${v#t}"; run_one "B-$v"; done; NODE_ENV=""; fi
+fi
 python3 "$DIR/scripts/throughput-report.py" "$OUT" > "$OUT/report.txt" 2>&1 || log "report failed (report.txt)"
 log "done"; publish "done"

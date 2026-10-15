@@ -81,7 +81,10 @@ cols = [('achieved/min', 'achieved', 0), ('publish ms med', 'pub_med', 0), ('pub
         ('s/block', 's_per_block', 1), ('stale blocks', 'stale', 0), ('mempool avg', 'mempool', 0),
         ('CPU % (of 400)', 'cpu', 0), ('RAM MiB max', 'ram', 0)]
 print(f'{run}: median (min-max) over the runs of each rate; first {WARMUP} s of each step not measured')
-for K, name in (('A', 'A = original (upstream a0191cbc)'), ('B', 'B = ours')):
+names = {'A': 'A = original (upstream a0191cbc)', 'B': 'B = ours'}
+dirs = sorted((d for d in os.listdir(run) if os.path.isdir(os.path.join(run, d)) and (d in names or d.startswith('B-'))),
+              key=lambda d: (d != 'A', d))
+for K, name in ((d, names.get(d, f'{d} = ours, ZP_TEMPLATE_INTERVAL_MS={d[3:]}' if d.startswith('B-t') else d)) for d in dirs):
     steps = node(K)
     if not steps: print(f'\n{name}: no data'); continue
     print(f'\n{name}  (senders: {steps[0]["senders"]})')
