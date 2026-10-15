@@ -77,7 +77,13 @@ if [ -z "$(get BRIDGE_ID)" ]; then echo "-- AuthenticatedSupply (zUSDC, bridge k
     activate /tmp/AuthenticatedSupply.fst BRIDGE
   fi
 fi
-if [ -z "$(get DEX_ID)" ]; then echo "-- ZenDex"; activate src/ContractExamples/Dex.fst DEX; fi
+if [ -z "$(get DEX_ID)" ]; then echo "-- ZenDex"
+  if [ "$(tip)" -ge 2050 ]; then   # past the V1 fork: the V1 Dex (contracts/v1/Dex.fst; needs a node image with toolchain 87b24e2 or later)
+    OUT=$($D run --rm --network host -v "$DIR:/b" -w /b node:22-alpine node scripts/v1/testnet-v1-dex.mjs "$API" "$PW") \
+      || { echo "activation of the V1 Dex failed"; echo "$OUT" | tail -5; exit 1; }
+    put DEX_ADDRESS "$(echo "$OUT" | sed -n 's/^DEX_ADDRESS=//p')"; put DEX_ID "$(echo "$OUT" | sed -n 's/^DEX_ID=//p')"
+  else activate src/ContractExamples/Dex.fst DEX; fi
+fi
 put ORACLE_CONTRACT "$(get ORACLE_ADDRESS)"
 put BRIDGE_CONTRACT "$(get BRIDGE_ADDRESS)"; put BRIDGE_ASSET "$(get BRIDGE_ID)"
 put ZEN_DEX "$(get DEX_ID)"; put ZEN_NET test

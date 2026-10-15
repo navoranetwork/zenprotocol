@@ -170,6 +170,17 @@ withdrawals only for the current `BRIDGE_ASSET` (entries carry `asset`; the old 
 
 ### 3. Dex
 
+**Active since 2026-10-15 09:39 (Israel time).** The node image moved to sha256:9a4d8bf4…85af (zp-pow d47b1c76 +
+toolchain 87b24e2: `Zen.Asset.parse` realized, the secp256k1 resolver), the engine service reinstalled from it (engine-check
+44723fc, `result.unbalanced` live). `scripts/v1/dex-try.mjs`: all passed. Activated by `scripts/v1/testnet-v1-dex.mjs`
+(20,000 blocks, expires at block 22,417): `00000001fd5aa884b260058bf98db06d722cdb162e8cb03eeab920ba87ecfaae4a45cbf9`,
+`ctzn1qqqqqqq0at25gfvnqqk9lnrdsd4ezekck96xtq0h2hyst4plvl2hy53wtlym8deln`. `testnet-stack.env`: ZEN_DEX, DEX_ID,
+DEX_ADDRESS, MM_DEX and MM_ASSET (the V1 zUSDC) set (old file `testnet-stack.env.bak-dex-v0`); index, explorer and
+marketmaker recreated. The market maker's first ask on the V1 Dex: tx 52201a12…0b81. Its bid waits for V1 zUSDC in its
+address (the node wallet's `m/44'/258'/0'/0/0`, which is also the bridge's ZP address): fund it after the bridge test.
+The Dex page, the explorer's Dex API and the wallet's Markets tab read ZEN_DEX through the explorer, so they follow.
+The index's trade history keeps the V0 Dex's old trades (the table has no contract column).
+
 **State 2026-10-14 17:00: ported, waits for the next node image.** The market maker's orders on the V0 Dex are
 cancelled (`MM_CANCEL_ALL=1`, 0 open; Alon had none) and the `marketmaker` service stays stopped. `contracts/v1/Dex.fst`
 (V0 shapes; `takeInner`'s failure pads with `RT.autoFailw`, since V0's `RT.incFailw (W.size w * 256 + 6978)` computes
