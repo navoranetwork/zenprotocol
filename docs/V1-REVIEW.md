@@ -169,3 +169,45 @@ the Zulib cache is unreadable, or when an F* step fails on unreadable/unwritable
 Warning 247, permission denied); `verify-zulib.sh` makes the cache readable by all; the elaborator uses a
 private temp folder and maps access errors and a killed F* to exit 20. The image (Dockerfile.testnet-v1)
 gives F* and the toolchain root ownership, readable by all. Deploy with the next testnet image.
+
+## Testnet upgrade to toolchain 87b24e2 (2026-10-15)
+
+The public testnet node (91.98.3.17) moved from image f59abc5a (toolchain aec63af) to **zen-node:testnet-v1
+sha256:9a4d8bf465780eca45d64988b3d730273005f03b4fb1c0822cfd175f1ee685af** at 08:07 Israel time, block 2389,
+without leaving the chain. The image: zp-pow testnet-v1 d47b1c76 + zp-contracts-v1 **87b24e2**; saved as
+zen-node-testnet-v1.tar.gz, sha256 fa766d863d2b05eab056413f791987ad1ea1074bcab9030e0c64ce6c37944d1c (676 MB).
+
+What it brings (no change for contracts already active; their DLLs are rebuilt with the same behaviour):
+- **Zen.Asset.parse / fromSubtypeString / fromSubtypeInt, Zen.ContractId.parse**, realized after V0's Zulib
+  code; **Zen.Hash.Sha3** as V0's subset of Zen.Sha3.Realized (same bytes and costs). Checked against V0's own
+  code on 654 inputs (zp-contracts-v1 tests/asset/compare-v0.fsx): 611 identical, 40 different by design (an
+  asset string with a 2-62 character subtype: V0 made a hash shorter than 32 bytes that no output can hold, V1
+  returns None), 3 V1-only. Contracts that use them (the testnet Dex) now build.
+- **Rule 4.9:** code that runs Zen.MerkleTree or Zen.Set (declared, no V1 realization) is refused at the check
+  with an explanation, not at extraction.
+- 4dd5ad9: the elaborator's 4.5 messages name the top-level let (the engine shows the right line).
+- **E3** (c86a2c4, above) is now deployed.
+- Node: a **libsecp256k1 self-test at start** (ContractV1.secp256k1SelfTest): the library V1 contracts load
+  (/zen/libsecp256k1.so) parses libsecp256k1's own test key to V0's internal form, verifies its signature and
+  rejects another message; its sha256 is logged (2889daf9...ac9b). A failure stops the node.
+- Token template DLL: a81bccb314d95e65c612dc11521c90e7ffced0a76c9243aa7595102c686c262f (Zen.Asset's extracted
+  code changed; DLL bytes are local, not consensus). Image gates: Zulib verifies, token DLL hash, the asset test.
+
+Tests before it: every real-toolchain test of zp-contracts-v1 (elaborator, check with 36 refusals, sha3, crypto,
+bitcoin, token, mint, semantics, gas, security, asset, ilcheck, try, service, engine). Lab rehearsal on zp-lab-1
+(lab-testnet-v1-rehearsal.sh): the image built and was saved; the rehearsal node, started on its old data
+(synced on 2026-10-13 with older images), crashed in the CGP tally ("balance for key ... is 0 and you tried to
+remove 4500045200"); the tally code is the same as in f59abc5a, so its stored tallies were stale. With a fresh
+volume the same image synced the testnet **from genesis** to the tip (2389), built every active V1 contract
+(zUSDC 5ab27aa3... among them) with no error, and the testnet Dex (pow-bitzen contracts/v1/Dex.fst) built in it
+(exit 0). Lesson: rehearse an upgrade on a node synced from genesis with the new image, not on old data.
+
+The upgrade on 91.98.3.17: `testnet-v1-switch.sh upgrade /root/zen-node-testnet-v1.tar.gz` (systemd unit
+zp-upgrade): checksum, load, the running image kept as **zen-node:testnet-v1-prev** (f59abc5a; back with
+`testnet-v1-switch.sh upgrade-rollback`), the node recreated from its compose project (same volume and
+environment, MINER_THREADS=0), at block 2389 one minute later; smoke OK (SDK 10.0.112, F* 2026.09.27, Zulib
+stamp 1a819900..., token DLL a81bccb3, self-test passed); 10 minutes following: block 2392, no errors.
+
+After it: the engine container is reinstalled from this image (engine session); the engine's testnet pin is
+87b24e2 (zp-contracts-v1 bd23cb2); the testnet-migration session runs dex-try and activates the Dex. Still open:
+E2 (a ContractV1.load failure maps to BadContract), H1, H3, M1, M3.
