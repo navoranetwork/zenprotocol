@@ -1,0 +1,2 @@
+[2026-10-15 02:38] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
+[2026-10-15 02:38] B: fe456127 Merge branch 'v1-contracts' into testnet-v1; load tool: zenprotocol 45c75c6b Testnet V1 migration: CGP and voting cont
