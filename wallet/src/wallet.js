@@ -143,6 +143,29 @@ export function prepareSend(w, state, to, amount, asset = '00') {
   });
 }
 
+// --- combining small outputs: ZP received in many small pieces (thousands of 0.01 ZP payments, say) is sent to the
+// wallet's own address in transfers of up to COMBINE_BATCH pieces each (about 65 KB a transfer), smallest first.
+// No fee. exclude: outputs a transaction waiting for its block already spends ('txhash:index').
+export const COMBINE_BATCH = 500;
+export function prepareCombine(w, state, { batch = COMBINE_BATCH, exclude = [] } = {}) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash)), skip = new Set(exclude), maturity = maturityFor(w.network);
+  const own = { type: 'PK', hash: decodeAddress(receiveAddress(w)).hash };
+  const pieces = state.utxos.filter(u => u.spend.asset === '00' && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index)
+      && (u.lock.type !== 'Coinbase' || state.tip + 1 - u.lock.blockNumber >= maturity))
+    .sort((a, b) => (a.spend.amount > b.spend.amount ? 1 : a.spend.amount < b.spend.amount ? -1 : 0));
+  if (pieces.length < 2) throw new Error('Your ZP is already in one piece');
+  const out = [];
+  for (let i = 0; i < pieces.length; i += batch) {
+    const chunk = pieces.slice(i, i + batch); if (chunk.length < 2) continue;
+    const amount = chunk.reduce((a, u) => a + u.spend.amount, 0n);
+    const p = buildTransaction({ utxos: chunk.map(u => ({ ...u, spend: { asset: ZEN_ASSET, amount: u.spend.amount }, key: keyFor(u) })), tipBlockNumber: state.tip, maturity,
+      payments: [{ lock: own, spend: { asset: ZEN_ASSET, amount } }], changeLock: own });
+    out.push({ ...p, pieces: chunk.length, amount, spent: chunk.map(u => hex(u.outpoint.txHash) + ':' + u.outpoint.index) });
+  }
+  return { batches: out, pieces: pieces.length, amount: out.reduce((a, b) => a + b.amount, 0n) };
+}
+
 // --- extending a contract (Consensus/TransactionValidation.fs: extendContracts) -----------------------------
 // The sacrifice is paid in ZP to an ExtensionSacrifice output of the contract: blocks = amount / (1 kalapa x code length).
 // Only a contract that is still active can be extended (a lapsed one needs its code activated again).

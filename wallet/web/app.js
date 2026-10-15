@@ -5,7 +5,7 @@ import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress, encodeAddres
 import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
-import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall } from '../src/wallet.js';
+import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall, prepareCombine } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel, bookRow, bookFromOrders, levels, parsePrice, limitOrder } from '../src/dex.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
@@ -921,7 +921,6 @@ const views = {
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
       <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(asset, 18)}Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
-      ${S.draft.combine && asset === '00' ? '<div class="card small"><b>Combining your ZP.</b> This sends all your ZP to your own address in one transfer, so a contract call needs only one piece. Nothing leaves the wallet. After its block (about 4 minutes), try again.</div>' : ''}
       ${bridgeNote(S.draft.to, asset)}
       <div class="card small"><div class="kv"><span class="muted">From</span><span>${esc(a.name)}</span></div><div class="kv"><span class="muted">Network fee</span><span>None</span></div><div class="kv"><span class="muted">Change returns to</span><span class="mono">${esc(shortAddr(receiveAddress(S.open.get(a.id))))}</span></div></div>
       <p class="muted small">Signed on this device. The node only receives the signed transaction.</p>
@@ -1275,6 +1274,16 @@ function modalHtml() {
     <p>The contract becomes active when the transaction is in a block (about 4 minutes), for ${m.blocks.toLocaleString('en-US')} blocks.</p>
     <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
+  if (m.type === 'combine') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Combine your ZP</h2>
+    <div class="card"><div class="kv"><span class="muted">Small pieces</span><span class="amt">${m.pieces.toLocaleString('en-US')}</span></div>
+      <div class="kv"><span class="muted">Amount</span><span class="amt">${esc(formatZP(m.amount))} ZP</span></div>
+      <div class="kv"><span class="muted">Transfers</span><span>${m.batches.length} to your own address</span></div>
+      <div class="kv"><span class="muted">Fee</span><span>None</span></div></div>
+    <p class="muted small">Nothing leaves this wallet: the pieces are sent to its own address and come back as ${m.batches.length === 1 ? 'one piece' : m.batches.length + ' pieces'}. After the next block (about 4 minutes), contract calls (offers, Dex orders) work again.</p>${errBox()}
+    <div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="combine-send" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
+  if (m.type === 'combined') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">✓ Sent</h2>
+    <p>${m.sent} transfer${m.sent === 1 ? '' : 's'} to your own address gather ${m.pieces.toLocaleString('en-US')} pieces (${esc(formatZP(m.amount))} ZP). They take effect in the next block, about 4 minutes; then try again.</p>
+    <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'btcw') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Choose your Bitcoin wallet</h2>
     ${btcWallets().length ? btcTiles('btcw-pick') : '<p class="muted small">No Bitcoin wallet found in this browser. Use the QR code.</p>'}
     <p class="muted small">Your Bitcoin wallet shows the payment and asks you to confirm it. The ZP Wallet never sees your Bitcoin keys.</p>
@@ -1757,12 +1766,17 @@ $app.addEventListener('click', async e => {
       } finally { S.busy = false; }
       render(); setTimeout(loadSwap, 10000); return;
     }
-    if (act === 'combine') {   // one transfer to this wallet's own address gathers the small outputs into one
-      const a = active(), w = S.open.get(a.id); await refreshWallet(a.id);
-      const z = S.data.get(a.id)?.state?.assets.find(x => x.asset === '00')?.spendable || 0n;
-      stopScan(); S.modal = null; S.error = ''; S.errCombine = false;
-      S.draft = { to: receiveAddress(w), amount: formatZP(z).replace(/,/g, ''), asset: '00', combine: true };
-      return go('send');
+    if (act === 'combine') {   // transfers to this wallet's own address gather the small outputs into a few
+      const a = active(); await refreshWallet(a.id);
+      const d = S.data.get(a.id); if (!d?.state) throw new Error('Could not read the balance from the node');
+      const c = prepareCombine(S.open.get(a.id), d.state, { exclude: pendingSpent(d) });
+      stopScan(); S.errCombine = false; S.error = ''; S.modal = { type: 'combine', ...c }; return render();
+    }
+    if (act === 'combine-send') {
+      const m = S.modal; S.busy = true; render(); let sent = 0;
+      try { for (const b of m.batches) { await publish(node(), b); sent++; for (const sp of b.spent) (S.pendingVotes ||= []).push({ spent: sp, at: Date.now() }); } }
+      finally { S.busy = false; }
+      S.modal = { type: 'combined', sent, pieces: m.pieces, amount: m.amount }; render(); setTimeout(() => refreshAll(), 1500); return;
     }
     if (act === 'offer-max') { const i = $app.querySelector('form[data-form=offer] input[name=zp]'), bal = S.modal?.balance; if (i && bal) { i.value = formatZP(bal > 1n ? bal - 1n : 0n).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
     if (act === 'addr-src') { keepOffer(); S.modal.src = t.dataset.v; S.error = ''; freshScreen = true; render(); return syncOffer(); }

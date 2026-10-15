@@ -11,6 +11,14 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.28.0 — 2026-10-16
+
+### Added
+- Combine my ZP: when a contract call would need too many small outputs, "Combine my ZP now" shows how many pieces
+  and sends them to the wallet's own address in transfers of up to 500 pieces each (about 65 KB a transfer), smallest
+  first, no fee. One wallet on the testnet held 5,022 pieces of 0.01 ZP; one transfer of all of them would be about
+  650 KB. After the next block, offers and Dex orders work again.
+
 ## 0.27.6 — 2026-10-16
 
 ### Changed
