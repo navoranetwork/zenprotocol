@@ -129,6 +129,18 @@ call; replace the contract before that. Lessons: keep V0's expression shapes (th
 
 ### 2. USDC bridge (zUSDC)
 
+**Done 2026-10-15.** Checked end to end with a second MetaMask account ("Bridge Tester" `0x7c4f…dd6d`, linked to
+Alon's ZP Wallet address `tzn1qjyg6…7wpyf`): deposits of 2 USDC and 1 USDC issued as zUSDC within a minute of the 12
+Base confirmations; a withdrawal of 1 zUSDC sent from the ZP Wallet (0.15.0+) was paid by the bridge by itself
+(Base Sepolia tx `0x806797cd…9b89d`), and a later claim for the same transaction returned that payout (paid once).
+Bridge changes that day (node-upgrade-script 63afed3b3): withdrawals read from the node (`/blockchain/transaction`)
+instead of the explorer index (10 blocks behind on purpose), paid automatically after `BRIDGE_ZP_CONFIRMATIONS` (2)
+blocks; the claim stays as a fallback; test `site/test/bridge.test.mjs`. Page `/bridge.html` rebuilt: Deposit and
+Withdraw tabs, wallet picker (EIP-6963), live progress, waiting times, USDC (Circle's logo, unchanged) and zUSDC icons
+(`site/shell/icons/`). ZP Wallet 0.15.0-0.17.0: send tokens, the bridge named, token sheets. Still open: the market
+maker shares the bridge's ZP address (zUSDC sent there from a linked address is a withdrawal), so it needs its own
+key before it is funded with zUSDC; a trust-minimised bridge is a lab research task (docs/BRIDGE.md).
+
 **Active since 2026-10-15 02:06 (Israel time).** `scripts/v1/crypto-probe.mjs` showed through the node that V1
 `parsePublicKey` / `Crypto.verify` work (the node loads `/zen/libsecp256k1.so` for V1 contracts; only the engine's
 runner missed it, fixed in engine ff5ddc9). `scripts/v1/zusdc-try.mjs` on the engine: all passed. Destroy now refuses

@@ -41,7 +41,8 @@ The EVM test key needs a little test ETH for withdrawals. The default USDC addre
 - Reserve top-ups: USDC sent to the bridge from an address listed in `BRIDGE_FUNDERS` (in `testnet-stack.env`) adds to the reserves and issues nothing. Used on 2026-10-12 to cover the 100 zUSDC of the early mock deposit `0xmm1` (market maker seed), which had no USDC behind it.
 - 2026-10-15: withdrawals are automatic (see the table); the ZP Wallet sends zUSDC (0.15.0) and names the bridge (0.16.0). Waiting times are shown on the page: deposit about 5 minutes (12 Base confirmations, then the next ZP block), withdrawal about 8-10 minutes (2 ZP blocks).
 - The bridge's ZP address is the node wallet, which the market maker also uses: zUSDC sent there from a linked address is a withdrawal. Do not fund the market maker by sending zUSDC to that address from a linked ZP address.
-- Needed next: pause switch, limits per user, a separate key for the market maker.
+- Verified on the testnet 2026-10-15 (V1 zUSDC): deposits and an automatic withdrawal, paid once (docs/TESTNET-V1-MIGRATION.md, step 2).
+- Needed next: a separate key for the market maker, pause switch, limits per user. Later: a trust-minimised bridge (the operator key is the only guarantee of 1:1 today): research by the lab, covering Ethereum/Base verification in a ZP V1 contract (sync-committee BLS or a ZK light client, receipt proofs) and ZP verification on the EVM side (the PoW makes this the hard part), with an M-of-N committee, limits and proof of reserves as the intermediate step.
 
 ## Trying it on Base Sepolia (test network, test keys only)
 1. Make two keys: `node site/bridge/evm-tools.mjs newkey` twice (the bridge's key and a depositor's key).
