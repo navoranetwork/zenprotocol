@@ -9,6 +9,10 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.14.0 — 2026-10-15
+
 ### Added
 - Try it: when a call would pay out more than goes in (the engine's `unbalanced`), the result says "A node would reject this transaction" with the amount, is marked "Not valid", and the next call does not build on it.
 
