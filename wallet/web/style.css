@@ -85,7 +85,7 @@ input.mono { font-family: var(--mono); font-size: 13px; }
 .row > [data-s~="fixed"], [data-s~="fixed"] { flex: none; } [data-s~="gap6"] { gap: 6px; } [data-s~="gap10"] { gap: 10px; }
 [data-s~="title"] { font-size: 28px; } [data-s~="two"] { grid-template-columns: 1fr 1fr; }
 [data-s~="center"] { justify-content: center; } [data-s~="between"] { justify-content: space-between; }
-[data-s~="mt4"] { margin-top: 4px; } [data-s~="mt6"] { margin-top: 6px; } [data-s~="mt10"] { margin-top: 10px; }
+[data-s~="mt4"] { margin-top: 4px; } [data-s~="mt6"] { margin-top: 6px; } [data-s~="mt10"] { margin-top: 10px; } [data-s~="mb12"] { margin-bottom: 12px; }
 .screen[data-s~="flush"] { padding: 0; } [data-s~="right"] { text-align: right; } [data-s~="wrap"] { word-break: break-all; }
 [data-s~="plain"] { text-align: left; color: inherit; font: inherit; cursor: pointer; width: 100%; }
 input[data-s~="check"] { width: 20px; min-height: 20px; flex: none; }
@@ -187,3 +187,16 @@ input::placeholder, textarea::placeholder { color: #5E7076; font-style: italic; 
 .tname { display: inline-flex; align-items: center; gap: 8px; }
 .ticon { flex: none; vertical-align: middle; border-radius: 50%; }
 .amt .ticon { margin-right: 6px; }
+
+/* tokens: rows open the token's sheet; Send picks a token by icon */
+button.item.tokrow { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line2); color: inherit; font: inherit; cursor: pointer; text-align: left; }
+button.item.tokrow:last-child { border-bottom: 0; }
+.tokpick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.tokchip { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; text-align: left; }
+.tokchip small { display: block; font-weight: 500; color: var(--ink2); font-size: 12px; }
+.zpdot { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #0b1a16; font: 800 9px var(--sans); flex: none; }
+.zpdot.big { width: 44px; height: 44px; font-size: 16px; }
+.tokhead { display: flex; align-items: center; gap: 12px; } .tokhead h2 { margin: 0; }
+.tokbal { font-size: 30px; font-weight: 700; margin: 12px 0 14px; font-variant-numeric: tabular-nums; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.sheet .list { max-height: 40vh; overflow: auto; }

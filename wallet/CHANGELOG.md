@@ -11,6 +11,16 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.17.0 — 2026-10-15
+
+### Added
+- Tap a token in the Tokens card to open it: icon, name, balance, Send, Receive and its own activity; for zUSDC also
+  Withdraw (Send to the USDC bridge) and a link to deposit USDC on the bridge page.
+
+### Changed
+- Send chooses what to send with buttons that show each token's icon and balance (was the browser's list, which
+  cannot show icons).
+
 ## 0.16.1 — 2026-10-15
 
 ### Fixed

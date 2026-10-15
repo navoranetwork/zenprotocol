@@ -616,7 +616,7 @@ const views = {
         <div class="row k"><span>CGP · INTERVAL ${c.community}</span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt4">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
         <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
-      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span class="tname" title="${esc(x.asset)}">${tokenIcon(x.asset)}${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
+      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<button type="button" class="item tokrow" data-act="token" data-asset="${esc(x.asset)}"><span class="tname" title="${esc(x.asset)}">${tokenIcon(x.asset)}${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)} <span class="muted">›</span></span></button>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
       <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => activityRow(h, a)).join('')}</div></div>${nav('home')}`;
   },
@@ -625,7 +625,7 @@ const views = {
     const a = active(), assets = (S.data.get(a.id)?.state?.assets || []).filter(x => x.asset === '00' || x.spendable > 0n);
     const asset = assets.some(x => x.asset === S.draft.asset) ? S.draft.asset : '00', held = assets.find(x => x.asset === asset), u = unitOf(asset);
     return `${backBar(asset === '00' ? 'Send ZP' : 'Send ' + esc(u))}<form data-form="send" class="screen">
-      ${assets.length > 1 ? `<label class="field">What<select name="asset" data-act="send-asset">${assets.map(x => `<option value="${esc(x.asset)}" ${x.asset === asset ? 'selected' : ''}>${esc(unitOf(x.asset))} · ${esc(tokenAmount(x.asset, x.spendable))}</option>`).join('')}</select></label>` : ''}
+      ${assets.length > 1 ? `<div class="field"><span>What</span><div class="tokpick" role="radiogroup" aria-label="What to send">${assets.map(x => `<button type="button" role="radio" aria-checked="${x.asset === asset}" class="chip tokchip ${x.asset === asset ? 'on' : ''}" data-act="send-asset" data-asset="${esc(x.asset)}">${x.asset === '00' ? '<span class="zpdot">ZP</span>' : tokenIcon(x.asset, 22)}<span><b>${esc(unitOf(x.asset))}</b><small>${esc(tokenAmount(x.asset, x.spendable))}</small></span></button>`).join('')}</div><input type="hidden" name="asset" value="${esc(asset)}"></div>` : ''}
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
       <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(asset, 18)}Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
@@ -977,6 +977,19 @@ function modalHtml() {
     <p>The contract becomes active when the transaction is in a block (about 4 minutes), for ${m.blocks.toLocaleString('en-US')} blocks.</p>
     <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
+  if (m.type === 'token') {
+    const a = active(), st = S.data.get(a.id)?.state, x = st?.assets.find(y => y.asset === m.asset) || { spendable: 0n, maturing: 0n }, bridge = S.bridge && m.asset === S.bridge.asset;
+    const rows = (S.data.get(a.id)?.history || []).filter(h => h.asset === m.asset).slice(0, 8);
+    return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet">
+    <div class="tokhead">${tokenIcon(m.asset, 44) || '<span class="zpdot big">T</span>'}<div><h2>${esc(unitOf(m.asset))}</h2><div class="muted small mono" title="${esc(m.asset)}">${esc(m.asset.slice(0, 14))}…</div></div></div>
+    <div class="tokbal">${esc(tokenAmount(m.asset, x.spendable + x.maturing))} <span class="muted">${esc(unitOf(m.asset))}</span></div>
+    <div class="actions" data-s="mb12"><button class="btn primary" data-act="token-send" data-asset="${esc(m.asset)}" ${x.spendable > 0n && canSpend(S.open.get(a.id)) ? '' : 'disabled'}>${I.send}Send</button><button class="btn" data-go="receive">${I.recv}Receive</button>
+      ${bridge ? `<button class="btn" data-act="send-back" data-to="${esc(S.bridge.zp)}" data-asset="${esc(m.asset)}">${I.send}Withdraw</button>` : ''}</div>
+    ${bridge ? `<div class="card small">zUSDC is test USDC brought over the bridge, one for one. <a href="${esc(siteBase())}/bridge.html" rel="noopener">Deposit USDC</a> to get more; Withdraw sends it back as USDC to your linked EVM wallet (about 8 to 10 minutes).</div>` : ''}
+    <h3 class="small muted" data-s="mt10">Activity</h3>
+    <div class="list">${rows.length ? rows.map(h => activityRow(h, a)).join('') : '<p class="muted small">No transfers of this token yet.</p>'}</div>
+    <button class="btn" data-act="close">Close</button></div></div>`;
+  }
   if (m.type === 'sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
     <p>${esc(withUnit(m.asset || '00', m.amount))} is on its way. It appears in the next block, about 4 minutes.</p>
     ${m.bridge ? `<p class="small"><b>Withdrawal:</b> the bridge pays the USDC to your linked EVM address by itself, ${bridgeWait()}. Nothing else to do.</p>` : ''}
@@ -1369,6 +1382,9 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
+    if (act === 'token') { S.modal = { type: 'token', asset: t.dataset.asset }; return render(); }
+    if (act === 'token-send') { S.draft = { ...S.draft, asset: t.dataset.asset, amount: '' }; return go('send'); }
+    if (act === 'send-asset') { S.draft = { ...S.draft, asset: t.dataset.asset, to: $app.querySelector('[name=to]')?.value || S.draft.to || '', amount: '' }; S.error = ''; return render(); }
     if (act === 'send-back') { S.draft = { ...S.draft, to: t.dataset.to, asset: t.dataset.asset || '00', amount: '' }; return go('send'); }
     if (act === 'copy') { await navigator.clipboard.writeText(t.dataset.text); t.innerHTML = I.copy + 'Copied'; return; }
     if (act === 'max') { const as = $app.querySelector('[name=asset]')?.value || S.draft.asset || '00', h = S.data.get(active().id)?.state?.assets.find(x => x.asset === as); $app.querySelector('[name=amount]').value = tokenAmount(as, h?.spendable || 0n).replace(/,/g, ''); return; }
