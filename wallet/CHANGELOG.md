@@ -11,6 +11,15 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.16.0 — 2026-10-15
+
+### Added
+- The site's USDC bridge is recognised (read from its /bridge/status): its ZP address shows as "the USDC bridge" in the
+  activity and the confirm screen. Sending zUSDC there says it is a withdrawal, that the bridge pays the USDC to the
+  linked EVM address by itself, and how long it takes (2 ZP blocks, about 8 to 10 minutes); sending any other asset
+  there is warned against.
+- "Copy id" on each transfer in the activity, and "Copy" for the transaction id when a transfer is sent.
+
 ## 0.15.0 — 2026-10-15
 
 ### Added

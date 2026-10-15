@@ -56,6 +56,8 @@
 .zp .pick button:hover, .zp .pick button:focus-visible { border-color: var(--s-accent); }
 .zp .pick img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
 .zp .pick .noicon { width: 32px; height: 32px; border-radius: 8px; flex: none; background: var(--s-line); }
+.zp .wait { font-size: 14px; background: var(--s-bg); border-left: 3px solid var(--s-accent); padding: 8px 12px; border-radius: 6px; }
+.zp details.claim { margin-top: 10px; } .zp details.claim summary { cursor: pointer; color: var(--s-muted); font-size: 14px; }
 button.link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 </style>
 <script src="/shell/shell.js" defer></script>
@@ -99,6 +101,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   <li class="step" id="s3">
     <h3>Deposit USDC</h3>
     <p>Send USDC to the bridge. After <span id="conf">12</span> confirmations on Base Sepolia (about half a minute) the same amount of zUSDC is issued to your linked ZP address.</p>
+    <p class="wait"><b>How long:</b> about 5 minutes in all: half a minute on Base Sepolia, then the zUSDC is in the next ZP block (about 4 minutes, sometimes longer on the testnet). Your activity below shows each step.</p>
     <form class="row" id="depf" autocomplete="off">
       <input class="amt" id="amt" inputmode="decimal" placeholder="Amount" required aria-label="USDC amount">
       <button id="depb" type="submit" disabled>Send USDC</button>
@@ -108,12 +111,14 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   </li>
   <li class="step" id="s4">
     <h3>Withdraw back to USDC</h3>
-    <p>Send zUSDC from your linked ZP address to the bridge's ZP address (below), then paste that transaction here. The bridge destroys the zUSDC and pays USDC to your EVM address. In the <a href="/wallet/">ZP Wallet</a>: Send, choose zUSDC, paste the bridge's ZP address; the transaction id shows when it is sent.</p>
+    <p>Send zUSDC from your linked ZP address to the bridge's ZP address (below). That is all: the bridge sees it, destroys the zUSDC and pays the same amount of USDC to your EVM address by itself. In the <a href="/wallet/">ZP Wallet</a>: Send, choose zUSDC, paste the bridge's ZP address.</p>
+    <p class="wait"><b>How long:</b> the bridge waits for <span id="zpconf">2</span> ZP blocks after your transfer, about 8 to 10 minutes (longer when testnet blocks are slow), then pays at once. Your activity below shows "confirming 1 of 2" meanwhile.</p>
+    <details class="claim"><summary>Not paid after 20 minutes, or your ZP address is linked to several EVM addresses? Claim with the transaction id</summary>
     <form class="row" id="wdf" autocomplete="off">
       <input id="wtx" placeholder="ZP transaction id (64 hex characters)" spellcheck="false" required aria-label="ZP transaction id">
       <input id="wevm" placeholder="0x… EVM address to pay" spellcheck="false" required aria-label="EVM address to pay">
       <button id="wdb" type="submit">Claim USDC</button>
-    </form>
+    </form></details>
     <div class="msg" id="m4" hidden></div>
   </li>
 </ol>
@@ -162,7 +167,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
     const mock = S.evm === 'mock', net = mock ? 'a simulated EVM chain' : (NETS[S.chainId]?.[0] || 'the EVM test network');
     const out = BigInt(S.zusdcOutstanding || 0), res = S.reserves == null ? null : BigInt(S.reserves);
     $('out').textContent = usdc(out); $('res').textContent = res == null ? 'unknown' : usdc(res); $('resnet').textContent = 'on ' + net;
-    $('conf').textContent = S.confirmations ?? 12;
+    $('conf').textContent = S.confirmations ?? 12; $('zpconf').textContent = S.zpConfirmations ?? 2;
     $('eq').textContent = res == null ? '' : res >= out ? '≥' : '<';
     let h;
     if (mock) h = ['warn', 'Running on a simulated EVM chain', 'Deposits from a browser wallet are not picked up in this mode.'];
@@ -290,7 +295,8 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
       lookup(evm); loadStatus();
     } catch (e) {
       const t = errText(e);
-      show('m4', 'err', /not indexed/.test(t) ? 'The transaction is not in a block yet. Wait for the next block (a few minutes) and try again.' : 'Not paid: ' + t);
+      const w = t.match(/waiting for ZP blocks: (\d+) of (\d+)/);
+      show('m4', w ? 'info' : 'err', w ? `Received. The bridge pays after ${w[2]} ZP blocks; this one has ${w[1]}. It pays by itself, no need to claim again (about ${4 * (w[2] - w[1])} more minutes).` : /not found/.test(t) ? 'This transaction is not on the ZP testnet yet. If you just sent it, wait a minute and try again; otherwise check the id.' : 'Not paid: ' + t);
     } finally { $('wdb').disabled = false; }
   };
 
@@ -329,6 +335,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
           d.failed ? 'failed on the EVM chain' : d.confs >= need ? 'confirmed, being issued' : `confirming: ${Math.max(0, d.confs)} of ${need}`]),
         ...j.waiting.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), j.zp ? 'being issued' : 'waiting for a link']),
         ...j.deposits.map(d => ['Deposit', usdc(d.amount), evmLink('tx', d.evmTx), 'zUSDC issued ' + zpLink('tx', d.zpTx)]),
+        ...(j.arriving || []).map(d => ['Withdrawal', usdc(d.amount), zpLink('tx', d.zpTx), `confirming: ${d.confirmations} of ${d.need} ZP blocks, then paid by itself`]),
         ...j.withdrawals.map(d => ['Withdrawal', usdc(d.amount), zpLink('tx', d.zpTx), String(d.evmTx).startsWith('mock') ? 'USDC paid' : 'USDC paid ' + evmLink('tx', d.evmTx)])];
       box.innerHTML = `<p class="acct">${j.zp ? 'Linked to <code>' + esc(j.zp) + '</code>' : 'Not linked to a ZP address yet.'}</p>` +
         (rows.length ? `<div class="tw"><table class="hist"><thead><tr><th>Type</th><th>Amount</th><th>From</th><th>Result</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div>`

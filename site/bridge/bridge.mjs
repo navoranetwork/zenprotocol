@@ -1,6 +1,8 @@
 // USDC bridge prototype (testnet only, custodial): USDC on an EVM chain <-> zUSDC on ZP.
 //   deposit:   USDC sent to the bridge's EVM address by a linked EVM address -> zUSDC issued (AuthenticatedSupply Issue) to its ZP address
-//   withdraw:  user sends zUSDC to the bridge's ZP address and posts the transaction -> the bridge destroys it and sends USDC
+//   withdraw:  a linked ZP address sends zUSDC to the bridge's ZP address -> after BRIDGE_ZP_CONFIRMATIONS blocks the bridge
+//              destroys it and sends USDC to the linked EVM address by itself (POST /withdraw {zpTx, evm} remains for a
+//              ZP address linked to several EVM addresses, or to claim at once). Transactions are read from the node itself.
 // Amounts are in USDC base units (6 decimals) on both sides, 1:1. See docs/BRIDGE.md.
 //
 // Environment (all optional but the contract):
@@ -12,7 +14,7 @@
 //   BRIDGE_LOG_RANGE (190) blocks per log query (sepolia.base.org allows 200)   BRIDGE_CONFIRMATIONS (12)   BRIDGE_DATA (./data)   BRIDGE_LISTEN (127.0.0.1:8090)   BRIDGE_INTERVAL (15 s)
 //   BRIDGE_FUNDERS   comma-separated EVM addresses whose USDC transfers top up the reserves: never treated as deposits, no zUSDC issued
 //   BRIDGE_ZO        command that runs zen-oracle (dotnet src/Oracle/bin/Release/zen-oracle.dll)
-//   BRIDGE_EXPLORER  explorer API for reading withdrawal transactions (http://127.0.0.1:11580/explorer/api)
+//   BRIDGE_ZP_CONFIRMATIONS (2) ZP blocks before a withdrawal is paid   BRIDGE_AUTO_WITHDRAW (1) pay withdrawals without a claim
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,7 +28,7 @@ const EVM = env('BRIDGE_EVM', 'mock:./data/evm.json'), USDC = env('BRIDGE_USDC',
 const CONF = Number(env('BRIDGE_CONFIRMATIONS', '12')), DATA = env('BRIDGE_DATA', './data');
 const [HOST, PORT] = env('BRIDGE_LISTEN', '127.0.0.1:8090').split(':');
 const ZO = env('BRIDGE_ZO', 'dotnet src/Oracle/bin/Release/zen-oracle.dll').split(' ');
-const EXPLORER = env('BRIDGE_EXPLORER', 'http://127.0.0.1:11580/explorer/api');
+const ZP_CONF = Math.max(1, Number(env('BRIDGE_ZP_CONFIRMATIONS', '2'))), AUTO = env('BRIDGE_AUTO_WITHDRAW', '1') !== '0';
 const INTERVAL = Number(env('BRIDGE_INTERVAL', '15')) * 1000;
 const FUNDERS = new Set(env('BRIDGE_FUNDERS', '').split(',').map(a => a.trim().toLowerCase()).filter(a => /^0x[0-9a-f]{40}$/.test(a)));
 
@@ -133,24 +135,71 @@ async function depositsRound() {
   pendingDeposits = keep; save('pending.json', keep);
 }
 
-// a withdrawal: the user's transaction pays zUSDC to the bridge's ZP address; the sender must be the linked ZP address
+// a withdrawal: the user's transaction pays zUSDC to the bridge's ZP address; the sender must be a linked ZP address.
+// Read from the node (GET /blockchain/transaction, with its confirmations), not from the explorer's index, which stays
+// 10 blocks behind the tip on purpose.
+async function nodeTx(hash) {
+  const r = await fetch(NODE + '/blockchain/transaction?hash=' + hash, { signal: AbortSignal.timeout(20000) });
+  if (!r.ok) return null;
+  const j = await r.json().catch(() => null);
+  return j && j.tx && Array.isArray(j.tx.outputs) ? j : null;
+}
+const lockAddr = l => (l && typeof l === 'object' && (l.PK || l.Coinbase)?.address) || null;
+async function readPayment(zpTx) {
+  const j = await nodeTx(zpTx); if (!j) return null;
+  const me = await bridgeZp();
+  const paid = j.tx.outputs.filter(o => lockAddr(o.lock) === me && o.spend?.asset === ASSET).reduce((s, o) => s + BigInt(o.spend.amount), 0n);
+  const senders = new Set();
+  for (const i of j.tx.inputs || []) {
+    if (!i.outpoint) continue;
+    const prev = await nodeTx(i.outpoint.txHash), a = prev && lockAddr(prev.tx.outputs[i.outpoint.index]?.lock);
+    if (a) senders.add(a);
+  }
+  return { paid, senders, confirmations: Number(j.confirmations) || 0 };
+}
+const linkedTo = senders => Object.entries(links).filter(([, l]) => senders.has(l.zp)).sort((a, b) => (b[1].since || 0) - (a[1].since || 0));
+const busy = new Set();   // one payout per transaction at a time (the claim and the automatic round may meet)
 async function withdraw(zpTx, evmTo) {
   const key = 'w:' + zpTx;
   if (done[key]) return done[key];
-  const j = await (await fetch(EXPLORER + '/tx/' + zpTx)).json();
-  const t = j.transaction; if (!t) throw new Error('transaction not indexed yet');
-  const bridgeZp = (await zp('/wallet/address')).toString().replace(/"/g, '');
-  const paid = t.outputs.filter(o => o[0] === bridgeZp && o[1] === ASSET).reduce((s, o) => s + BigInt(o[2]), 0n);
-  if (paid <= 0n) throw new Error('the transaction pays no zUSDC to the bridge address');
-  const senders = new Set(t.inputs.map(i => i[0]).filter(Boolean));
+  const p = await readPayment(zpTx);
+  if (!p) throw new Error('transaction not found: it is not on the ZP testnet yet (or the id is wrong)');
+  if (p.paid <= 0n) throw new Error('the transaction pays no zUSDC to the bridge address');
   const link = links[evmTo.toLowerCase()];      // one ZP address may be linked to several EVM addresses: check the one asked for
-  if (!link || !senders.has(link.zp)) throw new Error('the paying ZP address is not linked to that EVM address');
-  const burn = await destroy(paid);
-  const out = await evmSend(evmTo, paid);
-  done[key] = { evmTx: out, burn, amount: String(paid), to: evmTo, asset: ASSET }; save('done.json', done);
-  log('withdrawal', String(paid), '->', evmTo, out);
-  notify('withdrawal', { evm: evmTo.toLowerCase() });
-  return done[key];
+  if (!link || !p.senders.has(link.zp)) throw new Error('the paying ZP address is not linked to that EVM address');
+  if (p.confirmations < ZP_CONF) throw new Error(`waiting for ZP blocks: ${p.confirmations} of ${ZP_CONF} confirmations`);
+  if (busy.has(key)) throw new Error('being paid now');
+  busy.add(key);
+  try {
+    if (done[key]) return done[key];
+    const burn = await destroy(p.paid);
+    const out = await evmSend(evmTo, p.paid);
+    done[key] = { evmTx: out, burn, amount: String(p.paid), to: evmTo.toLowerCase(), asset: ASSET, at: Date.now() }; save('done.json', done);
+    log('withdrawal', String(p.paid), '->', evmTo, out);
+    notify('withdrawal', { evm: evmTo.toLowerCase() });
+    return done[key];
+  } finally { busy.delete(key); }
+}
+// zUSDC arriving at the bridge's ZP address from a linked address is paid out without a claim; the latest link of
+// that ZP address receives it. Arrivals still short of ZP_CONF blocks are listed for /lookup.
+let arriving = [];   // [{ zpTx, amount, confirmations, evm }]
+const failedAt = {};
+async function withdrawalsRound() {
+  const me = await bridgeZp(); if (!me) return;
+  const rows = await zp('/addressdb/transactions', { addresses: [me], skip: 0, take: 50 });
+  if (!Array.isArray(rows)) return;
+  const next = [];
+  for (const r of rows) {
+    if (r.asset !== ASSET || !(BigInt(r.amount) > 0n) || done['w:' + r.txHash]) continue;
+    if (failedAt[r.txHash] && Date.now() - failedAt[r.txHash] < 5 * 60000) continue;
+    let p; try { p = await readPayment(r.txHash); } catch { continue; }
+    if (!p || p.paid <= 0n) continue;
+    const [evm] = linkedTo(p.senders)[0] || [];
+    if (!evm) continue;                                   // not from a linked address (a contract, the bridge itself, or unlinked): needs no payout
+    if (p.confirmations < ZP_CONF || !AUTO) { next.push({ zpTx: r.txHash, amount: String(p.paid), confirmations: p.confirmations, evm }); if (!arriving.some(a => a.zpTx === r.txHash)) notify('arriving', { evm }); continue; }
+    try { await withdraw(r.txHash, evm); } catch (e) { failedAt[r.txHash] = Date.now(); log('withdrawal failed', r.txHash, e.message); }
+  }
+  arriving = next;
 }
 
 // ---- API ----------------------------------------------------------------------------------------
@@ -158,7 +207,7 @@ async function withdraw(zpTx, evmTo) {
 // POST /withdraw  {zpTx, evm}
 // GET  /status    reserves (USDC held), zUSDC outstanding, counts, the bridge's addresses on both chains
 // GET  /lookup?evm=0x…   one EVM address: its linked ZP address, its deposits (issued and waiting) and its withdrawals
-// GET  /events    server-sent events: `change` {kind: deposit | waiting | withdrawal | link | reserves, evm?} when it happens
+// GET  /events    server-sent events: `change` {kind: deposit | waiting | arriving | withdrawal | link | reserves, evm?} when it happens
 const json = (res, code, v) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(v)); };
 const readBody = req => new Promise((ok, no) => { let b = ''; req.on('data', c => { b += c; if (b.length > 8192) no(new Error('too large')); }); req.on('end', () => ok(b)); });
 http.createServer(async (req, res) => {
@@ -176,7 +225,7 @@ http.createServer(async (req, res) => {
       const outstanding = cur.filter(d => d.zpTx).reduce((s, d) => s + BigInt(d.amount), 0n) - cur.filter(d => d.burn).reduce((s, d) => s + BigInt(d.amount), 0n);
       const reserves = await evmReserves();   // first: it also learns chainId
       return json(res, 200, { chain: 'testnet', evm: EVM.startsWith('mock:') ? 'mock' : EVM, chainId, bridgeEvm: bridgeEvm(), bridgeZp: await bridgeZp(), usdc: USDC, contract: CONTRACT, asset: ASSET,
-        confirmations: CONF, reserves,
+        confirmations: CONF, zpConfirmations: ZP_CONF, autoWithdraw: AUTO, reserves,
         links: Object.keys(links).length, deposits: cur.filter(d => d.zpTx).length, withdrawals: cur.filter(d => d.burn).length,
         zusdcOutstanding: String(outstanding), pendingDeposits: pendingDeposits.length });
     }
@@ -187,7 +236,8 @@ http.createServer(async (req, res) => {
       return json(res, 200, { evm, zp: links[evm]?.zp || null,
         deposits: mine.filter(([, d]) => d.zpTx && d.from === evm).map(([k, d]) => ({ evmTx: k.split(':')[0], amount: d.amount, zpTx: d.zpTx })),
         waiting: pendingDeposits.filter(d => d.from === evm).map(d => ({ evmTx: d.tx, amount: d.amount })),
-        withdrawals: mine.filter(([, d]) => d.burn && String(d.to).toLowerCase() === evm).map(([k, d]) => ({ zpTx: k.slice(2), amount: d.amount, evmTx: d.evmTx })) });
+        withdrawals: mine.filter(([, d]) => d.burn && String(d.to).toLowerCase() === evm).map(([k, d]) => ({ zpTx: k.slice(2), amount: d.amount, evmTx: d.evmTx })),
+        arriving: arriving.filter(a => a.evm === evm).map(a => ({ zpTx: a.zpTx, amount: a.amount, confirmations: a.confirmations, need: ZP_CONF })) });
     }
     if (req.method === 'POST' && u.pathname === '/link') {
       const { evm, zp: z, message, signature } = JSON.parse(await readBody(req));
@@ -208,4 +258,8 @@ http.createServer(async (req, res) => {
 }).listen(Number(PORT), HOST, () => log('bridge on', HOST + ':' + PORT));
 
 await evmInit();
-for (;;) { try { await depositsRound(); } catch (e) { log('round failed:', e.message); } await new Promise(r => setTimeout(r, INTERVAL)); }
+for (;;) {
+  try { await depositsRound(); } catch (e) { log('round failed:', e.message); }
+  try { await withdrawalsRound(); } catch (e) { log('withdrawals round failed:', e.message); }
+  await new Promise(r => setTimeout(r, INTERVAL));
+}

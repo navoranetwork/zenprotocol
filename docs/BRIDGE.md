@@ -8,7 +8,7 @@ ZP has no value of its own, so markets and bets need a unit that has. This proto
 |---|---|---|
 | Link | The depositor signs `Link <evm address> to <zp address>` with the EVM key; `POST /link` | The bridge stores the pair |
 | Deposit | Send USDC to the bridge's EVM address | After N confirmations the bridge calls `Issue` on the AuthenticatedSupply contract (only the bridge key can) and the zUSDC lands in the linked ZP address |
-| Withdraw | The bridge sends USDC to the linked EVM address | The user sends zUSDC to the bridge's ZP address and calls `POST /withdraw {zpTx, evm}`; the bridge checks the transaction (payer must be the linked ZP address), calls `Destroy`, then pays out |
+| Withdraw | The bridge sends USDC to the linked EVM address | The user sends zUSDC from the linked ZP address to the bridge's ZP address. The bridge reads it from the node (`/blockchain/transaction`, not the explorer index, which stays 10 blocks behind) and, after `BRIDGE_ZP_CONFIRMATIONS` blocks (2), calls `Destroy` and pays out by itself; no claim needed. `POST /withdraw {zpTx, evm}` stays for a ZP address linked to several EVM addresses (the automatic payout goes to the latest link) |
 | Reserves | The bridge's USDC balance | zUSDC outstanding = issued − destroyed (`GET /status`) |
 
 A deposit from an address that has not linked yet waits (it is kept in `pending.json`) and is issued as soon as the link arrives.
@@ -39,7 +39,9 @@ The EVM test key needs a little test ETH for withdrawals. The default USDC addre
 - Custody: one key holds the reserves and the issuing key. The plan is to move both to a community vote (multi-signature) before any real use. Real money, regulation and an independent audit come before that.
 - Site page `/bridge.html`: live reserves (the bridge's USDC balance read from the EVM chain) against zUSDC outstanding, connect a browser wallet (switches it to Base Sepolia), link by signature, deposit USDC, claim a withdrawal, and the history of one EVM address (`GET /lookup?evm=`). nginx exposes `/bridge/status`, `/bridge/lookup` (GET) and `/bridge/link`, `/bridge/withdraw` (POST, rate-limited); re-run `site/setup-testnet-web.sh` to publish the new routes.
 - Reserve top-ups: USDC sent to the bridge from an address listed in `BRIDGE_FUNDERS` (in `testnet-stack.env`) adds to the reserves and issues nothing. Used on 2026-10-12 to cover the 100 zUSDC of the early mock deposit `0xmm1` (market maker seed), which had no USDC behind it.
-- Needed next: sending zUSDC from the ZP Wallet (today the withdrawal transfer is made from a node wallet), pause switch, limits per user.
+- 2026-10-15: withdrawals are automatic (see the table); the ZP Wallet sends zUSDC (0.15.0) and names the bridge (0.16.0). Waiting times are shown on the page: deposit about 5 minutes (12 Base confirmations, then the next ZP block), withdrawal about 8-10 minutes (2 ZP blocks).
+- The bridge's ZP address is the node wallet, which the market maker also uses: zUSDC sent there from a linked address is a withdrawal. Do not fund the market maker by sending zUSDC to that address from a linked ZP address.
+- Needed next: pause switch, limits per user, a separate key for the market maker.
 
 ## Trying it on Base Sepolia (test network, test keys only)
 1. Make two keys: `node site/bridge/evm-tools.mjs newkey` twice (the bridge's key and a depositor's key).

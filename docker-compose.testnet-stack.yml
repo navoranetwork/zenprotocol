@@ -38,7 +38,7 @@ services:
     working_dir: /r
     command: node /r/site/bridge/bridge.mjs
     volumes: ["./:/r:ro", "bridge-data:/data"]
-    environment: { BRIDGE_NODE: "http://127.0.0.1:31567", BRIDGE_DATA: /data, BRIDGE_EXPLORER: "http://127.0.0.1:11581/explorer/api", BRIDGE_PASSWORD: "${TESTNET_PASSWORD:-testnet}" }
+    environment: { BRIDGE_NODE: "http://127.0.0.1:31567", BRIDGE_DATA: /data, BRIDGE_PASSWORD: "${TESTNET_PASSWORD:-testnet}" }
   marketmaker:
     <<: *tools
     working_dir: /r
