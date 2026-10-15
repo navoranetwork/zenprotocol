@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.25.1 — 2026-10-15
+
+### Fixed
+- Order book: prices line up on the left under "Price", as the header (they were pushed right by the depth bar).
+
 ## 0.25.0 — 2026-10-15
 
 ### Added
