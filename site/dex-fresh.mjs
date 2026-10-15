@@ -69,6 +69,7 @@ export function rowsOfMempool(list, dex, net) {
   return rows;
 }
 
+const round = x => Number(x.toPrecision(12));   // 1.0150000000000001 -> 1.015
 const sameOrder = (row, t) => row.under_asset === t.under_asset && row.under_amount === t.under_amount && row.pair_asset === t.pair_asset
   && row.pair_total === t.pair_total && (row.maker || '').toLowerCase() === (t.maker || '').toLowerCase();
 
@@ -106,7 +107,7 @@ export function fills(rows, { base, quote, bdec = 8, qdec = 6, tip }) {
     else continue;
     if (b === 0n) continue;
     const size = Number(b) / 10 ** bdec, value = Number(qa) / 10 ** qdec;
-    out.push({ tx: r.tx, block: r.block, time: r.time, side, price: value / size, size: String(b), quoteAmount: String(qa), maker: r.maker,
+    out.push({ tx: r.tx, block: r.block, time: r.time, side, price: round(value / size), size: String(b), quoteAmount: String(qa), maker: r.maker,
       pending: r.block == null, confirmations: r.block == null ? 0 : tip - r.block + 1 });
   }
   return out;
@@ -121,8 +122,8 @@ export function book(orders, { base, quote, bdec = 8, qdec = 6 }) {
     if (ua === 0n || pt === 0n) continue;
     const flags = { tx: o.tx, maker: o.maker, pending: o.pending, confirmations: o.confirmations, ...(o.pendingTake ? { pendingTake: o.pendingTake } : {}), ...(o.pendingCancel ? { pendingCancel: o.pendingCancel } : {}),
       order: { under_asset: o.under_asset, under_amount: o.under_amount, pair_asset: o.pair_asset, pair_total: o.pair_total, maker: o.maker } };
-    if (o.under_asset === base && o.pair_asset === quote) asks.push({ price: (Number(pt) / 10 ** qdec) / (Number(ua) / 10 ** bdec), size: String(ua), ...flags });
-    else if (o.under_asset === quote && o.pair_asset === base) bids.push({ price: (Number(ua) / 10 ** qdec) / (Number(pt) / 10 ** bdec), size: String(pt), ...flags });
+    if (o.under_asset === base && o.pair_asset === quote) asks.push({ price: round((Number(pt) / 10 ** qdec) / (Number(ua) / 10 ** bdec)), size: String(ua), ...flags });
+    else if (o.under_asset === quote && o.pair_asset === base) bids.push({ price: round((Number(ua) / 10 ** qdec) / (Number(pt) / 10 ** bdec)), size: String(pt), ...flags });
   }
   asks.sort((a, b) => a.price - b.price); bids.sort((a, b) => b.price - a.price);
   return { asks, bids };
