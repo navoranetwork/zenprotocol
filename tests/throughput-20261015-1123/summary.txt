@@ -1,0 +1,2 @@
+[2026-10-15 11:23] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
+[2026-10-15 11:23] B: ac632a07 Throughput measurement switches: ZP_VERIFIED_SIGNATURES=0 tur; load tool: zenprotocol 4372727b ZP Wallet 0.18.0: trade on the Dex from M
