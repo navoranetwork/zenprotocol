@@ -11,6 +11,29 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.20.0 — 2026-10-15
+
+### Added
+- ZP ⇄ BTC as easy as the bridge: two tabs, **Buy ZP** and **Sell ZP**, with a "Real bitcoin, test ZP" banner on the
+  testnet.
+  - Offers as cards: ZP, total in BTC, price per ZP in BTC and dollars, and "about N min after you pay".
+  - One list of steps for a purchase (Reserved → Pay → Bitcoin confirmations → Proof sent → ZP received) and for a sale
+    (Reserved by a buyer → The buyer pays you → confirmations → The ZP goes to the buyer), each with its expected time.
+  - Selling without typing Bitcoin addresses: paste the Bitcoin account key (zpub, xpub or ypub) once; each offer gets
+    new receive addresses from it (BIP84 / BIP49), skipping any used by this browser, by the market or on Bitcoin, and
+    continuing where the last offer stopped, also after a reload. The key stays on this device (Settings → Forget).
+    Or a connected Bitcoin wallet's one address (one reservation, said so), or typed addresses as before.
+  - Bitcoin wallets in the browser (WBIP004 providers such as Xverse and Leather with their own icon and name; UniSat,
+    OKX): only asked for an address, or to send an exact amount to an exact address in their own confirm screen. A
+    wallet on the wrong Bitcoin network is refused.
+  - "Pay with <wallet>" for a purchase, after a screen showing the address and amount match the reservation. Off until
+    switched on at build time (`BTC_WALLET_PAY=1`), and limited to 0.01 BTC per purchase; the QR code always works.
+  - Settings → Bitcoin data: which Esplora service is asked about addresses (mempool.space by default), what it learns,
+    and another one can be set.
+
+### Changed
+- Take back stays visible and is disabled with the reason (reserved, paid, or the 10 blocks after a reservation).
+
 ## 0.19.0 — 2026-10-15
 
 ### Added

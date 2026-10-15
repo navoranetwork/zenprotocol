@@ -205,3 +205,25 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .card.buy { border-color: var(--accent); }
 .bar { display: grid; gap: 4px; margin: 10px 0 6px; } .bar span { height: 6px; border-radius: 3px; background: var(--line); } .bar span.on { background: var(--accent); }
 .steps-list { padding-left: 18px; margin: 10px 0; display: grid; gap: 6px; }
+/* ZP <-> BTC: buy/sell tabs, offer cards, the steps of a purchase or a sale, Bitcoin wallet tiles */
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .seg2 .chip { text-align: center; padding: 12px 4px; font-size: 15px; }
+.offers { display: grid; gap: 10px; margin-top: 10px; }
+.offer { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface2); }
+.offzp { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--ink2); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.stepper { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; }
+.stepper li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; position: relative; padding-bottom: 14px; }
+.stepper li:not(:last-child)::before { content: ""; position: absolute; left: 11px; top: 24px; bottom: 0; width: 2px; background: var(--line); }
+.stepper li.done:not(:last-child)::before { background: var(--accent); }
+.sdot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font: 700 13px var(--sans); color: var(--accent-ink); background: var(--bg); }
+.stepper li.done .sdot { background: var(--accent); border-color: var(--accent); }
+.stepper li.now .sdot { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(63, 193, 160, .18); }
+.stepper li.next .sl { color: var(--muted); }
+.sl { font-weight: 600; line-height: 24px; } .sbody { min-width: 0; }
+.sd { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.countdown { font-size: 14px; }
+.linkbtn { background: none; border: 0; color: var(--accent); font: 600 13px var(--sans); cursor: pointer; padding: 4px 0; align-self: center; }
+.wtiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.wtile { display: flex; align-items: center; gap: 10px; padding: 12px; text-align: left; }
+.wicon { border-radius: 6px; flex: none; } .wicon.blank { display: inline-flex; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--line); color: var(--ink2); font-weight: 700; }
+.btn .wicon { margin-right: 2px; }
