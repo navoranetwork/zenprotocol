@@ -9,6 +9,7 @@ import { openWallet } from '../../src/wallet.js';
 import { VOTING_CONTRACT, CGP_CONTRACT } from '../../src/cgp.js';
 import { v1ContractId } from '../../src/engine.js';
 import { Reader, Writer, Asset, VarInt, Output, Outpoint, Data, serializeTx, deserializeTx, txHash, hex, unhex } from '../../src/serialize.js';
+import { sha3_256 } from '@noble/hashes/sha3.js';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
 const NET = arg('net', 'test'), PORT = Number(arg('port', 8082));
@@ -16,6 +17,8 @@ const st = { tip: Number(arg('tip', 95)), alloc: Number(arg('alloc', 0)), zp: Bi
 const VOTING = VOTING_CONTRACT[NET], CGP_ADDR = encodeAddress(unhex(CGP_CONTRACT[NET]), NET, true);   // the CGP fund holds 1,000 ZP
 // ZP <-> BTC swap (a V1 contract) and the site's prover status (/swap/status) when the wallet's node URL ends in /node
 const SWAP = '00000001' + 'dd'.repeat(32), SWAP_ADDR = encodeAddress(unhex(SWAP), NET, true);
+// a V1 Dex with the site's order list (/explorer/api/dex/orders): a bid and an ask of a market maker, and with dexmine=1 an order of this wallet
+const DEX = '00000001' + 'fd'.repeat(32), DEX_ADDR = encodeAddress(unhex(DEX), NET, true), MM_PUB = '02' + 'ab'.repeat(32);
 const w = openWallet({ id: 'm', name: 'm', network: NET, kind: 'mnemonic' }, Array(23).fill('abandon').concat('art').join(' '));
 const key0 = deriveKey(w.account, 0, 0), addr0 = encodeAddress(key0.pkHash, NET);
 const other = encodeAddress(deriveKey(w.account, 0, 21).pkHash, NET);
@@ -41,10 +44,18 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
+        case '/explorer/api/dex/orders': {
+          const ZU = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';
+          const all = [{ tx: 'b1'.repeat(32), block: 2090, under_asset: ZU, under_amount: '9900000', pair_asset: '00', pair_total: '10000000000', maker: MM_PUB },
+            { tx: 'a1'.repeat(32), block: 2091, under_asset: '00', under_amount: '10000000000', pair_asset: ZU, pair_total: '10100000', maker: MM_PUB },
+            ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])];
+          return send(res, 200, { tip: st.tip, dex: DEX, orders: all.filter(o => !(st.dexGone || []).includes(o.tx)) });
+        }
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
         case '/__published': return send(res, 200, st.published);
+        case '/__lastdex': return send(res, 200, st.lastDex || null);
         case '/blockchain/info': return send(res, 200, { chain: NET === 'main' ? 'main' : 'testnet', blocks: st.tip, headers: st.tip, difficulty: 0.1, medianTime: Date.now() });
         case '/blockchain/cgp': return send(res, 200, { interval: Math.floor(st.tip / (NET === 'main' ? 10000 : 100)) + 1, allocation: st.alloc, payout: null });
         case '/blockchain/candidates': return send(res, 200, st.cands ? [
@@ -117,7 +128,7 @@ http.createServer((req, res) => {
           for (let i = 0; i < n; i++) { if (r.u8() !== 1) throw new Error('pointed output expected'); inputs.push({ type: 'outpoint', outpoint: Outpoint.read(r) }); inSum += Output.read(r).spend.amount; }
           const m = VarInt.read(r), outputs = []; for (let i = 0; i < m; i++) outputs.push(Output.read(r));
           const msg = Data.read(new Reader(unhex(body.messageBody)));
-          const swap = body.address === SWAP_ADDR, zen = { contract: { version: 0, hash: new Uint8Array(32) }, subtype: new Uint8Array(32) };
+          const swap = body.address === SWAP_ADDR, dex = body.address === DEX_ADDR, zen = { contract: { version: 0, hash: new Uint8Array(32) }, subtype: new Uint8Array(32) };
           const add = { inputs: [], outputs: [] };
           if (swap) {
             if (!/^0[23][0-9a-f]{64}$/.test(body.options?.sender || '')) return send(res, 400, 'offer needs id, sats, s0, returnAddress, and a signed call', 'text/plain');
@@ -129,7 +140,27 @@ http.createServer((req, res) => {
             }
             if (body.command === 'cancel') { add.inputs.push({ type: 'outpoint', outpoint: { txHash: unhex('ee'.repeat(32)), index: 0 } }); add.outputs.push({ lock: { type: 'PK', hash: key0.pkHash }, spend: { asset: zen, amount: 300000000n } }); }
           }
-          const tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract', contractId: swap ? { version: 1, hash: unhex(SWAP.slice(8)) } : { version: 0, hash: unhex(VOTING.slice(8)) }, command: body.command,
+          if (dex) {   // as contracts/v1/Dex.fst: Take (anonymous), Make and Cancel (signed by the maker)
+            const f = Object.fromEntries(msg.v), dexLock = { type: 'Contract', contractId: { version: 1, hash: unhex(DEX.slice(8)) } };
+            const aid = id => id === '00' ? zen : { contract: { version: parseInt(id.slice(0, 8), 16), hash: unhex(id.slice(8, 72)) }, subtype: new Uint8Array(32) };
+            const order = { contract: { version: 1, hash: unhex(DEX.slice(8)) }, subtype: unhex('0e'.repeat(32)) }, makerHash = sha3_256(f.MakerPubKey.v);
+            const signed = /^0[23][0-9a-f]{64}$/.test(body.options?.sender || '');
+            if (body.command === 'Take') {
+              const ua = f.UnderlyingAmount.v, ot = f.OrderTotal.v, pr = f.ProvidedAmount.v, pay = f.RequestedPayout.v;
+              if (pay !== ua * pr / ot) return send(res, 400, 'Incorrect requested payout', 'text/plain');
+              add.inputs.push({ type: 'outpoint', outpoint: { txHash: unhex('fd'.repeat(32)), index: 0 } });
+              add.outputs.push({ lock: f.returnAddress.v, spend: { asset: aid(f.UnderlyingAsset.v), amount: pay } }, { lock: { type: 'PK', hash: makerHash }, spend: { asset: aid(f.PairAsset.v), amount: pr } });
+              if (pr < ot) add.outputs.push({ lock: dexLock, spend: { asset: aid(f.UnderlyingAsset.v), amount: ua - pay } }, { lock: dexLock, spend: { asset: order, amount: 1n } });
+              add.outputs.push({ lock: { type: 'Destroy' }, spend: { asset: order, amount: 1n } });
+              st.lastDex = { command: 'Take', provided: String(pr), payout: String(pay), signed };
+            } else if (body.command === 'Make' || body.command === 'Cancel') {
+              if (!signed || body.options.sender !== hex(f.MakerPubKey.v)) return send(res, 400, 'SenderPubKey must match MakerPubKey', 'text/plain');
+              if (body.command === 'Make') { add.inputs.push({ type: 'mint', spend: { asset: order, amount: 1n } }); add.outputs.push({ lock: dexLock, spend: { asset: order, amount: 1n } }, { lock: dexLock, spend: { asset: aid(f.UnderlyingAsset.v), amount: f.UnderlyingAmount.v } }); }
+              else { add.inputs.push({ type: 'outpoint', outpoint: { txHash: unhex('fd'.repeat(32)), index: 1 } }); add.outputs.push({ lock: { type: 'PK', hash: makerHash }, spend: { asset: aid(f.UnderlyingAsset.v), amount: f.UnderlyingAmount.v } }, { lock: { type: 'Destroy' }, spend: { asset: order, amount: 1n } }); }
+              st.lastDex = { command: body.command, signed };
+            }
+          }
+          const tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract', contractId: dex ? { version: 1, hash: unhex(DEX.slice(8)) } : swap ? { version: 1, hash: unhex(SWAP.slice(8)) } : { version: 0, hash: unhex(VOTING.slice(8)) }, command: body.command,
             messageBody: msg, stateCommitment: { type: 'NotCommitted' }, beginInputs: inputs.length, beginOutputs: outputs.length, inputsLength: add.inputs.length, outputsLength: add.outputs.length, signature: null, cost: 5n }] };
           return send(res, 200, hex(serializeTx(tx)), 'text/plain');
         }

@@ -5,7 +5,8 @@ import { newMnemonic, checkMnemonic, isValidAddress, decodeAddress, encodeAddres
 import { NodeClient, NodeError, DEFAULT_NODES } from '../src/node.js';
 import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
-import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1 } from '../src/wallet.js';
+import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall } from '../src/wallet.js';
+import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel } from '../src/dex.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
@@ -36,6 +37,58 @@ const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || ''
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
+// ---------------------------------------------------------------- Dex (contracts/v1/Dex.fst through src/dex.js)
+// orders come from the site's index, which trails the chain by about 10 blocks; an order taken or cancelled here is
+// marked at once and disappears when the Dex no longer holds it
+const dexPending = new Map();   // order tx -> 'taking' | 'cancelling'
+const myPub = () => { const k = signerOf(S.open.get(active().id)); return k ? hex(k.publicKey) : ''; };
+function orderLine(o) {
+  const price = Number(o.pairTotal) / 10 ** decimalsOf(o.pairAsset) / (Number(o.underAmount) / 10 ** decimalsOf(o.underAsset));
+  return `Sells <b>${esc(withUnit(o.underAsset, o.underAmount))}</b> for ${esc(withUnit(o.pairAsset, o.pairTotal))}<div class="muted small">${esc(price.toLocaleString('en-US', { maximumSignificantDigits: 6 }))} ${esc(unitOf(o.pairAsset))} per ${esc(unitOf(o.underAsset))}</div>`;
+}
+function dexView(m, base, loading) {
+  if (!m?.dex) return `<div class="card"><p class="muted small">${loading ? 'Loading…' : 'This site has no Dex.'}</p></div>`;
+  const me = myPub(), spendable = canSpend(S.open.get(active().id));
+  const list = (m.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).filter(Boolean);
+  const rows = list.map(o => {
+    const p = dexPending.get(o.tx), mineO = myOrder(o, me), who = mineO ? 'Your order' : (() => { const n = contractNames[encodeAddress(Uint8Array.from(pkHashOf(o.maker).match(/../g).map(h => parseInt(h, 16))), net())]; return n ? esc(n) : 'Another trader'; })();
+    const btn = p ? `<span class="muted small">${p === 'taking' ? 'Being taken…' : 'Being cancelled…'}</span>` : !spendable ? '' : mineO
+      ? `<button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : `<button class="btn primary mini" data-act="dex-take" data-tx="${esc(o.tx)}">Take</button>`;
+    return `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div><div>${orderLine(o)}</div><div class="muted small">${who}</div></div></div><div>${btn}</div></div>`;
+  }).join('');
+  const assets = (S.data.get(active().id)?.state?.assets || []).filter(x => x.asset === '00' || x.spendable > 0n);
+  const known = [...new Set(['00', ...assets.map(x => x.asset), ...list.flatMap(o => [o.underAsset, o.pairAsset])])];
+  const give = S.draft.dgive && known.includes(S.draft.dgive) ? S.draft.dgive : '00';
+  const want = S.draft.dwant && known.includes(S.draft.dwant) && S.draft.dwant !== give ? S.draft.dwant : known.find(a => a !== give) || '';
+  const pick = (name, sel) => `<div class="tokpick">${known.filter(a => name === 'dwant' ? a !== give : true).map(a => `<button type="button" class="chip tokchip ${a === sel ? 'on' : ''}" aria-checked="${a === sel}" role="radio" data-act="dex-pick" data-name="${name}" data-asset="${esc(a)}">${a === '00' ? '<span class="zpdot">ZP</span>' : tokenIcon(a, 22)}<span><b>${esc(unitOf(a))}</b></span></button>`).join('')}</div>`;
+  const has = assets.find(x => x.asset === give);
+  return `<div class="card"><h2>Open orders</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No open orders.</p>'}</div>
+      <p class="muted small" data-s="mt10">A new order shows here about 10 blocks after it is made. Taking needs no signature from the maker; you can take part of an order.</p></div>
+    ${spendable && want ? `<form class="card" data-form="dex-make"><h2>New order</h2>
+      <div class="field"><span>You give</span>${pick('dgive', give)}<input name="give" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(S.draft.dgamt || '')}"><span class="muted small">Available ${esc(tokenAmount(give, has?.spendable || 0n))} ${esc(unitOf(give))}</span></div>
+      <div class="field"><span>You want</span>${pick('dwant', want)}<input name="want" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(S.draft.dwamt || '')}"></div>
+      <p class="muted small">Your ${esc(unitOf(give))} waits in the Dex until someone takes the order or you cancel it. Signed with this wallet's key.</p>
+      ${errBox()}<button class="btn primary big">Review order</button></form>` : ''}`;
+}
+async function dexPrepare(kind, o, extra = {}) {
+  const a = active(), w = S.open.get(a.id); await refreshWallet(a.id);
+  const d = S.data.get(a.id); if (!d?.state) throw new Error('Could not read the balance from the node');
+  const signer = signerOf(w), me = hex(signer.publicKey), dex = S.markets.dex, myHash = hex(decodeAddress(receiveAddress(w)).hash);
+  let prepared, lines;
+  if (kind === 'take') {
+    const { body, payout } = takeBody(o, extra.provided, decodeAddress(receiveAddress(w)).hash);
+    prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Take', body, spends: [{ asset: o.pairAsset, amount: extra.provided }], expect: expectTake(o, extra.provided, payout, myHash) });
+    lines = [['You give', withUnit(o.pairAsset, extra.provided)], ['You get', withUnit(o.underAsset, payout)], ...(extra.provided < o.pairTotal ? [['Left in the order', withUnit(o.underAsset, o.underAmount - payout) + ' for ' + withUnit(o.pairAsset, o.pairTotal - extra.provided)]] : [])];
+  } else if (kind === 'make') {
+    prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Make', body: makeBody({ ...o, maker: me }), spends: [{ asset: o.underAsset, amount: o.underAmount }], signer, expect: expectMake(o) });
+    lines = [['You give', withUnit(o.underAsset, o.underAmount)], ['You want', withUnit(o.pairAsset, o.pairTotal)]];
+  } else {
+    prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Cancel', body: cancelBody(o), signer, expect: expectCancel(o, pkHashOf(o.maker)) });
+    lines = [['Back to you', withUnit(o.underAsset, o.underAmount)]];
+  }
+  S.modal = { type: 'dex-confirm', kind, o, prepared, lines }; S.error = ''; render();
+}
+
 function bridgeNote(to, asset) {
   const named = contractNames[String(to || '').trim()];
   if (!toBridge(to) && typeof named === 'string') return `<div class="card small">This is the <b>${esc(named)}</b>, not the USDC bridge: nothing sent here is paid out as USDC.</div>`;
@@ -112,8 +165,8 @@ async function loadMarkets() {
     const round = norm(await get('/oracle/rounds/latest'));
     let evidence = {}; try { evidence = JSON.parse(round.evidence || '{}'); } catch { /* older round */ }
     if (!Array.isArray(round.tickers) || !Array.isArray(round.values)) throw new Error('unexpected oracle answer');
-    const orders = await get('/explorer/api/dex/orders').then(j => Array.isArray(j?.orders) ? j.orders : []).catch(() => []);
-    S.markets = { round, evidence, orders, day: new Date(round.timestamp).toISOString().slice(0, 10) };
+    const dj = await get('/explorer/api/dex/orders').catch(() => null), orders = Array.isArray(dj?.orders) ? dj.orders : [];
+    S.markets = { round, evidence, orders, dex: typeof dj?.dex === 'string' && /^[0-9a-f]{72}$/.test(dj.dex) ? dj.dex : null, day: new Date(round.timestamp).toISOString().slice(0, 10) };
   } catch (e) { S.markets = null; S.marketsError = 'Could not read the oracle: ' + e.message; }
   await loadSwap();
 }
@@ -685,13 +738,7 @@ const views = {
       body = `${errCard}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices yet.</p>'}</div>
         <p class="muted small" data-s="mt10">Several sources must agree; stocks and gold are end-of-day closes.</p></div>`;
     } else if (tab === 'dex') {
-      const orders = (m?.orders || []).slice(0, 20).map(o => {
-        let text = '';
-        try { text = `${unit(o.under_asset, o.under_amount)} for ${unit(o.pair_asset, o.pair_total)}`; } catch { text = 'order'; }
-        return `<div class="item"><div><div>${esc(text)}</div><div class="muted small mono" title="${esc(o.maker || '')}">${esc(shortAddr(String(o.maker || '')))}</div></div></div>`;
-      }).join('');
-      body = `${errCard}<div class="card"><h2>Open orders</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : orders || '<p class="muted small">No open orders.</p>'}</div>
-        ${base ? `<p class="muted small" data-s="mt10">Trading from the wallet comes next. Today trade on <a href="${esc(base)}/dex.html" rel="noopener">the Dex page</a>.</p>` : ''}</div>`;
+      body = errCard + dexView(m, base, loading);
     } else body = swapCard();
     return `${top()}<div class="screen"><h1>Markets</h1>${head}${body}</div>${nav('markets')}`;
   },
@@ -979,6 +1026,24 @@ function modalHtml() {
     <p>The contract becomes active when the transaction is in a block (about 4 minutes), for ${m.blocks.toLocaleString('en-US')} blocks.</p>
     <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
+  if (m.type === 'dex-take') {
+    const o = m.o, have = S.data.get(active().id)?.state?.assets.find(x => x.asset === o.pairAsset)?.spendable || 0n, v = S.draft.dtake ?? '';
+    let get = ''; try { const p = o.pairAsset === '00' ? parseZP(v) : parseUnits(v, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal) get = withUnit(o.underAsset, payoutFor(o, p)); } catch { /* not yet */ }
+    return `<div class="modal" role="dialog" aria-modal="true"><form class="sheet" data-form="dex-take"><h2>Take order</h2>
+    <div class="card small">${orderLine(o)}</div>
+    <label class="field"><span class="row" data-s="between"><span class="tname">${o.pairAsset === '00' ? '' : tokenIcon(o.pairAsset, 18)}You give (${esc(unitOf(o.pairAsset))})</span><span data-s="right">You have ${esc(tokenAmount(o.pairAsset, have))}</span></span>
+      <span class="row"><input name="give" inputmode="decimal" autocomplete="off" value="${esc(v)}" placeholder="up to ${esc(tokenAmount(o.pairAsset, o.pairTotal))}"><button type="button" class="btn" data-act="dex-all" data-s="fixed">Whole order</button></span></label>
+    <div class="kv"><span class="muted">You get</span><span class="amt" id="dex-get">${get ? esc(get) : '–'}</span></div>
+    ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review'}</button></div></form></div>`;
+  }
+  if (m.type === 'dex-confirm') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>${m.kind === 'take' ? 'Confirm take' : m.kind === 'make' ? 'Confirm order' : 'Cancel order'}</h2>
+    <div class="card">${m.lines.map(([k, v]) => `<div class="kv"><span class="muted">${esc(k)}</span><span class="amt">${esc(v)}</span></div>`).join('')}<div class="kv"><span class="muted">Fee</span><span>1 kalapa</span></div></div>
+    <p class="muted small">Checked before signing: the Dex pays exactly this, and nothing goes to anyone else.</p>${errBox()}
+    <div class="row"><button class="btn" data-act="close">Back</button><button class="btn primary" data-act="dex-send" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
+  if (m.type === 'dex-sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">Sent</h2>
+    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the order list about 10 blocks after its block.' : 'The cancel is on its way. Your coins come back in the next block.'}</p>
+    <div class="card small"><div class="between"><span class="muted">Transaction</span><button type="button" class="chip mini" data-act="copy" data-text="${esc(m.hash)}">Copy</button></div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
+    <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'token') {
     const a = active(), st = S.data.get(a.id)?.state, x = st?.assets.find(y => y.asset === m.asset) || { spendable: 0n, maturing: 0n }, bridge = S.bridge && m.asset === S.bridge.asset;
     const rows = (S.data.get(a.id)?.history || []).filter(h => h.asset === m.asset).slice(0, 8);
@@ -1384,6 +1449,17 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
+    if (act === 'dex-take') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (o) { S.draft.dtake = ''; S.modal = { type: 'dex-take', o }; S.error = ''; render(); } return; }
+    if (act === 'dex-all') { const o = S.modal?.o, i = $app.querySelector('[data-form=dex-take] [name=give]'); if (o && i) { i.value = tokenAmount(o.pairAsset, o.pairTotal).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
+    if (act === 'dex-cancel') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (!o) return; S.busy = true; render(); try { await dexPrepare('cancel', o); } finally { S.busy = false; render(); } return; }
+    if (act === 'dex-pick') { const f = $app.querySelector('[data-form=dex-make]'); S.draft = { ...S.draft, [t.dataset.name]: t.dataset.asset, dgamt: f?.give.value || '', dwamt: f?.want.value || '' }; S.error = ''; return render(); }
+    if (act === 'dex-send') {
+      S.busy = true; render();
+      const m = S.modal, hash = await publish(node(), m.prepared);
+      if (m.kind !== 'make') dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling');
+      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '' };
+      render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
+    }
     if (act === 'token') { S.modal = { type: 'token', asset: t.dataset.asset }; return render(); }
     if (act === 'token-send') { S.draft = { ...S.draft, asset: t.dataset.asset, amount: '' }; return go('send'); }
     if (act === 'send-asset') { S.draft = { ...S.draft, asset: t.dataset.asset, to: $app.querySelector('[name=to]')?.value || S.draft.to || '', amount: '' }; S.error = ''; return render(); }
@@ -1416,6 +1492,11 @@ $app.addEventListener('click', async e => {
 
 $app.addEventListener('input', e => {
   const t = e.target; S.lastActivity = Date.now();
+  if (t.name === 'give' && t.closest('[data-form=dex-take]') && S.modal?.o) {   // the payout as you type
+    const o = S.modal.o, el = $app.querySelector('#dex-get'); S.draft.dtake = t.value;
+    let txt = '–'; try { const p = o.pairAsset === '00' ? parseZP(t.value.trim().replace(/,/g, '')) : parseUnits(t.value, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal && payoutFor(o, p) > 0n) txt = withUnit(o.underAsset, payoutFor(o, p)); else if (p > o.pairTotal) txt = 'more than the order'; } catch { /* not yet */ }
+    if (el) el.textContent = txt; return;
+  }
   if (t.name === 'to' && t.closest('[data-form=send]') && (toBridge(t.value) !== toBridge(S.draft.to) || !!contractNames[t.value.trim()] !== !!contractNames[String(S.draft.to || '').trim()])) { S.draft = { ...S.draft, to: t.value, amount: $app.querySelector('[name=amount]')?.value || '' }; render(); const i = $app.querySelector('[name=to]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } return; }
   if (t.name === 'asset' && t.closest('[data-form=send]')) { S.draft = { ...S.draft, asset: t.value, to: $app.querySelector('[name=to]')?.value || '', amount: '' }; S.error = ''; return render(); }
   if (t.name === 'pct') syncAlloc(t.value, 'field');
@@ -1456,6 +1537,22 @@ $app.addEventListener('submit', async e => {
         S.vault.wallets.push(rec); storage.save(S.vault); S.open.set(rec.id, opened);
         S.settings.active = rec.id; saveSettings(); S.draft = {};
         go('home'); return refreshAll(true);
+      }
+      case 'dex-take': {
+        const o = S.modal.o, raw = String(v.give || '').trim(); S.draft.dtake = raw;
+        const provided = o.pairAsset === '00' ? parseZP(raw.replace(/,/g, '')) : parseUnits(raw, decimalsOf(o.pairAsset));
+        if (provided <= 0n) throw new Error('Enter how much you give');
+        if (provided > o.pairTotal) throw new Error(`The order takes at most ${withUnit(o.pairAsset, o.pairTotal)}`);
+        S.busy = true; render(); try { await dexPrepare('take', o, { provided }); } finally { S.busy = false; } return render();
+      }
+      case 'dex-make': {
+        const give = S.draft.dgive || '00', known = $app.querySelector('[data-form=dex-make] [data-name=dwant].on')?.dataset.asset || S.draft.dwant;
+        S.draft = { ...S.draft, dgamt: v.give, dwamt: v.want };
+        if (!known || known === give) throw new Error('Choose what you want for it');
+        const amt = (a, x) => a === '00' ? parseZP(String(x).trim().replace(/,/g, '')) : parseUnits(x, decimalsOf(a));
+        const underAmount = amt(give, v.give), pairTotal = amt(known, v.want);
+        if (underAmount <= 0n || pairTotal <= 0n) throw new Error('Enter both amounts');
+        S.busy = true; render(); try { await dexPrepare('make', { underAsset: give, underAmount, pairAsset: known, pairTotal }); } finally { S.busy = false; } return render();
       }
       case 'send': {
         const asset = v.asset || S.draft.asset || '00', to = v.to.trim(); S.draft = { to, amount: v.amount, asset };

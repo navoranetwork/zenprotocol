@@ -142,6 +142,11 @@ export function assetFromId(id) {
   if (!/^[0-9a-f]{72}([0-9a-f]{64})?$/.test(s)) throw new Error('Not an asset id: ' + id);
   return { contract: { version: parseInt(s.slice(0, 8), 16) >>> 0, hash: unhex(s.slice(8, 72)) }, subtype: s.length === 136 ? unhex(s.slice(72)) : ZERO32 };
 }
+// the node's id of an asset object (inverse of assetFromId)
+export function assetToId(a) {
+  if (isZero(a.contract.hash) && isZero(a.subtype)) return '00';
+  return (a.contract.version >>> 0).toString(16).padStart(8, '0') + hex(a.contract.hash) + (isZero(a.subtype) ? '' : hex(a.subtype));
+}
 export const assetToString = a => {
   const w = new Writer(); Asset.write(w, a);
   return isZero(a.contract.hash) && isZero(a.subtype) ? '00' : hex(w.out());

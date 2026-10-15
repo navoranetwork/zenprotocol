@@ -262,29 +262,40 @@ const spendableOwn = (w, state, u) => u.lock.type === 'PK' || (u.lock.type === '
 // SHA3(transaction hash ‖ Message{contract, command, body}) (Consensus/InputValidation/ContractV0.fs getSender).
 // amount: ZP (kalapas) the transaction leaves for the contract (an offer locks it); 0 for a call that only pays the fee.
 // expect(added): checks the inputs and outputs the contract added (the node is not trusted with our coins).
-export async function prepareSignedCall({ w, state, node, contractId, command, body, amount = 0n, signer, expect, exclude = [] }) {
-  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+// A contract call: `spends` [{asset (node id, '00' = ZP), amount}] go to the contract, plus a 1 kalapa fee in ZP.
+// `signer` signs the call (the contract sees a PK sender); without it the call is anonymous (e.g. a Dex Take).
+// `expect(added, cid)` checks what the contract adds before anything is signed.
+export async function prepareSignedCall({ amount = 0n, signer, ...rest }) {
   if (!signer?.privateKey || !signer?.publicKey) throw new Error('No key to sign the call');
+  return prepareContractCall({ ...rest, signer, spends: amount ? [{ asset: '00', amount }] : [] });
+}
+export async function prepareContractCall({ w, state, node, contractId, command, body, spends = [], signer = null, expect, exclude = [] }) {
+  if (!canSpend(w)) throw new Error('This is a watch-only wallet');
+  if (signer && (!signer.privateKey || !signer.publicKey)) throw new Error('No key to sign the call');
   const cid = contractIdOf(contractId);
-  const fee = 1n, need = amount + fee;
+  const fee = 1n, need = new Map([['00', fee]]);
+  for (const sp of spends) { if (!(sp.amount > 0n)) throw new Error('Amount must be positive'); need.set(sp.asset, (need.get(sp.asset) || 0n) + sp.amount); }
   const keyFor = u => w.keys.get(hex(u.lock.type === 'PK' ? u.lock.hash : u.lock.pkHash));
   const skip = new Set(exclude);
-  const pool = state.utxos.filter(u => u.spend.asset === '00' && spendableOwn(w, state, u) && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
-    .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : b.spend.amount < a.spend.amount ? -1 : 0));
-  const fund = []; let sum = 0n;
-  for (const u of pool) { if (sum >= need) break; fund.push(u); sum += u.spend.amount; }
-  if (sum < need) throw new Error(amount ? 'Not enough spendable ZP in this wallet (the offer plus a 1 kalapa fee)' : 'You need a little ZP in a spendable output to pay the 1 kalapa fee');
+  const fund = [], outputs = [], change = hash => ({ type: 'PK', hash });
+  const changeHash = decodeAddress(receiveAddress(w)).hash;
+  for (const [asset, amt] of need) {
+    const pool = state.utxos.filter(u => u.spend.asset === asset && (asset === '00' ? spendableOwn(w, state, u) : u.lock.type === 'PK') && keyFor(u) && !skip.has(hex(u.outpoint.txHash) + ':' + u.outpoint.index))
+      .sort((a, b) => (b.spend.amount > a.spend.amount ? 1 : b.spend.amount < a.spend.amount ? -1 : 0));
+    let sum = 0n; const took = [];
+    for (const u of pool) { if (sum >= amt) break; took.push(u); sum += u.spend.amount; }
+    if (sum < amt) throw new Error(asset === '00' ? (amt > fee ? 'Not enough spendable ZP in this wallet (the amount plus a 1 kalapa fee)' : 'You need a little ZP in a spendable output to pay the 1 kalapa fee') : 'Not enough of that token in this wallet');
+    fund.push(...took.map(u => ({ ...u, assetObj: assetFromId(asset) })));
+    if (sum > amt) outputs.push({ lock: change(changeHash), spend: { asset: assetFromId(asset), amount: sum - amt } });
+  }
   if (fund.length > 50) throw new Error('This needs too many small outputs: send yourself the ZP in one transfer first');
-  const spend = a => ({ asset: ZEN_ASSET, amount: a });
-  const outputs = [];
-  if (sum > need) outputs.push({ lock: { type: 'PK', hash: decodeAddress(receiveAddress(w)).hash }, spend: spend(sum - need) });
-  outputs.push({ lock: { type: 'Fee' }, spend: spend(fee) });
-  const inputs = fund.map(u => ({ outpoint: u.outpoint, lock: u.lock, spend: spend(u.spend.amount) }));
+  outputs.push({ lock: { type: 'Fee' }, spend: { asset: ZEN_ASSET, amount: fee } });
+  const inputs = fund.map(u => ({ outpoint: u.outpoint, lock: u.lock, spend: { asset: u.assetObj, amount: u.spend.amount } }));
   const bw = new Writer(); Data.write(bw, body); const bodyHex = hex(bw.out());
 
   const res = await node.executeContract({
     address: encodeAddress(unhex(contractId), w.network, true), command, messageBody: bodyHex,
-    options: { sender: hex(signer.publicKey) }, tx: skeletonHex(inputs, outputs),
+    options: signer ? { sender: hex(signer.publicKey) } : {}, tx: skeletonHex(inputs, outputs),
   });
   if (typeof res !== 'string' || !/^([0-9a-f]{2})+$/.test(res)) throw new Error(typeof res === 'string' && res ? 'The contract refused: ' + res.slice(0, 200) : 'The node sent an invalid answer');
 
@@ -307,10 +318,13 @@ export async function prepareSignedCall({ w, state, node, contractId, command, b
 
   const digest = txHash(tx);
   const mw = new Writer(); ContractId.write(mw, cid); Str.write(mw, command); mw.u8(1); Data.write(mw, cw[0].messageBody);   // Serialization.Message
-  const callMsg = sha3_256(Uint8Array.from([...digest, ...mw.out()]));
-  const csig = signDigest(signer.privateKey, callMsg);
-  if (!verifyDigest(csig, callMsg, signer.publicKey)) throw new Error('Signing failed');
-  const contractWitness = { ...cw[0], signature: { publicKey: signer.publicKey, signature: csig } };
+  let contractWitness = cw[0];
+  if (signer) {
+    const callMsg = sha3_256(Uint8Array.from([...digest, ...mw.out()]));
+    const csig = signDigest(signer.privateKey, callMsg);
+    if (!verifyDigest(csig, callMsg, signer.publicKey)) throw new Error('Signing failed');
+    contractWitness = { ...cw[0], signature: { publicKey: signer.publicKey, signature: csig } };
+  }
   // one PK witness per input; the last also covers the contract witness after it (FollowingWitnesses)
   const pkws = fund.map((u, i) => {
     const key = keyFor(u), last = i === fund.length - 1;

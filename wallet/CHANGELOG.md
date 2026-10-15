@@ -11,6 +11,19 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.18.0 — 2026-10-15
+
+### Added
+- Trade on the Dex from Markets → Dex (contracts/v1/Dex.fst):
+  - Take an order, whole or in part: you choose how much you give, the wallet shows what you get
+    (floor(underlying × given / total), as the Dex pays) and what stays in the order. The call is anonymous, as the
+    Dex allows; the coins you give can be ZP or a token such as zUSDC.
+  - Cancel your own orders (signed with this wallet's key); they show as "Your order".
+  - Make an order: what you give and what you want, by token, with both amounts.
+  - Before anything is signed the wallet checks what the Dex adds: you get exactly the payout, the maker gets exactly
+    what you give, and nothing goes to anyone else (src/dex.js).
+- Contract calls can send any asset and can be unsigned (prepareContractCall); offers and votes are unchanged.
+
 ## 0.17.1 — 2026-10-15
 
 ### Changed
