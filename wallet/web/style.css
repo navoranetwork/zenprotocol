@@ -200,3 +200,8 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .tokbal { font-size: 30px; font-weight: 700; margin: 12px 0 14px; font-variant-numeric: tabular-nums; }
 .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .sheet .list { max-height: 40vh; overflow: auto; }
+
+/* buying ZP with bitcoin */
+.card.buy { border-color: var(--accent); }
+.bar { display: grid; gap: 4px; margin: 10px 0 6px; } .bar span { height: 6px; border-radius: 3px; background: var(--line); } .bar span.on { background: var(--accent); }
+.steps-list { padding-left: 18px; margin: 10px 0; display: grid; gap: 6px; }

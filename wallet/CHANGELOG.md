@@ -11,6 +11,17 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.19.0 — 2026-10-15
+
+### Added
+- Buy ZP with bitcoin from Markets → ZP ⇄ BTC (BitZenSwap, the buyer's side), as on the site's swap page:
+  - others' offers with a Buy button; Reserve holds the offer for this wallet's address (the site's prover sends the
+    reservation and pays its fee; the wallet checks it is for its own address);
+  - the payment screen: exact amount, the seller's Bitcoin address, a QR code and "Open in my Bitcoin wallet", and how
+    long is left to pay (with a warning not to pay when too little time is left for the confirmations);
+  - live progress: payment seen, Bitcoin confirmations, proof sent, ZP received. Nothing to trust: the contract checks
+    the Bitcoin payment itself. One purchase at a time, kept across reloads; refreshes every 10 s while it runs.
+
 ## 0.18.0 — 2026-10-15
 
 ### Added

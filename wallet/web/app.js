@@ -196,6 +196,58 @@ const BTC_USED_KEY = 'zp-wallet.btc-scripts.v1';
 const usedScripts = () => { try { const v = JSON.parse(localStorage.getItem(BTC_USED_KEY)); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; } };
 const rememberScripts = xs => { try { localStorage.setItem(BTC_USED_KEY, JSON.stringify([...new Set([...usedScripts(), ...xs])].slice(-500))); } catch { /* private mode */ } };
 const swapState = o => takingBack(o) ? 'Taking back: waits for its block (about 4 minutes)' : o.payment?.proof ? 'Paid: the ZP went to the buyer' : o.payment ? `Buyer paid, ${o.payment.confs ?? 0} of ${o.payment.need} confirmations` : o.state === 'reserved' ? `Reserved until block ${Number(o.until).toLocaleString('en-US')}` : o.state === 'expired' ? ((S.swap?.zpTip ?? 0) + 1 < backFrom(o) ? `A reservation expired: open again; you can take it back from block ${backFrom(o).toLocaleString('en-US')}` : 'A reservation expired: open again') : 'Open';
+// ---------------------------------------------------------------- buying ZP with bitcoin (BitZenSwap, the buyer's side)
+// As the site's swap page: the prover reserves the offer for this wallet's address (POST /swap/reserve, it pays the
+// fee), the buyer pays the offer's Bitcoin address, and the contract releases the ZP when the prover's proof of the
+// payment is in a block. Nothing to sign on ZP. One purchase at a time, kept across reloads.
+const BUY_KEY = 'zp-wallet.btc-buy.v1';
+const BLOCK_MIN = 4;
+const holdOf = sats => sats <= 1000000 ? 20 : sats <= 10000000 ? 30 : 60;   // blocks the contract holds a reservation
+const payOf = sats => sats <= 1000000 ? 8 : sats <= 10000000 ? 11 : 15;     // ... of which the buyer has these to pay
+const hm = blocks => { const m = Math.max(0, blocks) * BLOCK_MIN; return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+const myBuy = () => { try { const b = JSON.parse(localStorage.getItem(BUY_KEY)); return b && b.net === net() && b.swapId === S.swap?.swapId && typeof b.id === 'string' ? b : null; } catch { return null; } };
+const setBuy = b => { try { if (b) localStorage.setItem(BUY_KEY, JSON.stringify({ ...b, net: net(), swapId: S.swap?.swapId })); else localStorage.removeItem(BUY_KEY); } catch { /* private mode */ } };
+function buyCard() {
+  const b = myBuy(); if (!b) return '';
+  const o = S.swap.offers.find(x => x.id === b.id), close = '<button class="btn" data-act="buy-done">Close</button>';
+  const head = t => `<div class="card buy"><h2>${t}</h2>`;
+  if (!o) return b.paid ? `${head('You received the ZP')}<p class="ok small">The contract checked your Bitcoin payment and released the ZP to this wallet.</p><button class="btn primary" data-act="buy-done">Done</button></div>`
+    : `${head('The offer is closed')}<p class="muted small">It is no longer in the market.</p>${close}</div>`;
+  const ours = !!(o.buyer && b.pk && String(o.buyer).toLowerCase() === String(b.pk).toLowerCase());
+  if (o.state === 'reserved' && ours && !b.held) { b.held = true; setBuy(b); }
+  if (!b.held) return `${head('Reserving…')}<p class="muted small"><span class="spin"></span> Waiting for the reservation to be in a ZP block (a few minutes). Do not pay yet: the payment details appear here.</p></div>`;
+  if (!ours || (o.state !== 'reserved' && !o.payment)) return `${head('Your reservation expired')}<div class="warn">Do not pay now. Reserve again if the offer is still open.</div>${close}</div>`;
+  const p = o.payment, left = Number(o.until) - (S.swap.zpTip ?? 0), rest = holdOf(o.sats) - payOf(o.sats), late = left < rest, amt = formatBTC(o.sats);
+  if (!p) {
+    const uri = `bitcoin:${o.address}?amount=${amt}`, q = qrcode(0, 'M'); q.addData(uri); q.make();
+    return `${head(`Pay ${esc(amt)} BTC`)}
+      ${late ? `<div class="warn"><b>Do not pay now.</b> Less than ${hm(rest)} is left on your reservation: too little for the Bitcoin confirmations. Wait until it expires and reserve again.</div>`
+        : `<div class="qr">${q.createSvgTag({ cellSize: 4, margin: 2, scalable: false })}</div>
+      <div class="kv"><span class="muted">Exact amount</span><span class="amt">${esc(amt)} BTC <button type="button" class="chip mini" data-act="copy" data-text="${esc(amt)}">Copy</button></span></div>
+      <div class="kv"><span class="muted">To</span><span class="mono small" data-s="wrap">${esc(o.address || '–')} <button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address || '')}">Copy</button></span></div>
+      <div class="card small">⏱ Pay within <b>${hm(left - rest)}</b> (held for you ${hm(left)} in all). The bitcoin goes straight to the seller; this address is for your reservation only.</div>
+      <a class="btn primary big" href="${esc(uri)}">Open in my Bitcoin wallet</a>`}
+      <p class="muted small">This screen updates by itself when the payment is seen.</p></div>`;
+  }
+  const c = Math.max(0, p.confs ?? 0), need = p.need || o.confs;
+  if (p.proof && !b.paid) { b.paid = true; setBuy(b); }
+  return `${head(p.proof ? 'Releasing your ZP' : 'Payment received')}
+    <div class="kv"><span class="muted">Bitcoin confirmations</span><span>${Math.min(c, need)} of ${need}</span></div>
+    <div class="bar" style="grid-template-columns: repeat(${need}, 1fr)" aria-hidden="true">${Array.from({ length: need }, (_, i) => `<span class="${i < c ? 'on' : ''}"></span>`).join('')}</div>
+    <p class="muted small">${p.proof ? 'The proof was sent. The ZP arrives with the next ZP block.' : p.block == null ? 'Waiting for the first Bitcoin block (about 10 minutes).' : `About ${(need - c) * 10} more minutes: one Bitcoin block every 10 minutes on average. You can close the wallet.`}</p>
+    <p class="muted small mono">Bitcoin ${esc(String(p.txid || '').slice(0, 16))}…</p></div>`;
+}
+function marketCard() {
+  const me = mySellers(), b = myBuy();
+  const list = S.swap.offers.filter(o => !me.has(o.seller) && o.state !== 'closed');
+  if (!list.length) return '<div class="card"><h2>Buy ZP with bitcoin</h2><p class="muted small">No offers from others right now.</p></div>';
+  return `<div class="card"><h2>Buy ZP with bitcoin</h2><div class="list">${list.map(o => {
+    const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(Number(o.until) - (S.swap.zpTip ?? 0))}` : o.state === 'closing' ? 'Being taken back by the seller' : `${o.confs} Bitcoin confirmations`;
+    return `<div class="item"><div><div><b>${esc(formatZP(BigInt(o.amount)))} ZP</b> for ${esc(formatBTC(o.sats))} BTC</div><div class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</div><div class="muted small">${esc(status)}</div></div>
+      ${b?.id === o.id ? '<span class="muted small">Yours</span>' : `<button class="btn primary mini" data-act="buy" data-id="${esc(o.id)}" ${o.canReserve && !b ? '' : 'disabled'}>Buy</button>`}</div>`;
+  }).join('')}</div>${b ? '<p class="muted small" data-s="mt10">Finish or close your purchase above to buy another.</p>' : '<p class="muted small" data-s="mt10">The offer is held for you while you pay; nobody else can take it and the seller cannot take it back.</p>'}</div>`;
+}
+
 function swapCard() {
   if (!siteBase()) return '<div class="card"><p class="muted small">ZP ⇄ BTC needs the community node, which serves the swap next to it.</p></div>';
   const sw = S.swap;
@@ -204,7 +256,7 @@ function swapCard() {
   const waiting = pendingOffers().map(p => `<div class="item"><div><div>${esc(formatZP(BigInt(p.amount)))} ZP for ${esc(formatBTC(p.sats))} BTC</div>
         <div class="small">${esc(rateText(p.sats, BigInt(p.amount)))}</div>
         <div class="muted small"><span class="spin"></span> Sent: waiting for the next block (about 4 minutes), then it is in the market</div></div></div>`).join('');
-  return `<div class="card"><div class="row" data-s="between"><h2>Your offers</h2><button class="btn primary small" data-s="fixed" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
+  return `${buyCard()}${marketCard()}<div class="card"><div class="row" data-s="between"><h2>Your offers</h2><button class="btn primary small" data-s="fixed" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
     <div class="list">${waiting}${mine.length ? mine.map(o => `<div class="item"><div><div>${esc(formatZP(BigInt(o.amount)))} ZP for ${esc(formatBTC(o.sats))} BTC</div>
         <div class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</div>
         <div class="muted small">${esc(swapState(o))} · ${esc(me.get(o.seller).name)}</div><div class="muted small">${o.scripts - o.used} of ${o.scripts} Bitcoin addresses unused</div></div>
@@ -212,7 +264,7 @@ function swapCard() {
       : waiting ? '' : '<p class="muted small">You have no offers. Sell ZP for bitcoin: the buyer pays straight to your Bitcoin address.</p>'}</div>
     ${S.modal ? '' : errBox()}</div>
     <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
-      <p class="muted small" data-s="mt10">Buyers reserve and pay on the <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC page</a>.</p>
+      <p class="muted small" data-s="mt10">Buyers reserve and pay here or on the <a href="${esc(siteBase())}/swap.html" rel="noopener">ZP ⇄ BTC page</a>.</p>
       <details class="how"><summary>How a sale works</summary><p class="muted small">Your ZP waits in a contract. A buyer reserves the offer (about 80 minutes up to 0.01 BTC, 2 hours up to 0.1 BTC, 4 hours above) and pays bitcoin to your Bitcoin address; the contract checks the payment on Bitcoin and releases the ZP to the buyer. You can take an offer back while it is not reserved, and from 10 blocks after a reservation ends (a payment slow to confirm can still arrive).</p></details></div>`;
 }
 
@@ -1026,6 +1078,15 @@ function modalHtml() {
     <p>The contract becomes active when the transaction is in a block (about 4 minutes), for ${m.blocks.toLocaleString('en-US')} blocks.</p>
     <div class="card small"><div class="muted">Contract address</div><div class="mono" data-s="wrap">${esc(m.address)}</div><div class="muted" data-s="mt10">Transaction</div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <div class="row"><button class="btn" data-act="copy" data-text="${esc(m.address)}">${I.copy}Copy address</button><button class="btn primary" data-act="close">Done</button></div></div></div>`;
+  if (m.type === 'buy') {
+    const o = S.swap?.offers.find(x => x.id === m.id); if (!o) return '';
+    const to = receiveAddress(S.open.get(active().id));
+    return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Buy ${esc(formatZP(BigInt(o.amount)))} ZP</h2>
+    <div class="card"><div class="kv"><span class="muted">You pay</span><span class="amt">${esc(formatBTC(o.sats))} BTC</span></div><div class="kv"><span class="muted">Price</span><span class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</span></div>
+      <div class="kv"><span class="muted">ZP to</span><span class="mono small">${esc(active().name)} · ${esc(shortAddr(to))}</span></div></div>
+    <ol class="small steps-list"><li>Reserve: the offer is held for you about <b>${hm(holdOf(o.sats))}</b> (no fee for you).</li><li>Pay the bitcoin within the first <b>${hm(payOf(o.sats))}</b>, from any Bitcoin wallet.</li><li>After ${o.confs} Bitcoin confirmations the contract releases the ZP here by itself.</li></ol>
+    ${errBox()}<div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="buy-reserve" data-id="${esc(o.id)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Reserve'}</button></div></div></div>`;
+  }
   if (m.type === 'dex-take') {
     const o = m.o, have = S.data.get(active().id)?.state?.assets.find(x => x.asset === o.pairAsset)?.spendable || 0n, v = S.draft.dtake ?? '';
     let get = ''; try { const p = o.pairAsset === '00' ? parseZP(v) : parseUnits(v, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal) get = withUnit(o.underAsset, payoutFor(o, p)); } catch { /* not yet */ }
@@ -1449,6 +1510,20 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'lock') return lock();
     if (act === 'toggle-pw') { const inp = t.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-pressed', String(show)); t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); return; }
+    if (act === 'buy') { S.modal = { type: 'buy', id: t.dataset.id }; S.error = ''; return render(); }
+    if (act === 'buy-done') { setBuy(null); return render(); }
+    if (act === 'buy-reserve') {
+      const id = t.dataset.id, buyer = receiveAddress(S.open.get(active().id));
+      S.busy = true; render();
+      try {
+        const r = await fetch(siteBase() + '/swap/reserve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, buyer }) });
+        const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+        if (!/^[0-9a-f]{64}$/.test(String(j.pkHash || ''))) throw new Error('The swap service sent an unexpected answer');
+        if (j.pkHash !== hex(decodeAddress(buyer).hash)) throw new Error('The reservation is not for this wallet');
+        setBuy({ id, buyer, pk: j.pkHash, tx: j.tx, at: Date.now() }); S.modal = null;
+      } finally { S.busy = false; }
+      render(); setTimeout(loadSwap, 15000); return;
+    }
     if (act === 'dex-take') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (o) { S.draft.dtake = ''; S.modal = { type: 'dex-take', o }; S.error = ''; render(); } return; }
     if (act === 'dex-all') { const o = S.modal?.o, i = $app.querySelector('[data-form=dex-take] [name=give]'); if (o && i) { i.value = tokenAmount(o.pairAsset, o.pairTotal).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
     if (act === 'dex-cancel') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (!o) return; S.busy = true; render(); try { await dexPrepare('cancel', o); } finally { S.busy = false; render(); } return; }
@@ -1674,6 +1749,7 @@ setInterval(() => { if (S.key && S.screen === 'home' && !S.modal) refreshAll(); 
 setInterval(() => { if (S.key && S.screen === 'vote' && !S.modal) refreshVotes(); }, 20000);
 // the ZP ⇄ BTC tab follows the market as the site's page does (reservations, payments, a sent offer, a take-back)
 setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'swap' && !S.modal && !document.hidden) loadSwap(); }, 30000);
+setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'swap' && !S.modal && !document.hidden && myBuy() && !myBuy().paid) loadSwap(); }, 10000);   // a purchase in progress
 ['keydown', 'pointerdown'].forEach(ev => addEventListener(ev, () => { S.lastActivity = Date.now(); }, { passive: true }));
 
 (async () => {
