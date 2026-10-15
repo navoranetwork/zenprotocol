@@ -5,7 +5,8 @@
 // Prices are USD per 1 ZP. 1 ZP = 1e8 kalapas, zUSDC has 6 decimals.
 //
 // Environment:
-//   MM_NODE (http://127.0.0.1:31567)  MM_PASSWORD  MM_SIGN (m/44'/258'/0'/0/0, a wallet address so proceeds show in the wallet)
+//   MM_NODE (http://127.0.0.1:31567)  MM_PASSWORD  MM_SIGN (a key of the node wallet, so proceeds show in the wallet; not the
+//               main key m/44'/258'/0'/0/0 when a bridge uses that wallet: scripts/v1/mm-key.mjs makes one)
 //   MM_DEX      Dex contract address (ctzn1...)       MM_ASSET  zUSDC asset id (hex)
 //   MM_PRICE    fixed reference price in USD per ZP (default 0.10)
 //   MM_ORACLE   oracle service url + ticker, e.g. http://127.0.0.1:8085/ZPUSD : takes the price from the latest round instead (falls back to MM_PRICE)
@@ -94,6 +95,13 @@ async function cycle(pk) {
 }
 
 if (!DEX || !USDC) { console.error('MM_DEX and MM_ASSET are required'); process.exit(1); }
+// the node wallet's main key (m/44'/258'/0'/0/0) is the bridge's ZP address: a Take pays the maker's key, and the bridge
+// would pay a linked taker's zUSDC out as USDC. Give the market maker its own key (scripts/v1/mm-key.mjs) unless no
+// bridge runs on this wallet (MM_MAIN_KEY_OK=1).
+if (SIGN === "m/44'/258'/0'/0/0" && env('MM_MAIN_KEY_OK', '') !== '1') {
+  console.error("MM_SIGN is the node wallet's main key, which is the bridge's ZP address: run scripts/v1/mm-key.mjs and set MM_SIGN (or MM_MAIN_KEY_OK=1 when no bridge uses this wallet)");
+  process.exit(1);
+}
 const pk = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '').toLowerCase();
 log(`market maker: key ${pk.slice(0, 12)}…, size ${SIZE} ZP, spread ${SPREAD * 1e4} bps${DRY ? ', DRY RUN' : ''}`);
 if (env('MM_CANCEL_ALL', '') === '1') {

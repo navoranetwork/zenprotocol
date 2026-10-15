@@ -188,8 +188,13 @@ toolchain 87b24e2: `Zen.Asset.parse` realized, the secp256k1 resolver), the engi
 (20,000 blocks, expires at block 22,417): `00000001fd5aa884b260058bf98db06d722cdb162e8cb03eeab920ba87ecfaae4a45cbf9`,
 `ctzn1qqqqqqq0at25gfvnqqk9lnrdsd4ezekck96xtq0h2hyst4plvl2hy53wtlym8deln`. `testnet-stack.env`: ZEN_DEX, DEX_ID,
 DEX_ADDRESS, MM_DEX and MM_ASSET (the V1 zUSDC) set (old file `testnet-stack.env.bak-dex-v0`); index, explorer and
-marketmaker recreated. The market maker's first ask on the V1 Dex: tx 52201a12…0b81. Its bid waits for V1 zUSDC in its
-address (the node wallet's `m/44'/258'/0'/0/0`, which is also the bridge's ZP address): fund it after the bridge test.
+marketmaker recreated. The market maker's first ask on the V1 Dex: tx 52201a12…0b81. 2026-10-15 12:38: that key (`m/44'/258'/0'/0/0`) is the bridge's ZP
+address, and the bridge now pays out USDC by itself for zUSDC sent there from a linked address, so a Take of the market
+maker's order would have paid the taker twice (wallet session's finding). The order was cancelled (tx 954f4a83…) and
+the market maker got its own key: `MM_SIGN=m/44'/258'/0'/2/0`, address
+`tzn1q27ngrump3ahlrtrys9y03c84hj9j8pjupsz0f6qrach80j3jjy6sn0732d` (`scripts/v1/mm-key.mjs`; old file
+`testnet-stack.env.bak-mm-key`); its first ask from it: tx 806bc2a4…4991. maker.mjs now refuses the main key, and the
+installer makes the key. Fund the market maker with V1 zUSDC at that address for its bid.
 The Dex page, the explorer's Dex API and the wallet's Markets tab read ZEN_DEX through the explorer, so they follow.
 The index's trade history keeps the V0 Dex's old trades (the table has no contract column).
 

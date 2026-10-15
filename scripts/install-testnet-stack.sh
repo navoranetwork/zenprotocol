@@ -88,6 +88,10 @@ put ORACLE_CONTRACT "$(get ORACLE_ADDRESS)"
 put BRIDGE_CONTRACT "$(get BRIDGE_ADDRESS)"; put BRIDGE_ASSET "$(get BRIDGE_ID)"
 put ZEN_DEX "$(get DEX_ID)"; put ZEN_NET test
 put MM_DEX "$(get DEX_ADDRESS)"; put MM_ASSET "$(get BRIDGE_ID)"
+if [ -z "$(get MM_SIGN)" ]; then   # the market maker's own key, off the bridge's ZP address (the wallet's main key)
+  MMK=$($D run --rm --network host -v "$DIR:/b" -w /b node:22-alpine node scripts/v1/mm-key.mjs "$API" "$PW" | sed -n "s/^MM_SIGN=//p")
+  [ -n "$MMK" ] && put MM_SIGN "$MMK" || { echo "could not make the market maker's key (scripts/v1/mm-key.mjs)"; exit 1; }
+fi
 [ -n "$(get MM_PRICE)" ] || put MM_PRICE 0.10
 [ -n "$(get ORACLE_PROVIDER)" ] || put ORACLE_PROVIDER "${ORACLE_PROVIDER:-auto}"
 [ "$(get ORACLE_PROVIDER)" = frankfurter ] && echo "$(get ORACLE_TICKERS)" | grep -q BTC && put ORACLE_PROVIDER auto   # frankfurter has no BTC
