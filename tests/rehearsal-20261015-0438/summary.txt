@@ -2,3 +2,12 @@
   Chain.fs:142:        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
   Chain.fs:189:        v1ContractsHeight=2050ul
   Chain.fs:217:        v1ContractsHeight=localV1Height
+[2026-10-15 04:38] toolchain: zp-contracts-v1 87b24e2 Zen.Asset.parse/fromSubtypeString/fromSubtypeInt, Zen.Contract
+[2026-10-15 04:38] image build: start (Zulib verification and the token DLL check run inside)
+[2026-10-15 04:47] image built: sha256:9a4d8bf46578; Zulib: 50 of 50 modules verify;token template DLL: a81bccb314d95e65c612dc11521c90e7ffced0a76c9243aa7595102c686c262f;
+[2026-10-15 04:47] saved: fa766d863d2b05eab056413f791987ad1ea1074bcab9030e0c64ce6c37944d1c (676M)
+[2026-10-15 04:47] node started (seed 91.98.3.17); syncing
+[2026-10-15 04:48] SYNCED at block 2386, tip 84e7d29438be4b6d08ca198232afffc32f01e408ffaa6099d6ca52c1a6a3e065
+[2026-10-15 04:48] [04:47:53 INF] V1 libsecp256k1 self-test passed: /zen/libsecp256k1.so (sha256 2889daf967e2d1297034c5fbe04ca80f6337f7da569049b633376139f271ac9b)
+V1 libsecp256k1 self-test: NO LINE
+[2026-10-15 04:48] Dex build in the image: Error response from daemon: Container b73d25828969182790930d49d4c7d8224533668450d652f44635c9f413364a37 is restarting, wait until the container is running (0 = built)
