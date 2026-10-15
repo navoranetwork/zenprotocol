@@ -105,6 +105,7 @@ tr.click:focus-visible, button:focus-visible { outline: 2px solid var(--accent);
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pxd = v => Math.abs(v) >= 100 ? 2 : Math.abs(v) >= 1 ? 4 : 6;   // price digits by size: 4,181.93 · 1.1194 · 0.006324
 const num = (v, d = 6) => Number(v).toLocaleString('en-US', { maximumFractionDigits: d });
 const NAME = { BTC: 'Bitcoin', ETH: 'Ether', EUR: 'Euro', GBP: 'Pound sterling', JPY: 'Japanese yen', CHF: 'Swiss franc', AUD: 'Australian dollar', SPY: 'S&P 500 ETF', QQQ: 'Nasdaq 100 ETF', AAPL: 'Apple', MSFT: 'Microsoft', XAU: 'Gold', WTI: 'WTI crude oil' };
 let names = { '00': 'ZP' }, latest = null, evidence = {}, pickTicker = null, books = new Map(), pair = null;
@@ -131,7 +132,7 @@ async function oracle() {
     const sources = !src.length ? '1 source' : `<span class="${dropped.length ? 'pill warn' : ''}">${used} of ${src.length}${dropped.length ? ' · dropped ' + esc(dropped.join(', ')) : ''}</span>`;
     const was = old && old.values[t], ch = was ? (latest.values[t] - was) / was * 100 : null;
     const chCell = ch === null ? '–' : `<span class="${ch > 0.05 ? 'up' : ch < -0.05 ? 'down' : ''}">${ch > 0 ? '+' : ''}${ch.toFixed(1)}%</span>`;
-    return `<tr class="click${t === pickTicker ? ' sel' : ''}" tabindex="0" data-t="${esc(t)}"><td><b>${esc(t)}</b></td><td>${esc(NAME[t] || '')}</td><td class="num">${num(latest.values[t])}</td><td>${sources}</td><td>${e.asOf && e.asOf !== today ? 'close ' + niceDay(e.asOf) : 'latest'}</td><td class="num">${chCell}</td></tr>`;
+    return `<tr class="click${t === pickTicker ? ' sel' : ''}" tabindex="0" data-t="${esc(t)}"><td><b>${esc(t)}</b></td><td>${esc(NAME[t] || '')}</td><td class="num">${num(latest.values[t], pxd(latest.values[t]))}</td><td>${sources}</td><td>${e.asOf && e.asOf !== today ? 'close ' + niceDay(e.asOf) : 'latest'}</td><td class="num">${chCell}</td></tr>`;
   }).join('');
   if (!pickTicker || !latest.tickers.includes(pickTicker)) pickTicker = latest.tickers[0];
   showEvidence();
@@ -139,22 +140,27 @@ async function oracle() {
 function showEvidence() {
   const t = pickTicker, e = evidence[t] || {}; if (!latest || !t) return;
   $('evName').textContent = t;
-  $('ev').innerHTML = `<dt>Price</dt><dd><b>${num(latest.values[t])}</b> USD</dd><dt>Committed</dt><dd>${esc(ago(latest.stamp))}</dd><dt>Transaction</dt><dd class="mono">${latest.tx ? `<a href="/explorer.html#tx/${encodeURIComponent(latest.tx)}">${esc(String(latest.tx).slice(0, 8))}…${esc(String(latest.tx).slice(-6))}</a>` : '–'}</dd><dt>Merkle root</dt><dd class="mono">${esc(String(latest.root).slice(0, 8))}…${esc(String(latest.root).slice(-6))}</dd>`;
+  $('ev').innerHTML = `<dt>Price</dt><dd><b>${num(latest.values[t], pxd(latest.values[t]))}</b> USD</dd><dt>Committed</dt><dd>${esc(ago(latest.stamp))}</dd><dt>Transaction</dt><dd class="mono">${latest.tx ? `<a href="/explorer.html#tx/${encodeURIComponent(latest.tx)}">${esc(String(latest.tx).slice(0, 8))}…${esc(String(latest.tx).slice(-6))}</a>` : '–'}</dd><dt>Merkle root</dt><dd class="mono">${esc(String(latest.root).slice(0, 8))}…${esc(String(latest.root).slice(-6))}</dd>`;
   const src = Object.entries(e.sources || {}), dropped = new Set(e.dropped || []);
-  $('evSrc').innerHTML = src.length ? '<h2 style="margin-bottom:6px">Sources</h2><dl class="kv">' + src.map(([s, v]) => `<dt>${esc(s)}</dt><dd class="${dropped.has(s) ? 'down' : ''}">${num(v)}${dropped.has(s) ? ' · dropped' : ''}</dd>`).join('') + '</dl>' : '<p class="note">This price has one source.</p>';
+  $('evSrc').innerHTML = src.length ? '<h2 style="margin-bottom:6px">Sources</h2><dl class="kv">' + src.map(([s, v]) => `<dt>${esc(s)}</dt><dd class="${dropped.has(s) ? 'down' : ''}">${num(v, pxd(v))}${dropped.has(s) ? ' · dropped' : ''}</dd>`).join('') + '</dl>' : '<p class="note">This price has one source.</p>';
 }
 $('px').addEventListener('click', e => { const tr = e.target.closest('tr[data-t]'); if (tr) { pickTicker = tr.dataset.t; document.querySelectorAll('#px tr').forEach(r => r.classList.toggle('sel', r === tr)); showEvidence(); } });
 $('px').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { const tr = e.target.closest('tr[data-t]'); if (tr) { e.preventDefault(); tr.click(); } } });
 
-// order books: the first asset of a pair is the one priced in the second (ZP is always the second)
+// order books: a dollar token (zUSDC) is the quote of its pair, else ZP; prices are quote per base in whole units
+// (ZP has 8 decimals, zUSDC 6; another token is counted in its own units)
+const DEC = a => a === '00' ? 8 : /usdc/i.test(names[a] || '') ? 6 : 0;
+const isUsd = a => /usd/i.test(names[a] || '');
 async function dex() {
   const o = await fetch('/explorer/api/dex/orders', { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject());
   books = new Map();
   for (const r of o.orders || []) {
     const sA = r.under_asset, wA = r.pair_asset, n = Number(r.under_amount), m = Number(r.pair_total); if (!(n > 0 && m > 0)) continue;
-    const baseFirst = wA === '00' || (sA !== '00' && nm(sA) < nm(wA)), base = baseFirst ? sA : wA, quote = baseFirst ? wA : sA, key = nm(base) + ' / ' + nm(quote);
+    const quote = isUsd(sA) ? sA : isUsd(wA) ? wA : wA === '00' ? wA : sA === '00' ? sA : (nm(sA) < nm(wA) ? wA : sA), base = quote === sA ? wA : sA;
+    const key = nm(base) + ' / ' + nm(quote), db = 10 ** DEC(base), dq = 10 ** DEC(quote);
     const b = books.get(key) || { key, asks: [], bids: [] }; books.set(key, b);
-    if (baseFirst) b.asks.push({ price: m / n, qty: n }); else b.bids.push({ price: n / m, qty: m });
+    if (sA === base) b.asks.push({ price: (m / dq) / (n / db), qty: n / db });     // sells base for quote
+    else b.bids.push({ price: (n / dq) / (m / db), qty: m / db });                  // pays quote for base
   }
   if (!pair || !books.has(pair)) pair = [...books.keys()][0] || null;
   drawBook();
@@ -166,8 +172,8 @@ function drawBook() {
   if (!b) { $('book').innerHTML = '<p class="empty">No open orders.</p>'; return; }
   const asks = [...b.asks].sort((x, y) => x.price - y.price).slice(0, 8), bids = [...b.bids].sort((x, y) => y.price - x.price).slice(0, 8);
   const max = Math.max(...asks.map(x => x.qty), ...bids.map(x => x.qty), 1);
-  const row = (c, x) => `<div class="${c}"><b>${num(x.price, 6)}</b><i style="width:${Math.max(2, Math.round(x.qty / max * 100))}%"></i><span>${num(x.qty, 2)}</span></div>`;
-  const mid = asks.length && bids.length ? `<div class="mid">spread ${num(asks[0].price - bids[0].price, 6)} · mid ${num((asks[0].price + bids[0].price) / 2, 6)}</div>` : `<div class="mid">${asks.length ? 'no buyers yet' : 'no sellers yet'}</div>`;
+  const row = (c, x) => `<div class="${c}"><b>${num(x.price, 4)}</b><i style="width:${Math.max(2, Math.round(x.qty / max * 100))}%"></i><span>${num(x.qty, 2)}</span></div>`;
+  const mid = asks.length && bids.length ? `<div class="mid">spread ${num(asks[0].price - bids[0].price, 4)} · mid ${num((asks[0].price + bids[0].price) / 2, 4)}</div>` : `<div class="mid">${asks.length ? 'no buyers yet' : 'no sellers yet'}</div>`;
   $('book').innerHTML = [...asks.reverse().map(x => row('ask', x)), mid, ...bids.map(x => row('bid', x))].join('');
   $('bookNote').textContent = 'Price = ' + pair.split(' / ')[1] + ' per ' + pair.split(' / ')[0] + '. Sizes in ' + pair.split(' / ')[0] + '. Red: offered for sale, green: wanted. Orders can be taken in part.';
 }
