@@ -1,0 +1,530 @@
+20:37:29 wallet tzn1q0q3xhhrl4e7p6y4va5z6mytlcqu3rwzxmpq79g7drmlmtagfazds6lrcma, tip 329, 1 outputs (0 small), 30 ZP
+20:37:29 split 9d371c1801129f52646c5a3572e57e4cb83bb8581c6b95315b1da3a9e37b5979 sent
+20:37:49 split c79e6d0e736dd6e192bb12c93769727a26335f2b645b9e8e65e5f7273463af34 sent
+20:37:49 split 0114ff0ea2abefed52dedbfb7037386a91d31baa66600a856394b98910a0d18d sent
+20:37:49 split a3ad4dc74189449271d8c0915169762ea99f01aa15a8a5ada91801ab131ba300 sent
+20:37:49 split 3f82f63adddb1cd5d2018fc18788b777ac1745633996c39aeeac084d0c47dd5c sent
+20:37:49 split 020a1949595b3d6eab58d7a249d547e1ea854b6db9dff87400b7c0288be92587 sent
+20:37:49 split 696b43c7b4473c9ebe624a0becc2329d628c8b0457991b96aaae07458d757043 sent
+20:37:49 split ca7af90f13d5547f49ab4f83629420e9756f08f83917e28a610250f6b1aae3df sent
+20:37:49 split eb5dfa3aefe0980fdaedb1ef011361152043f2129ced844a35092d19a7c30903 sent
+20:37:49 split 0858ccb9623ce02c29b529fca6bfec477feeac906abd07eabce13dd4055c1823 sent
+20:37:49 split 51064d22906ad0c8f78f227d5b68181404cf56e914ab599c6e464a7b30b4f718 sent
+20:37:49 split efbfbb2b2fdf87992e73fe1c140909170fa882dbd36c3e5d62585ef67c205d93 sent
+20:37:49 split aa21559b2b720b3f001b1c4a5628cf1f3dbb209dffd56aa8abf70114a85d430f sent
+20:37:49 split df388967e7dca91872c09c282d69195dbd20af38344f8f358a1bdeb0db1316aa sent
+20:37:49 split 461ec1046eef1882da916fd635fd6d0eb713465e14c1a4472954f77e70efc501 sent
+20:37:49 split b84c77ad5cb21d36bd7d0feec8d4852905e9c2f8db44d6322bfccbe54ad1611a sent
+20:37:49 split a59a4a92b0773078c36437d8687948b74fd51682586ed6ec2bb0dbc1ae44ed8d sent
+20:37:49 split 31cef9cbce5e5184fe96c010e0d85cf004f1169690c30ebc28d6708690b87e36 sent
+20:37:49 split 8f2810ff3cd506441d4ecea2936aea1b78e43cda72501a9133d9c1a0ba8cb51f sent
+20:37:50 split d80d10cba79e31196e195636fb07e61d08acb75630766fba61955dbccf5c41ee sent
+20:37:50 split 1c90cb5c50ee9394a39534986bf63a0f9017f23e84fe5757b3ec73d1aa2d509a sent
+20:37:50 split ba73758b22373059ab8d5a8da07b64649b67e88b01ca3f98151cc092c91bb587 sent
+20:37:50 split c84e373cba2eff9a413a1fe09ec686345934319b694294ed98ebd013e6d47a8b sent
+20:37:50 split 78003845176a4cbc3229c5b86823d9f53816f698d050c94a1097d9cad8eff351 sent
+20:37:50 split 12f0df70f96141ae9472df923bb4be0f4db2f7a5ded178244fbd78b44638f9a2 sent
+20:37:50 split 6b709c8162344e66232b13f4b0873eb9a6993857169223d7928e8d77b4761337 sent
+20:37:50 split 3594a19c9186e3ce29c8683a6e0db630d4d23ece7792430f4fc12280270b6716 sent
+20:37:50 split d42dcebd9bfef3219e35c28dad21006d09d4b9be52cc5142045453ce48bd6197 sent
+20:37:50 split 5589a0f2c05b1fd7ebb5eb3dc1f5302530760e70bd5e888e3bc0cee4f6732e78 sent
+20:37:50 split 90a42e3d267ebdb6fb58e8bf5f808918ed8dfdcc59fed1b510415c99b44c2bca sent
+20:37:50 split e2b749cb00ed269ba21bd4d1f2f8fc231ee7a4a2c633d244a725d8b2e14390c2 sent
+20:37:50 split f148711d3f03eb38e59fd1a75e49e428bcb0a20713a49d63f61815a6e5cecd53 sent
+20:37:50 split 4967e28c667b9027f21b01707b2ea4851294a7608039b33dd00073a6c79a4a15 sent
+20:37:50 split 152f16bd83a20579f927bd34bca749fbffcd68cf98375370bbb2ff4854c14667 sent
+20:37:50 split e9fc175c9ecb1d21f4022a89e301a393c2ba2e01a670308eff336ad1eb6184a2 sent
+20:37:50 split 2d56bce6382d74ac0ee2138200c849a571383178efb00646031b2c022dcdb78b sent
+20:37:50 split 847d5b1aa29138f2814473d9080871c557ee2b5c3cf06c25fc5a970573a10d65 sent
+20:37:50 split f8bf9a72e9b829a90b07041e0a1e767d75e8f82943b66a412327b0a7d7edd120 sent
+20:37:50 split 917131b4c6b08ea841752f68a61703b66fb073d7e9ca62ffb67c3caa43386fce sent
+20:37:50 split 3fbe2c02eabd172a0c024a49031594d7e366c74bf365465a7d01788cdb2286f0 sent
+20:37:50 split 5d4e035cf7fdb86bf8b6457e47a26348033d4cb06797329dd8cc870847bf43bd sent
+20:37:50 split 716b6808562a168ee62029c81c17391a88ad0eeec994d056381e6a3bd744facd sent
+20:37:50 split 307d8fd4911ede19728730e609200f1952a110200634e98b178b9e1bf59af43c sent
+20:37:50 split 8d72dc334dc1ff4395671424ca0475123de04aaab5daf7412114c276268a480b sent
+20:37:50 split 19acc54c61a0495fc84f59c2d94382af3ba3e9b5581d56992ca6c07e61d25f53 sent
+20:37:50 split 011e683410599ad393959b58491e2b775571bf5a00f42ac7dd4d38d92c83b2c5 sent
+20:37:50 split d96cf42d211ab8806d13ffc53f5fa181313c3f70ec833f2531548742129b2005 sent
+20:37:50 split 49f99384feee2b20efc41d9a4968bf430961556e0cda4abe8b181c982ffd76a4 sent
+20:37:50 split 626fc6d8540adc34a10085b07aff808ff8563c959f965202cf561cd5548a05e4 sent
+20:37:50 split e7ff405ee449779558029921bd32f19683ece804d6488ebe9245c851d8ebc891 sent
+20:37:50 split 34910763a3c5f2508bad81ccf1415f774d25f08466c9ef02e14e708100762f74 sent
+20:37:50 split 680392f5573723cb5a5a1d7affcf6b3698eda2aff5ea72e8984f07b5cf1bb987 sent
+20:37:51 split 439e1e26dde47badf9d56dc1dce3703a431c90a0598617ff11990e893212fa28 sent
+20:37:51 split 12542c86667a783e6a33cf9c06e56f80107d9df8b04033c87efd6e6a931fcf53 sent
+20:37:51 split 34817f545be6fd87df3ae6aeda4c62980040e58233febb7ef53d0be880622df4 sent
+20:37:51 split c29a3b14ab468402873ee62207c022649bcd675dde5d5db8164a0918ec46c65e sent
+20:37:51 split a0a00bab9286acdbf8dbc2253423c6f49f5fa7536fa035767de6bb55e671630d sent
+20:37:51 split 4e21d0bad5ffb1664998c30e60ca64533691926a604f52b6e4b96d34ae3ab8b5 sent
+20:37:51 split 0ffa50cfc34dfb02f1605c3ba10bbff708020f6d6beb2764185eb02409923af5 sent
+20:37:51 split 279a306d4289da49496248f2188e4aef4f1bf9775f2a533f4d22aa5d546bb44e sent
+20:37:51 split ed166089d1f31e8d442a0e424a2d8602519bbd10733c0abf9a4df3c20d6a08ad sent
+20:37:51 split 1e7bf78b49ecd797d39b00b7a74a8fd9084445f8c833fcd1ef81485c48f5777d sent
+20:37:51 split 29f81d8bd90c96612922cd353e96d2aadd3ac0901d997ebac5c9d8ea9a4e9c14 sent
+20:37:51 split 4d25864706ff502b2e0a84c4f0cefd9ed2f078b69de54100e5423a97de976145 sent
+20:37:51 split 7cbcfbcea111f1b51fcafbdcc75e519fc9afc794c71122f0137ce1e7c4936c5d sent
+20:37:51 split a423f9601f451385725b6b9109f99cae6f2ef0c2cf97e17cbf710cb3414a32c2 sent
+20:37:51 split a641ef6b17fdf49fae3accbb4ae833bd4030488a04f33167df1c65eea7f57b33 sent
+20:37:51 split 0593168e40dac514933883e45f590f842f5f35e7c1da4dfbd958e8e6a71a654d sent
+20:37:51 split acd9946e7983094c07866b61d19baf4573ca09fb4c38ffe0345f47d3621ad9a9 sent
+20:37:51 split a117775f36a85f40bbbffcc64f7e676440d5352578eadbf9558a1f252f2f76d0 sent
+20:37:51 split 03bb5722c79328ff4def2cef71b66db435c05a54c275004b50b3ef22aaee3cb2 sent
+20:37:51 split af621f27a77474887df41dfb87be606aed218c0b7644f06f12d4946aba393b0b sent
+20:37:51 split 4117226b0b2bb061b53e5e913ada80aaf72e3bb8291d05b478cdefcbc925410c sent
+20:37:51 split 58d4cc3f54737d0e34f7a60d00f28e60e4b46b097a8dbf4946f31d521c457cf7 sent
+20:37:51 split 336a9c8f19d4f3674af523e73a6b88761ee4df812c59f3451a96cabb1baae3a9 sent
+20:37:51 split 374b92cf0f57e051c9eb08d229379adc1e4b003efc4c7e253176305ba36ca0f0 sent
+20:37:51 split a9bf5cdf24c9f83ddd98014f75826631650baef3d6646ffc2fb7d5003796e9a9 sent
+20:37:51 split eb8add4c9dc194f34b0b3ba08620a1b013b9849d26f4faedba9a01d7b88de831 sent
+20:37:51 split 74fe63967da24e9699219c250b2218f0f8f00fb0e05566d9eabcf651b03203b0 sent
+20:37:51 split 62e0fe40c164172e3ffb2d78d206921c24e63006300b2e15be5b089e86789ca0 sent
+20:37:51 split 7c782d98fc964f496854c5b15c6fe1f4f0d947179dd6bd88e25a13a2fb322c21 sent
+20:37:51 split 1212426854929ca0a77d88e5c3f655e61406307241fb05aa64d2da5423717088 sent
+20:37:51 split b6d71e612a056beb4b3eaa9c1f707f4b5357c748aa85afabf77c62d1817fe9f4 sent
+20:37:51 split 60024db1dc2bed2194c5d14ffd7379e8b75284e68bef16eb97affbd63fe6f9c8 sent
+20:37:51 split 87f2c92b640872ca74e67388cc0d5d1b53551fab5ca979b37e7805863e0feb8c sent
+20:37:51 split c903b28cac45f980f522be0df7d0d27c863eba7fddaf001922a6060325f84802 sent
+20:37:51 split 39204a37aa7b5b7c0778ffb8898d585e3569c44897852479e33725e4874c4b1e sent
+20:37:51 split d38eda904eb78cdffd538fb64c9c63074cf9f43cb2761fcb3905bf771e2b0620 sent
+20:37:51 split e2a3209ac2ae28fd0d99d30b529860ff2efe378e25d4e87788ae44bb7111aab1 sent
+20:37:51 split 6ed6ec9f5f866eed63d8fe905ff83973f4d723a9e3fa583f421dbdfbc7cd0914 sent
+20:37:51 split a53e6e9da953b42ee953dd48c02a13ede8a4984d858dc94a789d3db697976f81 sent
+20:37:51 split a770c756b94b9af07fde523ec643df89655e368e65901465ccf5807394a85c65 sent
+20:37:51 split 4dcd12453656bf5c3afc02e2bd73320cc0e38c9edbec3c983003fed21e78a8c3 sent
+20:37:51 split 4b72463fab52c35293909e0425f70db8a236d3bac9ae48ae8d4614bf5722012f sent
+20:37:51 split 58a92b13e56e98b5150fb3c9e14f1340932e05b7ceb5c7c2106bbb75ba791ade sent
+20:37:51 split 6a7fd0d677daf78f5cef2579a35e6bb3a4d581f674caa625fa2786b9415dbbe0 sent
+20:37:51 split 0aa1147e2bffaa0c37ca574de54ef9585d6611c36fdd91b7d2d902bc599de8cd sent
+20:37:51 split 4507cebfa66302136936d5f8e151be1e7605c031a596a0523b61157aff5b4017 sent
+20:37:51 split c6e1fbd66eb09fe0397c852986da7e35a953eb400ba5e732d630c891912d549a sent
+20:37:51 split f1272178be316b38f394db2b76dbaf98d0d5e3ef3cc36534a5a45b39c486b8e6 sent
+20:37:51 split 54a12a7ed34ef72ed15c058b1889ae53ae23be995a2414cd910659b62126f105 sent
+20:38:11 --- step: 3000 transfers a minute for 6 minutes
+20:38:27 rate 3000/min: sent 750, accepted 750, refused 0, mempool 251, tip 398, free outputs 19351
+20:38:42 rate 3000/min: sent 1510, accepted 1510, refused 0, mempool 152, tip 405, free outputs 18591
+20:38:57 rate 3000/min: sent 2269, accepted 2269, refused 0, mempool 456, tip 410, free outputs 17832
+20:39:12 rate 3000/min: sent 3035, accepted 3035, refused 0, mempool 362, tip 414, free outputs 17066
+20:39:28 rate 3000/min: sent 3797, accepted 3797, refused 0, mempool 648, tip 418, free outputs 19158
+20:39:43 rate 3000/min: sent 4558, accepted 4558, refused 0, mempool 125, tip 424, free outputs 18397
+20:39:58 rate 3000/min: sent 5321, accepted 5321, refused 0, mempool 633, tip 426, free outputs 17634
+20:40:13 rate 3000/min: sent 6081, accepted 6081, refused 0, mempool 853, tip 429, free outputs 16874
+20:40:29 rate 3000/min: sent 6842, accepted 6842, refused 0, mempool 257, tip 434, free outputs 18914
+20:40:44 rate 3000/min: sent 7606, accepted 7606, refused 0, mempool 698, tip 437, free outputs 18150
+20:40:59 rate 3000/min: sent 8364, accepted 8364, refused 0, mempool 750, tip 438, free outputs 17392
+20:41:14 rate 3000/min: sent 9125, accepted 9125, refused 0, mempool 331, tip 439, free outputs 16631
+20:41:29 rate 3000/min: sent 9889, accepted 9889, refused 0, mempool 998, tip 440, free outputs 19172
+20:41:45 rate 3000/min: sent 10649, accepted 10649, refused 0, mempool 458, tip 443, free outputs 18412
+20:42:00 rate 3000/min: sent 11411, accepted 11411, refused 0, mempool 1335, tip 445, free outputs 17650
+20:42:15 rate 3000/min: sent 12171, accepted 12171, refused 0, mempool 370, tip 449, free outputs 16890
+20:42:30 rate 3000/min: sent 12935, accepted 12935, refused 0, mempool 418, tip 453, free outputs 19152
+20:42:46 rate 3000/min: sent 13696, accepted 13696, refused 0, mempool 294, tip 454, free outputs 18391
+20:43:01 rate 3000/min: sent 14455, accepted 14455, refused 0, mempool 1378, tip 455, free outputs 17632
+20:43:16 rate 3000/min: sent 15215, accepted 15215, refused 0, mempool 1212, tip 457, free outputs 16872
+20:43:31 rate 3000/min: sent 15978, accepted 15978, refused 0, mempool 625, tip 461, free outputs 18732
+20:43:47 rate 3000/min: sent 16740, accepted 16740, refused 0, mempool 265, tip 463, free outputs 17970
+20:44:02 rate 3000/min: sent 17504, accepted 17504, refused 0, mempool 722, tip 464, free outputs 17206
+20:44:11 --- step: 7500 transfers a minute for 6 minutes
+20:44:27 rate 7500/min: sent 1875, accepted 1875, refused 0, mempool 3553, tip 466, free outputs 17369
+20:44:43 rate 7500/min: sent 3827, accepted 3827, refused 0, mempool 879, tip 470, free outputs 15417
+20:44:59 rate 7500/min: sent 5730, accepted 5730, refused 0, mempool 3192, tip 471, free outputs 13514
+20:45:17 rate 7500/min: sent 7599, accepted 7599, refused 0, mempool 3359, tip 472, free outputs 16701
+20:45:34 rate 7500/min: sent 9899, accepted 9899, refused 0, mempool 1704, tip 474, free outputs 14401
+20:45:52 rate 7500/min: sent 12040, accepted 12040, refused 0, mempool 5411, tip 475, free outputs 12260
+20:46:08 rate 7500/min: sent 13456, accepted 13456, refused 0, mempool 1290, tip 477, free outputs 10844
+20:46:26 rate 7500/min: sent 15705, accepted 15705, refused 0, mempool 4842, tip 478, free outputs 17224
+20:46:43 rate 7500/min: sent 16612, accepted 16612, refused 0, mempool 698, tip 479, free outputs 16317
+20:46:59 rate 7500/min: sent 19543, accepted 19543, refused 0, mempool 3109, tip 481, free outputs 13386
+20:47:16 rate 7500/min: sent 21796, accepted 21796, refused 0, mempool 4349, tip 482, free outputs 11133
+20:47:32 rate 7500/min: sent 23638, accepted 23638, refused 0, mempool 3473, tip 483, free outputs 16084
+20:47:48 rate 7500/min: sent 24908, accepted 24908, refused 0, mempool 6009, tip 483, free outputs 14814
+20:48:05 rate 7500/min: sent 25566, accepted 25566, refused 0, mempool 7327, tip 483, free outputs 14156
+20:48:23 rate 7500/min: sent 27883, accepted 27883, refused 0, mempool 1101, tip 486, free outputs 14014
+20:48:39 rate 7500/min: sent 30701, accepted 30701, refused 0, mempool 417, tip 489, free outputs 11196
+20:48:55 rate 7500/min: sent 32971, accepted 32971, refused 0, mempool 4945, tip 489, free outputs 8926
+20:49:11 rate 7500/min: sent 35142, accepted 35142, refused 0, mempool 4440, tip 490, free outputs 6755
+20:49:30 rate 7500/min: sent 35884, accepted 35884, refused 0, mempool 196, tip 491, free outputs 17155
+20:49:46 rate 7500/min: sent 38797, accepted 38797, refused 0, mempool 860, tip 493, free outputs 14242
+20:50:04 rate 7500/min: sent 41367, accepted 41367, refused 0, mempool 4699, tip 494, free outputs 11672
+20:50:12 --- step: 3000 transfers a minute for 6 minutes
+20:50:28 rate 3000/min: sent 750, accepted 750, refused 0, mempool 948, tip 497, free outputs 15991
+20:50:43 rate 3000/min: sent 1555, accepted 1555, refused 0, mempool 172, tip 501, free outputs 15186
+20:50:58 rate 3000/min: sent 2326, accepted 2326, refused 0, mempool 888, tip 502, free outputs 14415
+20:51:16 rate 3000/min: sent 3073, accepted 3073, refused 0, mempool 349, tip 504, free outputs 18910
+20:51:31 rate 3000/min: sent 3942, accepted 3942, refused 0, mempool 412, tip 508, free outputs 18041
+20:51:46 rate 3000/min: sent 4702, accepted 4702, refused 0, mempool 294, tip 511, free outputs 17281
+20:52:01 rate 3000/min: sent 5463, accepted 5463, refused 0, mempool 578, tip 514, free outputs 16520
+20:52:17 rate 3000/min: sent 6180, accepted 6180, refused 0, mempool 605, tip 518, free outputs 19095
+20:52:32 rate 3000/min: sent 7018, accepted 7018, refused 0, mempool 218, tip 523, free outputs 18257
+20:52:48 rate 3000/min: sent 7779, accepted 7779, refused 0, mempool 498, tip 524, free outputs 17496
+20:53:03 rate 3000/min: sent 8538, accepted 8538, refused 0, mempool 346, tip 526, free outputs 16737
+20:53:19 rate 3000/min: sent 9250, accepted 9250, refused 0, mempool 581, tip 528, free outputs 19216
+20:53:34 rate 3000/min: sent 10093, accepted 10093, refused 0, mempool 2235, tip 528, free outputs 18373
+20:53:49 rate 3000/min: sent 10816, accepted 10816, refused 0, mempool 112, tip 529, free outputs 17650
+20:54:05 rate 3000/min: sent 11629, accepted 11629, refused 0, mempool 224, tip 530, free outputs 16837
+20:54:21 rate 3000/min: sent 12405, accepted 12405, refused 0, mempool 1722, tip 531, free outputs 19218
+20:54:36 rate 3000/min: sent 13190, accepted 13190, refused 0, mempool 698, tip 534, free outputs 18433
+20:54:51 rate 3000/min: sent 13957, accepted 13957, refused 0, mempool 554, tip 535, free outputs 17666
+20:55:06 rate 3000/min: sent 14718, accepted 14718, refused 0, mempool 552, tip 536, free outputs 16905
+20:55:23 rate 3000/min: sent 15401, accepted 15401, refused 0, mempool 190, tip 537, free outputs 19142
+20:55:38 rate 3000/min: sent 16288, accepted 16288, refused 0, mempool 674, tip 540, free outputs 18255
+20:55:53 rate 3000/min: sent 17048, accepted 17048, refused 0, mempool 1166, tip 541, free outputs 17495
+20:56:08 rate 3000/min: sent 17807, accepted 17807, refused 0, mempool 2684, tip 541, free outputs 16736
+20:56:12 --- step: 7500 transfers a minute for 6 minutes
+20:56:29 rate 7500/min: sent 1217, accepted 1217, refused 0, mempool 827, tip 542, free outputs 17355
+20:56:48 rate 7500/min: sent 3541, accepted 3541, refused 0, mempool 829, tip 543, free outputs 15031
+20:57:04 rate 7500/min: sent 6224, accepted 6224, refused 0, mempool 741, tip 546, free outputs 12348
+20:57:20 rate 7500/min: sent 8396, accepted 8396, refused 0, mempool 897, tip 551, free outputs 17574
+20:57:35 rate 7500/min: sent 10367, accepted 10367, refused 0, mempool 3301, tip 552, free outputs 15603
+20:57:52 rate 7500/min: sent 11617, accepted 11617, refused 0, mempool 817, tip 553, free outputs 14353
+20:58:07 rate 7500/min: sent 14018, accepted 14018, refused 0, mempool 1820, tip 554, free outputs 11952
+20:58:23 rate 7500/min: sent 16296, accepted 16296, refused 0, mempool 3470, tip 556, free outputs 16929
+20:58:40 rate 7500/min: sent 18280, accepted 18280, refused 0, mempool 3307, tip 557, free outputs 14945
+20:58:56 rate 7500/min: sent 20296, accepted 20296, refused 0, mempool 3091, tip 559, free outputs 12929
+20:59:12 rate 7500/min: sent 22427, accepted 22427, refused 0, mempool 1026, tip 563, free outputs 10798
+20:59:28 rate 7500/min: sent 24166, accepted 24166, refused 0, mempool 4449, tip 563, free outputs 17849
+20:59:44 rate 7500/min: sent 25337, accepted 25337, refused 0, mempool 6785, tip 563, free outputs 16678
+21:00:00 rate 7500/min: sent 26355, accepted 26355, refused 0, mempool 1514, tip 565, free outputs 15660
+21:00:16 rate 7500/min: sent 28694, accepted 28694, refused 0, mempool 3579, tip 566, free outputs 13321
+21:00:32 rate 7500/min: sent 29709, accepted 29709, refused 0, mempool 5585, tip 566, free outputs 17234
+21:00:50 rate 7500/min: sent 30439, accepted 30439, refused 0, mempool 7040, tip 566, free outputs 16504
+21:01:06 rate 7500/min: sent 33101, accepted 33101, refused 0, mempool 2058, tip 568, free outputs 13842
+21:01:22 rate 7500/min: sent 35017, accepted 35017, refused 0, mempool 1855, tip 569, free outputs 11926
+21:01:38 rate 7500/min: sent 37295, accepted 37295, refused 0, mempool 1354, tip 571, free outputs 16835
+21:01:54 rate 7500/min: sent 39890, accepted 39890, refused 0, mempool 2525, tip 572, free outputs 14240
+21:02:11 rate 7500/min: sent 42093, accepted 42093, refused 0, mempool 4331, tip 573, free outputs 12037
+21:02:14 --- step: 1500 transfers a minute for 6 minutes
+21:02:30 rate 1500/min: sent 375, accepted 375, refused 0, mempool 816, tip 574, free outputs 17330
+21:02:45 rate 1500/min: sent 774, accepted 774, refused 0, mempool 86, tip 577, free outputs 16931
+21:03:00 rate 1500/min: sent 1154, accepted 1154, refused 0, mempool 543, tip 578, free outputs 16551
+21:03:15 rate 1500/min: sent 1532, accepted 1532, refused 0, mempool 564, tip 580, free outputs 16173
+21:03:30 rate 1500/min: sent 1911, accepted 1911, refused 0, mempool 225, tip 584, free outputs 19440
+21:03:46 rate 1500/min: sent 2290, accepted 2290, refused 0, mempool 477, tip 587, free outputs 19061
+21:04:01 rate 1500/min: sent 2668, accepted 2668, refused 0, mempool 1233, tip 587, free outputs 18683
+21:04:16 rate 1500/min: sent 3046, accepted 3046, refused 0, mempool 720, tip 589, free outputs 18305
+21:04:31 rate 1500/min: sent 3427, accepted 3427, refused 0, mempool 273, tip 592, free outputs 19360
+21:04:46 rate 1500/min: sent 3806, accepted 3806, refused 0, mempool 729, tip 593, free outputs 18981
+21:05:01 rate 1500/min: sent 4184, accepted 4184, refused 0, mempool 367, tip 597, free outputs 18603
+21:05:17 rate 1500/min: sent 4563, accepted 4563, refused 0, mempool 99, tip 599, free outputs 18224
+21:05:32 rate 1500/min: sent 4942, accepted 4942, refused 0, mempool 607, tip 600, free outputs 19673
+21:05:47 rate 1500/min: sent 5320, accepted 5320, refused 0, mempool 497, tip 602, free outputs 19295
+21:06:02 rate 1500/min: sent 5699, accepted 5699, refused 0, mempool 1255, tip 602, free outputs 18916
+21:06:17 rate 1500/min: sent 6078, accepted 6078, refused 0, mempool 2013, tip 602, free outputs 18537
+21:06:32 rate 1500/min: sent 6459, accepted 6459, refused 0, mempool 2767, tip 602, free outputs 18714
+21:06:48 rate 1500/min: sent 6841, accepted 6841, refused 0, mempool 3539, tip 602, free outputs 18332
+21:07:03 rate 1500/min: sent 7224, accepted 7224, refused 0, mempool 864, tip 603, free outputs 17949
+21:07:18 rate 1500/min: sent 7612, accepted 7612, refused 0, mempool 281, tip 605, free outputs 17561
+21:07:34 rate 1500/min: sent 7991, accepted 7991, refused 0, mempool 214, tip 607, free outputs 19582
+21:07:49 rate 1500/min: sent 8369, accepted 8369, refused 0, mempool 567, tip 608, free outputs 19204
+21:08:04 rate 1500/min: sent 8747, accepted 8747, refused 0, mempool 405, tip 611, free outputs 18826
+21:08:14 --- step: 150 transfers a minute for 6 minutes
+21:08:29 rate 150/min: sent 38, accepted 38, refused 0, mempool 6, tip 615, free outputs 19608
+21:08:44 rate 150/min: sent 76, accepted 76, refused 0, mempool 82, tip 615, free outputs 19570
+21:09:00 rate 150/min: sent 114, accepted 114, refused 0, mempool 56, tip 616, free outputs 19532
+21:09:15 rate 150/min: sent 152, accepted 152, refused 0, mempool 32, tip 617, free outputs 19494
+21:09:30 rate 150/min: sent 190, accepted 190, refused 0, mempool 2, tip 619, free outputs 20047
+21:09:45 rate 150/min: sent 228, accepted 228, refused 0, mempool 14, tip 620, free outputs 20009
+21:10:00 rate 150/min: sent 266, accepted 266, refused 0, mempool 10, tip 621, free outputs 19971
+21:10:16 rate 150/min: sent 304, accepted 304, refused 0, mempool 6, tip 625, free outputs 19933
+21:10:31 rate 150/min: sent 342, accepted 342, refused 0, mempool 12, tip 626, free outputs 20060
+21:10:46 rate 150/min: sent 380, accepted 380, refused 0, mempool 28, tip 627, free outputs 20022
+21:11:01 rate 150/min: sent 418, accepted 418, refused 0, mempool 44, tip 629, free outputs 19984
+21:11:16 rate 150/min: sent 456, accepted 456, refused 0, mempool 8, tip 631, free outputs 19946
+21:11:32 rate 150/min: sent 494, accepted 494, refused 0, mempool 4, tip 634, free outputs 20059
+21:11:47 rate 150/min: sent 532, accepted 532, refused 0, mempool 40, tip 638, free outputs 20021
+21:12:02 rate 150/min: sent 570, accepted 570, refused 0, mempool 46, tip 639, free outputs 19983
+21:12:17 rate 150/min: sent 608, accepted 608, refused 0, mempool 122, tip 639, free outputs 19945
+21:12:32 rate 150/min: sent 646, accepted 646, refused 0, mempool 12, tip 642, free outputs 20002
+21:12:48 rate 150/min: sent 684, accepted 684, refused 0, mempool 14, tip 644, free outputs 19964
+21:13:03 rate 150/min: sent 722, accepted 722, refused 0, mempool 24, tip 646, free outputs 19926
+21:13:18 rate 150/min: sent 760, accepted 760, refused 0, mempool 6, tip 649, free outputs 19888
+21:13:33 rate 150/min: sent 798, accepted 798, refused 0, mempool 36, tip 650, free outputs 20060
+21:13:48 rate 150/min: sent 836, accepted 836, refused 0, mempool 112, tip 650, free outputs 20022
+21:14:04 rate 150/min: sent 874, accepted 874, refused 0, mempool 188, tip 650, free outputs 19984
+21:14:14 --- step: 1500 transfers a minute for 6 minutes
+21:14:29 rate 1500/min: sent 375, accepted 375, refused 0, mempool 386, tip 653, free outputs 19608
+21:14:44 rate 1500/min: sent 757, accepted 757, refused 0, mempool 1149, tip 653, free outputs 19226
+21:15:00 rate 1500/min: sent 1136, accepted 1136, refused 0, mempool 153, tip 655, free outputs 18847
+21:15:15 rate 1500/min: sent 1521, accepted 1521, refused 0, mempool 315, tip 659, free outputs 18462
+21:15:30 rate 1500/min: sent 1900, accepted 1900, refused 0, mempool 58, tip 661, free outputs 19565
+21:15:45 rate 1500/min: sent 2279, accepted 2279, refused 0, mempool 817, tip 661, free outputs 19186
+21:16:00 rate 1500/min: sent 2658, accepted 2658, refused 0, mempool 341, tip 663, free outputs 18807
+21:16:16 rate 1500/min: sent 3038, accepted 3038, refused 0, mempool 289, tip 666, free outputs 18427
+21:16:31 rate 1500/min: sent 3416, accepted 3416, refused 0, mempool 1045, tip 666, free outputs 19579
+21:16:46 rate 1500/min: sent 3794, accepted 3794, refused 0, mempool 457, tip 668, free outputs 19201
+21:17:01 rate 1500/min: sent 4174, accepted 4174, refused 0, mempool 713, tip 669, free outputs 18821
+21:17:16 rate 1500/min: sent 4553, accepted 4553, refused 0, mempool 749, tip 670, free outputs 18442
+21:17:31 rate 1500/min: sent 4933, accepted 4933, refused 0, mempool 259, tip 671, free outputs 19347
+21:17:47 rate 1500/min: sent 5313, accepted 5313, refused 0, mempool 301, tip 673, free outputs 18967
+21:18:02 rate 1500/min: sent 5692, accepted 5692, refused 0, mempool 551, tip 674, free outputs 18588
+21:18:17 rate 1500/min: sent 6070, accepted 6070, refused 0, mempool 493, tip 676, free outputs 18210
+21:18:32 rate 1500/min: sent 6448, accepted 6448, refused 0, mempool 321, tip 677, free outputs 19477
+21:18:47 rate 1500/min: sent 6827, accepted 6827, refused 0, mempool 163, tip 680, free outputs 19098
+21:19:02 rate 1500/min: sent 7206, accepted 7206, refused 0, mempool 213, tip 683, free outputs 18719
+21:19:17 rate 1500/min: sent 7584, accepted 7584, refused 0, mempool 59, tip 686, free outputs 18341
+21:19:33 rate 1500/min: sent 7962, accepted 7962, refused 0, mempool 105, tip 688, free outputs 19694
+21:19:48 rate 1500/min: sent 8340, accepted 8340, refused 0, mempool 147, tip 689, free outputs 19316
+21:20:03 rate 1500/min: sent 8718, accepted 8718, refused 0, mempool 189, tip 691, free outputs 18938
+21:20:14 --- step: 750 transfers a minute for 6 minutes
+21:20:29 rate 750/min: sent 188, accepted 188, refused 0, mempool 1129, tip 691, free outputs 19537
+21:20:44 rate 750/min: sent 377, accepted 377, refused 0, mempool 140, tip 695, free outputs 19348
+21:21:00 rate 750/min: sent 568, accepted 568, refused 0, mempool 321, tip 696, free outputs 19157
+21:21:15 rate 750/min: sent 757, accepted 757, refused 0, mempool 193, tip 697, free outputs 18968
+21:21:30 rate 750/min: sent 946, accepted 946, refused 0, mempool 571, tip 697, free outputs 19816
+21:21:45 rate 750/min: sent 1135, accepted 1135, refused 0, mempool 79, tip 698, free outputs 19627
+21:22:00 rate 750/min: sent 1324, accepted 1324, refused 0, mempool 152, tip 700, free outputs 19438
+21:22:15 rate 750/min: sent 1513, accepted 1513, refused 0, mempool 329, tip 701, free outputs 19249
+21:22:30 rate 750/min: sent 1702, accepted 1702, refused 0, mempool 45, tip 702, free outputs 19748
+21:22:45 rate 750/min: sent 1891, accepted 1891, refused 0, mempool 68, tip 704, free outputs 19559
+21:23:00 rate 750/min: sent 2080, accepted 2080, refused 0, mempool 396, tip 705, free outputs 19370
+21:23:16 rate 750/min: sent 2269, accepted 2269, refused 0, mempool 774, tip 705, free outputs 19181
+21:23:31 rate 750/min: sent 2458, accepted 2458, refused 0, mempool 255, tip 706, free outputs 19525
+21:23:46 rate 750/min: sent 2647, accepted 2647, refused 0, mempool 97, tip 708, free outputs 19336
+21:24:01 rate 750/min: sent 2836, accepted 2836, refused 0, mempool 123, tip 710, free outputs 19147
+21:24:16 rate 750/min: sent 3025, accepted 3025, refused 0, mempool 250, tip 711, free outputs 18958
+21:24:31 rate 750/min: sent 3214, accepted 3214, refused 0, mempool 628, tip 711, free outputs 19787
+21:24:46 rate 750/min: sent 3403, accepted 3403, refused 0, mempool 140, tip 713, free outputs 19598
+21:25:01 rate 750/min: sent 3592, accepted 3592, refused 0, mempool 116, tip 716, free outputs 19409
+21:25:17 rate 750/min: sent 3781, accepted 3781, refused 0, mempool 92, tip 718, free outputs 19220
+21:25:32 rate 750/min: sent 3970, accepted 3970, refused 0, mempool 196, tip 720, free outputs 19866
+21:25:47 rate 750/min: sent 4159, accepted 4159, refused 0, mempool 92, tip 722, free outputs 19677
+21:26:02 rate 750/min: sent 4348, accepted 4348, refused 0, mempool 320, tip 724, free outputs 19488
+21:26:14 --- step: 1500 transfers a minute for 6 minutes
+21:26:29 rate 1500/min: sent 375, accepted 375, refused 0, mempool 606, tip 727, free outputs 19414
+21:26:45 rate 1500/min: sent 757, accepted 757, refused 0, mempool 416, tip 729, free outputs 19032
+21:27:00 rate 1500/min: sent 1139, accepted 1139, refused 0, mempool 266, tip 730, free outputs 18650
+21:27:15 rate 1500/min: sent 1519, accepted 1519, refused 0, mempool 312, tip 732, free outputs 18270
+21:27:30 rate 1500/min: sent 1898, accepted 1898, refused 0, mempool 155, tip 735, free outputs 19565
+21:27:45 rate 1500/min: sent 2278, accepted 2278, refused 0, mempool 516, tip 737, free outputs 19185
+21:28:00 rate 1500/min: sent 2655, accepted 2655, refused 0, mempool 62, tip 739, free outputs 18808
+21:28:16 rate 1500/min: sent 3034, accepted 3034, refused 0, mempool 384, tip 741, free outputs 18429
+21:28:31 rate 1500/min: sent 3412, accepted 3412, refused 0, mempool 120, tip 743, free outputs 19531
+21:28:46 rate 1500/min: sent 3792, accepted 3792, refused 0, mempool 780, tip 744, free outputs 19151
+21:29:01 rate 1500/min: sent 4169, accepted 4169, refused 0, mempool 499, tip 745, free outputs 18774
+21:29:16 rate 1500/min: sent 4549, accepted 4549, refused 0, mempool 230, tip 746, free outputs 18394
+21:29:31 rate 1500/min: sent 4928, accepted 4928, refused 0, mempool 988, tip 746, free outputs 19607
+21:29:47 rate 1500/min: sent 5306, accepted 5306, refused 0, mempool 599, tip 747, free outputs 19229
+21:30:02 rate 1500/min: sent 5686, accepted 5686, refused 0, mempool 325, tip 750, free outputs 18849
+21:30:17 rate 1500/min: sent 6065, accepted 6065, refused 0, mempool 782, tip 751, free outputs 18470
+21:30:32 rate 1500/min: sent 6443, accepted 6443, refused 0, mempool 617, tip 752, free outputs 19332
+21:30:47 rate 1500/min: sent 6823, accepted 6823, refused 0, mempool 341, tip 754, free outputs 18952
+21:31:02 rate 1500/min: sent 7204, accepted 7204, refused 0, mempool 397, tip 756, free outputs 18571
+21:31:18 rate 1500/min: sent 7582, accepted 7582, refused 0, mempool 647, tip 757, free outputs 18193
+21:31:33 rate 1500/min: sent 7960, accepted 7960, refused 0, mempool 1403, tip 757, free outputs 19400
+21:31:48 rate 1500/min: sent 8338, accepted 8338, refused 0, mempool 2159, tip 757, free outputs 19022
+21:32:03 rate 1500/min: sent 8718, accepted 8718, refused 0, mempool 121, tip 760, free outputs 18642
+21:32:14 --- step: 150 transfers a minute for 6 minutes
+21:32:29 rate 150/min: sent 38, accepted 38, refused 0, mempool 10, tip 763, free outputs 19721
+21:32:45 rate 150/min: sent 76, accepted 76, refused 0, mempool 6, tip 765, free outputs 19683
+21:33:00 rate 150/min: sent 114, accepted 114, refused 0, mempool 12, tip 768, free outputs 19645
+21:33:15 rate 150/min: sent 152, accepted 152, refused 0, mempool 46, tip 773, free outputs 19607
+21:33:30 rate 150/min: sent 190, accepted 190, refused 0, mempool 70, tip 774, free outputs 20040
+21:33:45 rate 150/min: sent 228, accepted 228, refused 0, mempool 146, tip 774, free outputs 20002
+21:34:01 rate 150/min: sent 266, accepted 266, refused 0, mempool 222, tip 774, free outputs 19964
+21:34:16 rate 150/min: sent 304, accepted 304, refused 0, mempool 10, tip 775, free outputs 19926
+21:34:31 rate 150/min: sent 342, accepted 342, refused 0, mempool 16, tip 777, free outputs 20058
+21:34:46 rate 150/min: sent 380, accepted 380, refused 0, mempool 32, tip 778, free outputs 20020
+21:35:01 rate 150/min: sent 418, accepted 418, refused 0, mempool 38, tip 779, free outputs 19982
+21:35:17 rate 150/min: sent 456, accepted 456, refused 0, mempool 26, tip 781, free outputs 19944
+21:35:32 rate 150/min: sent 494, accepted 494, refused 0, mempool 28, tip 787, free outputs 20050
+21:35:47 rate 150/min: sent 532, accepted 532, refused 0, mempool 104, tip 787, free outputs 20012
+21:36:02 rate 150/min: sent 570, accepted 570, refused 0, mempool 11, tip 788, free outputs 19974
+21:36:17 rate 150/min: sent 608, accepted 608, refused 0, mempool 16, tip 790, free outputs 19936
+21:36:33 rate 150/min: sent 646, accepted 646, refused 0, mempool 12, tip 791, free outputs 20055
+21:36:48 rate 150/min: sent 684, accepted 684, refused 0, mempool 88, tip 791, free outputs 20017
+21:37:03 rate 150/min: sent 722, accepted 722, refused 0, mempool 54, tip 792, free outputs 19979
+21:37:18 rate 150/min: sent 760, accepted 760, refused 0, mempool 130, tip 792, free outputs 19941
+21:37:33 rate 150/min: sent 798, accepted 798, refused 0, mempool 6, tip 795, free outputs 19998
+21:37:49 rate 150/min: sent 836, accepted 836, refused 0, mempool 62, tip 796, free outputs 19960
+21:38:04 rate 150/min: sent 874, accepted 874, refused 0, mempool 138, tip 796, free outputs 19922
+21:38:14 --- step: 7500 transfers a minute for 6 minutes
+21:38:31 rate 7500/min: sent 1753, accepted 1753, refused 0, mempool 777, tip 797, free outputs 18253
+21:38:48 rate 7500/min: sent 3938, accepted 3938, refused 0, mempool 4333, tip 798, free outputs 16068
+21:39:04 rate 7500/min: sent 5719, accepted 5719, refused 0, mempool 2389, tip 799, free outputs 14287
+21:39:20 rate 7500/min: sent 7567, accepted 7567, refused 0, mempool 953, tip 801, free outputs 17067
+21:39:36 rate 7500/min: sent 10040, accepted 10040, refused 0, mempool 1257, tip 803, free outputs 14594
+21:39:52 rate 7500/min: sent 12151, accepted 12151, refused 0, mempool 1238, tip 806, free outputs 12483
+21:40:08 rate 7500/min: sent 13834, accepted 13834, refused 0, mempool 978, tip 807, free outputs 10800
+21:40:24 rate 7500/min: sent 15763, accepted 15763, refused 0, mempool 2812, tip 810, free outputs 17699
+21:40:41 rate 7500/min: sent 18061, accepted 18061, refused 0, mempool 2933, tip 812, free outputs 15401
+21:40:57 rate 7500/min: sent 20134, accepted 20134, refused 0, mempool 3215, tip 813, free outputs 13328
+21:41:13 rate 7500/min: sent 22249, accepted 22249, refused 0, mempool 2213, tip 814, free outputs 11213
+21:41:30 rate 7500/min: sent 24248, accepted 24248, refused 0, mempool 3058, tip 815, free outputs 16952
+21:41:46 rate 7500/min: sent 26376, accepted 26376, refused 0, mempool 2110, tip 817, free outputs 14824
+21:42:02 rate 7500/min: sent 28250, accepted 28250, refused 0, mempool 432, tip 819, free outputs 12950
+21:42:18 rate 7500/min: sent 30181, accepted 30181, refused 0, mempool 1079, tip 820, free outputs 11019
+21:42:34 rate 7500/min: sent 32060, accepted 32060, refused 0, mempool 584, tip 823, free outputs 17615
+21:42:50 rate 7500/min: sent 34096, accepted 34096, refused 0, mempool 4939, tip 823, free outputs 15579
+21:43:07 rate 7500/min: sent 36279, accepted 36279, refused 0, mempool 786, tip 826, free outputs 13396
+21:43:24 rate 7500/min: sent 38469, accepted 38469, refused 0, mempool 442, tip 830, free outputs 11206
+21:43:39 rate 7500/min: sent 40399, accepted 40399, refused 0, mempool 3840, tip 831, free outputs 17945
+21:43:59 rate 7500/min: sent 41729, accepted 41729, refused 0, mempool 6556, tip 831, free outputs 16615
+21:44:15 --- step: 300 transfers a minute for 6 minutes
+21:44:31 rate 300/min: sent 75, accepted 75, refused 0, mempool 71, tip 837, free outputs 15886
+21:44:46 rate 300/min: sent 155, accepted 155, refused 0, mempool 31, tip 839, free outputs 15806
+21:45:01 rate 300/min: sent 231, accepted 231, refused 0, mempool 183, tip 839, free outputs 15730
+21:45:16 rate 300/min: sent 307, accepted 307, refused 0, mempool 94, tip 841, free outputs 15654
+21:45:32 rate 300/min: sent 383, accepted 383, refused 0, mempool 85, tip 842, free outputs 19978
+21:45:47 rate 300/min: sent 459, accepted 459, refused 0, mempool 97, tip 843, free outputs 19902
+21:46:02 rate 300/min: sent 535, accepted 535, refused 0, mempool 108, tip 844, free outputs 19826
+21:46:17 rate 300/min: sent 611, accepted 611, refused 0, mempool 47, tip 847, free outputs 19750
+21:46:32 rate 300/min: sent 687, accepted 687, refused 0, mempool 31, tip 850, free outputs 20002
+21:46:48 rate 300/min: sent 763, accepted 763, refused 0, mempool 83, tip 852, free outputs 19926
+21:47:03 rate 300/min: sent 839, accepted 839, refused 0, mempool 54, tip 856, free outputs 19850
+21:47:18 rate 300/min: sent 915, accepted 915, refused 0, mempool 25, tip 857, free outputs 19774
+21:47:33 rate 300/min: sent 991, accepted 991, refused 0, mempool 37, tip 858, free outputs 20013
+21:47:48 rate 300/min: sent 1067, accepted 1067, refused 0, mempool 9, tip 860, free outputs 19937
+21:48:04 rate 300/min: sent 1143, accepted 1143, refused 0, mempool 18, tip 862, free outputs 19861
+21:48:19 rate 300/min: sent 1219, accepted 1219, refused 0, mempool 71, tip 865, free outputs 19785
+21:48:34 rate 300/min: sent 1295, accepted 1295, refused 0, mempool 223, tip 865, free outputs 19990
+21:48:49 rate 300/min: sent 1371, accepted 1371, refused 0, mempool 14, tip 868, free outputs 19914
+21:49:04 rate 300/min: sent 1447, accepted 1447, refused 0, mempool 106, tip 869, free outputs 19838
+21:49:20 rate 300/min: sent 1523, accepted 1523, refused 0, mempool 77, tip 870, free outputs 19762
+21:49:35 rate 300/min: sent 1599, accepted 1599, refused 0, mempool 29, tip 871, free outputs 19987
+21:49:50 rate 300/min: sent 1675, accepted 1675, refused 0, mempool 19, tip 872, free outputs 19911
+21:50:05 rate 300/min: sent 1751, accepted 1751, refused 0, mempool 111, tip 873, free outputs 19835
+21:50:15 --- step: 150 transfers a minute for 6 minutes
+21:50:30 rate 150/min: sent 38, accepted 38, refused 0, mempool 10, tip 877, free outputs 19959
+21:50:45 rate 150/min: sent 76, accepted 76, refused 0, mempool 7, tip 878, free outputs 19921
+21:51:01 rate 150/min: sent 114, accepted 114, refused 0, mempool 3, tip 880, free outputs 19883
+21:51:16 rate 150/min: sent 152, accepted 152, refused 0, mempool 79, tip 880, free outputs 19845
+21:51:31 rate 150/min: sent 190, accepted 190, refused 0, mempool 4, tip 882, free outputs 20024
+21:51:46 rate 150/min: sent 228, accepted 228, refused 0, mempool 19, tip 883, free outputs 19986
+21:52:01 rate 150/min: sent 266, accepted 266, refused 0, mempool 35, tip 885, free outputs 19948
+21:52:17 rate 150/min: sent 304, accepted 304, refused 0, mempool 21, tip 886, free outputs 19910
+21:52:32 rate 150/min: sent 342, accepted 342, refused 0, mempool 61, tip 887, free outputs 20053
+21:52:47 rate 150/min: sent 380, accepted 380, refused 0, mempool 137, tip 887, free outputs 20015
+21:53:02 rate 150/min: sent 418, accepted 418, refused 0, mempool 9, tip 891, free outputs 19977
+21:53:17 rate 150/min: sent 456, accepted 456, refused 0, mempool 35, tip 892, free outputs 19939
+21:53:33 rate 150/min: sent 494, accepted 494, refused 0, mempool 21, tip 895, free outputs 20046
+21:53:48 rate 150/min: sent 532, accepted 532, refused 0, mempool 17, tip 899, free outputs 20008
+21:54:03 rate 150/min: sent 570, accepted 570, refused 0, mempool 31, tip 901, free outputs 19970
+21:54:18 rate 150/min: sent 608, accepted 608, refused 0, mempool 18, tip 902, free outputs 19932
+21:54:33 rate 150/min: sent 646, accepted 646, refused 0, mempool 94, tip 902, free outputs 20054
+21:54:49 rate 150/min: sent 684, accepted 684, refused 0, mempool 59, tip 903, free outputs 20016
+21:55:04 rate 150/min: sent 722, accepted 722, refused 0, mempool 15, tip 904, free outputs 19978
+21:55:19 rate 150/min: sent 760, accepted 760, refused 0, mempool 51, tip 905, free outputs 19940
+21:55:34 rate 150/min: sent 798, accepted 798, refused 0, mempool 47, tip 907, free outputs 20038
+21:55:49 rate 150/min: sent 836, accepted 836, refused 0, mempool 123, tip 907, free outputs 20000
+21:56:05 rate 150/min: sent 874, accepted 874, refused 0, mempool 199, tip 907, free outputs 19962
+21:56:15 --- step: 300 transfers a minute for 6 minutes
+21:56:30 rate 300/min: sent 75, accepted 75, refused 0, mempool 30, tip 910, free outputs 19901
+21:56:45 rate 300/min: sent 151, accepted 151, refused 0, mempool 23, tip 913, free outputs 19825
+21:57:01 rate 300/min: sent 227, accepted 227, refused 0, mempool 74, tip 914, free outputs 19749
+21:57:16 rate 300/min: sent 303, accepted 303, refused 0, mempool 24, tip 917, free outputs 19673
+21:57:31 rate 300/min: sent 379, accepted 379, refused 0, mempool 157, tip 918, free outputs 20013
+21:57:46 rate 300/min: sent 455, accepted 455, refused 0, mempool 8, tip 921, free outputs 19937
+21:58:01 rate 300/min: sent 531, accepted 531, refused 0, mempool 161, tip 921, free outputs 19861
+21:58:17 rate 300/min: sent 607, accepted 607, refused 0, mempool 30, tip 923, free outputs 19785
+21:58:32 rate 300/min: sent 683, accepted 683, refused 0, mempool 113, tip 925, free outputs 20010
+21:58:47 rate 300/min: sent 759, accepted 759, refused 0, mempool 13, tip 927, free outputs 19934
+21:59:02 rate 300/min: sent 835, accepted 835, refused 0, mempool 85, tip 931, free outputs 19858
+21:59:17 rate 300/min: sent 911, accepted 911, refused 0, mempool 96, tip 932, free outputs 19782
+21:59:33 rate 300/min: sent 987, accepted 987, refused 0, mempool 249, tip 932, free outputs 19977
+21:59:48 rate 300/min: sent 1063, accepted 1063, refused 0, mempool 400, tip 932, free outputs 19901
+22:00:03 rate 300/min: sent 1139, accepted 1139, refused 0, mempool 54, tip 934, free outputs 19825
+22:00:18 rate 300/min: sent 1215, accepted 1215, refused 0, mempool 206, tip 934, free outputs 19749
+22:00:33 rate 300/min: sent 1291, accepted 1291, refused 0, mempool 358, tip 934, free outputs 19922
+22:00:49 rate 300/min: sent 1367, accepted 1367, refused 0, mempool 48, tip 939, free outputs 19846
+22:01:04 rate 300/min: sent 1443, accepted 1443, refused 0, mempool 201, tip 939, free outputs 19770
+22:01:19 rate 300/min: sent 1519, accepted 1519, refused 0, mempool 352, tip 939, free outputs 19694
+22:01:34 rate 300/min: sent 1595, accepted 1595, refused 0, mempool 110, tip 940, free outputs 19849
+22:01:49 rate 300/min: sent 1671, accepted 1671, refused 0, mempool 82, tip 941, free outputs 19773
+22:02:05 rate 300/min: sent 1747, accepted 1747, refused 0, mempool 53, tip 942, free outputs 19697
+22:02:15 --- step: 300 transfers a minute for 6 minutes
+22:02:30 rate 300/min: sent 75, accepted 75, refused 0, mempool 168, tip 943, free outputs 19947
+22:02:45 rate 300/min: sent 151, accepted 151, refused 0, mempool 100, tip 944, free outputs 19871
+22:03:01 rate 300/min: sent 227, accepted 227, refused 0, mempool 50, tip 945, free outputs 19795
+22:03:16 rate 300/min: sent 303, accepted 303, refused 0, mempool 128, tip 947, free outputs 19719
+22:03:31 rate 300/min: sent 379, accepted 379, refused 0, mempool 53, tip 948, free outputs 19961
+22:03:46 rate 300/min: sent 455, accepted 455, refused 0, mempool 24, tip 951, free outputs 19885
+22:04:01 rate 300/min: sent 531, accepted 531, refused 0, mempool 76, tip 952, free outputs 19809
+22:04:17 rate 300/min: sent 607, accepted 607, refused 0, mempool 28, tip 953, free outputs 19733
+22:04:32 rate 300/min: sent 683, accepted 683, refused 0, mempool 18, tip 956, free outputs 20011
+22:04:47 rate 300/min: sent 759, accepted 759, refused 0, mempool 110, tip 957, free outputs 19935
+22:05:02 rate 300/min: sent 835, accepted 835, refused 0, mempool 102, tip 958, free outputs 19859
+22:05:17 rate 300/min: sent 911, accepted 911, refused 0, mempool 88, tip 960, free outputs 19783
+22:05:33 rate 300/min: sent 987, accepted 987, refused 0, mempool 240, tip 960, free outputs 19981
+22:05:48 rate 300/min: sent 1063, accepted 1063, refused 0, mempool 38, tip 964, free outputs 19905
+22:06:03 rate 300/min: sent 1139, accepted 1139, refused 0, mempool 48, tip 967, free outputs 19829
+22:06:18 rate 300/min: sent 1215, accepted 1215, refused 0, mempool 18, tip 970, free outputs 19753
+22:06:33 rate 300/min: sent 1291, accepted 1291, refused 0, mempool 170, tip 970, free outputs 20016
+22:06:49 rate 300/min: sent 1367, accepted 1367, refused 0, mempool 62, tip 974, free outputs 19940
+22:07:04 rate 300/min: sent 1443, accepted 1443, refused 0, mempool 214, tip 974, free outputs 19864
+22:07:19 rate 300/min: sent 1519, accepted 1519, refused 0, mempool 124, tip 975, free outputs 19788
+22:07:34 rate 300/min: sent 1595, accepted 1595, refused 0, mempool 276, tip 975, free outputs 19963
+22:07:50 rate 300/min: sent 1671, accepted 1671, refused 0, mempool 8, tip 981, free outputs 19887
+22:08:05 rate 300/min: sent 1747, accepted 1747, refused 0, mempool 98, tip 982, free outputs 19811
+22:08:15 --- step: 750 transfers a minute for 6 minutes
+22:08:30 rate 750/min: sent 188, accepted 188, refused 0, mempool 34, tip 986, free outputs 19811
+22:08:46 rate 750/min: sent 377, accepted 377, refused 0, mempool 162, tip 989, free outputs 19622
+22:09:01 rate 750/min: sent 566, accepted 566, refused 0, mempool 288, tip 991, free outputs 19433
+22:09:16 rate 750/min: sent 755, accepted 755, refused 0, mempool 364, tip 992, free outputs 19244
+22:09:31 rate 750/min: sent 945, accepted 945, refused 0, mempool 329, tip 995, free outputs 19729
+22:09:46 rate 750/min: sent 1134, accepted 1134, refused 0, mempool 368, tip 996, free outputs 19540
+22:10:01 rate 750/min: sent 1323, accepted 1323, refused 0, mempool 37, tip 998, free outputs 19351
+22:10:16 rate 750/min: sent 1512, accepted 1512, refused 0, mempool 415, tip 998, free outputs 19162
+22:10:31 rate 750/min: sent 1700, accepted 1700, refused 0, mempool 286, tip 999, free outputs 19706
+22:10:47 rate 750/min: sent 1889, accepted 1889, refused 0, mempool 662, tip 999, free outputs 19517
+22:11:02 rate 750/min: sent 2078, accepted 2078, refused 0, mempool 121, tip 1002, free outputs 19328
+22:11:17 rate 750/min: sent 2267, accepted 2267, refused 0, mempool 349, tip 1003, free outputs 19139
+22:11:32 rate 750/min: sent 2456, accepted 2456, refused 0, mempool 727, tip 1003, free outputs 19737
+22:11:47 rate 750/min: sent 2645, accepted 2645, refused 0, mempool 32, tip 1005, free outputs 19548
+22:12:02 rate 750/min: sent 2836, accepted 2836, refused 0, mempool 164, tip 1007, free outputs 19357
+22:12:17 rate 750/min: sent 3025, accepted 3025, refused 0, mempool 190, tip 1009, free outputs 19168
+22:12:33 rate 750/min: sent 3214, accepted 3214, refused 0, mempool 568, tip 1009, free outputs 19817
+22:12:48 rate 750/min: sent 3403, accepted 3403, refused 0, mempool 946, tip 1009, free outputs 19628
+22:13:03 rate 750/min: sent 3592, accepted 3592, refused 0, mempool 145, tip 1011, free outputs 19439
+22:13:18 rate 750/min: sent 3782, accepted 3782, refused 0, mempool 123, tip 1013, free outputs 19249
+22:13:33 rate 750/min: sent 3971, accepted 3971, refused 0, mempool 125, tip 1015, free outputs 19851
+22:13:48 rate 750/min: sent 4160, accepted 4160, refused 0, mempool 503, tip 1015, free outputs 19662
+22:14:03 rate 750/min: sent 4349, accepted 4349, refused 0, mempool 147, tip 1020, free outputs 19473
+22:14:15 --- step: 750 transfers a minute for 6 minutes
+22:14:31 rate 750/min: sent 188, accepted 188, refused 0, mempool 472, tip 1021, free outputs 19689
+22:14:46 rate 750/min: sent 378, accepted 378, refused 0, mempool 349, tip 1022, free outputs 19499
+22:15:01 rate 750/min: sent 569, accepted 569, refused 0, mempool 732, tip 1022, free outputs 19308
+22:15:16 rate 750/min: sent 758, accepted 758, refused 0, mempool 189, tip 1023, free outputs 19119
+22:15:31 rate 750/min: sent 947, accepted 947, refused 0, mempool 567, tip 1023, free outputs 19818
+22:15:46 rate 750/min: sent 1136, accepted 1136, refused 0, mempool 32, tip 1026, free outputs 19629
+22:16:02 rate 750/min: sent 1325, accepted 1325, refused 0, mempool 65, tip 1030, free outputs 19440
+22:16:17 rate 750/min: sent 1514, accepted 1514, refused 0, mempool 135, tip 1032, free outputs 19251
+22:16:32 rate 750/min: sent 1703, accepted 1703, refused 0, mempool 513, tip 1032, free outputs 19845
+22:16:47 rate 750/min: sent 1892, accepted 1892, refused 0, mempool 891, tip 1032, free outputs 19656
+22:17:02 rate 750/min: sent 2081, accepted 2081, refused 0, mempool 1269, tip 1032, free outputs 19467
+22:17:17 rate 750/min: sent 2270, accepted 2270, refused 0, mempool 68, tip 1034, free outputs 19278
+22:17:32 rate 750/min: sent 2460, accepted 2460, refused 0, mempool 450, tip 1034, free outputs 19876
+22:17:47 rate 750/min: sent 2649, accepted 2649, refused 0, mempool 322, tip 1035, free outputs 19687
+22:18:03 rate 750/min: sent 2838, accepted 2838, refused 0, mempool 270, tip 1038, free outputs 19498
+22:18:18 rate 750/min: sent 3027, accepted 3027, refused 0, mempool 118, tip 1040, free outputs 19309
+22:18:33 rate 750/min: sent 3216, accepted 3216, refused 0, mempool 345, tip 1041, free outputs 19853
+22:18:48 rate 750/min: sent 3405, accepted 3405, refused 0, mempool 166, tip 1043, free outputs 19664
+22:19:03 rate 750/min: sent 3594, accepted 3594, refused 0, mempool 142, tip 1045, free outputs 19475
+22:19:18 rate 750/min: sent 3783, accepted 3783, refused 0, mempool 268, tip 1046, free outputs 19286
+22:19:33 rate 750/min: sent 3972, accepted 3972, refused 0, mempool 38, tip 1048, free outputs 19778
+22:19:48 rate 750/min: sent 4161, accepted 4161, refused 0, mempool 416, tip 1048, free outputs 19589
+22:20:04 rate 750/min: sent 4349, accepted 4349, refused 0, mempool 124, tip 1051, free outputs 19401
+22:20:16 --- step: 3000 transfers a minute for 6 minutes
+22:20:31 rate 3000/min: sent 750, accepted 750, refused 0, mempool 644, tip 1056, free outputs 19138
+22:20:46 rate 3000/min: sent 1528, accepted 1528, refused 0, mempool 776, tip 1059, free outputs 18360
+22:21:02 rate 3000/min: sent 2293, accepted 2293, refused 0, mempool 2306, tip 1059, free outputs 17595
+22:21:19 rate 3000/min: sent 3061, accepted 3061, refused 0, mempool 3866, tip 1059, free outputs 16827
+22:21:34 rate 3000/min: sent 3908, accepted 3908, refused 0, mempool 251, tip 1061, free outputs 17332
+22:21:49 rate 3000/min: sent 4685, accepted 4685, refused 0, mempool 522, tip 1063, free outputs 16555
+22:22:05 rate 3000/min: sent 5445, accepted 5445, refused 0, mempool 614, tip 1065, free outputs 15795
+22:22:20 rate 3000/min: sent 6206, accepted 6206, refused 0, mempool 1088, tip 1066, free outputs 15034
+22:22:35 rate 3000/min: sent 6966, accepted 6966, refused 0, mempool 1107, tip 1067, free outputs 18797
+22:22:50 rate 3000/min: sent 7728, accepted 7728, refused 0, mempool 495, tip 1069, free outputs 18035
+22:23:06 rate 3000/min: sent 8491, accepted 8491, refused 0, mempool 187, tip 1073, free outputs 17272
+22:23:21 rate 3000/min: sent 9260, accepted 9260, refused 0, mempool 261, tip 1074, free outputs 16503
+22:23:36 rate 3000/min: sent 10017, accepted 10017, refused 0, mempool 1547, tip 1075, free outputs 19214
+22:23:51 rate 3000/min: sent 10775, accepted 10775, refused 0, mempool 3063, tip 1075, free outputs 18456
+22:24:07 rate 3000/min: sent 11539, accepted 11539, refused 0, mempool 769, tip 1077, free outputs 17692
+22:24:22 rate 3000/min: sent 12308, accepted 12308, refused 0, mempool 153, tip 1078, free outputs 16923
+22:24:38 rate 3000/min: sent 13097, accepted 13097, refused 0, mempool 1261, tip 1079, free outputs 19249
+22:24:53 rate 3000/min: sent 13865, accepted 13865, refused 0, mempool 443, tip 1083, free outputs 18481
+22:25:08 rate 3000/min: sent 14629, accepted 14629, refused 0, mempool 1971, tip 1083, free outputs 17717
+22:25:24 rate 3000/min: sent 15387, accepted 15387, refused 0, mempool 707, tip 1086, free outputs 16959
+22:25:39 rate 3000/min: sent 16155, accepted 16155, refused 0, mempool 2243, tip 1086, free outputs 18980
+22:25:54 rate 3000/min: sent 16914, accepted 16914, refused 0, mempool 217, tip 1088, free outputs 18221
+22:26:09 rate 3000/min: sent 17686, accepted 17686, refused 0, mempool 1761, tip 1088, free outputs 17449
+22:26:31 done: all steps ran - results in /out/summary.json

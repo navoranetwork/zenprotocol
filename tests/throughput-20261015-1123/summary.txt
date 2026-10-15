@@ -17,3 +17,6 @@
 [2026-10-15 18:47] B-t1000: node up, block 320, senders 1 and 2 funded
 [2026-10-15 18:47] B-t1000: load, 18 steps of 6 min
 [2026-10-15 20:37] B-t1000: done at block 1088
+[2026-10-15 20:37] B-t2000: node up, block 320, senders 1 and 2 funded
+[2026-10-15 20:37] B-t2000: load, 18 steps of 6 min
+[2026-10-15 22:26] B-t2000: done at block 1090
