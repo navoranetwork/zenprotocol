@@ -37,7 +37,8 @@ const ICONS = typeof __ICONS__ === 'object' && __ICONS__ ? __ICONS__ : {};
 // the Bitcoin logo (public domain) next to BTC amounts and the Bitcoin side
 const btcLogo = (n = 18) => ICONS.btc ? `<img class="ticon" src="${ICONS.btc}" alt="" width="${n}" height="${n}">` : '';
 const btcAmt = (sats, n = 18) => `<span class="tname">${btcLogo(n)}${esc(formatBTC(sats))} BTC</span>`;
-const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
+const zpLogo = (n = 18) => ICONS.zp ? `<img class="ticon" src="${ICONS.zp}" alt="" width="${n}" height="${n}">` : '';
+const tokenIcon = (asset, size = 20) => asset === '00' ? zpLogo(size) : /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
@@ -64,7 +65,7 @@ function dexView(m, base, loading) {
   const known = [...new Set(['00', ...assets.map(x => x.asset), ...list.flatMap(o => [o.underAsset, o.pairAsset])])];
   const give = S.draft.dgive && known.includes(S.draft.dgive) ? S.draft.dgive : '00';
   const want = S.draft.dwant && known.includes(S.draft.dwant) && S.draft.dwant !== give ? S.draft.dwant : known.find(a => a !== give) || '';
-  const pick = (name, sel) => `<div class="tokpick">${known.filter(a => name === 'dwant' ? a !== give : true).map(a => `<button type="button" class="chip tokchip ${a === sel ? 'on' : ''}" aria-checked="${a === sel}" role="radio" data-act="dex-pick" data-name="${name}" data-asset="${esc(a)}">${a === '00' ? '<span class="zpdot">ZP</span>' : tokenIcon(a, 22)}<span><b>${esc(unitOf(a))}</b></span></button>`).join('')}</div>`;
+  const pick = (name, sel) => `<div class="tokpick">${known.filter(a => name === 'dwant' ? a !== give : true).map(a => `<button type="button" class="chip tokchip ${a === sel ? 'on' : ''}" aria-checked="${a === sel}" role="radio" data-act="dex-pick" data-name="${name}" data-asset="${esc(a)}">${a === '00' && !ICONS.zp ? '<span class="zpdot">ZP</span>' : tokenIcon(a, 22)}<span><b>${esc(unitOf(a))}</b></span></button>`).join('')}</div>`;
   const has = assets.find(x => x.asset === give);
   return `<div class="card"><h2>Open orders</h2><div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No open orders.</p>'}</div>
       <p class="muted small" data-s="mt10">A new order shows here about 10 blocks after it is made. Taking needs no signature from the maker; you can take part of an order.</p></div>
@@ -305,7 +306,7 @@ function buyCard() {
   return `${head(title)}${stage === 4 ? '<p class="ok small">The contract checked your Bitcoin payment and released the ZP to this wallet.</p>' : ''}${stepper(steps)}
     ${stage === 4 ? '<button class="btn primary" data-act="buy-done">Done</button>' : stage === 0 ? '' : '<p class="muted small">This screen updates by itself.</p>'}</div>`;
 }
-const offerHead = o => `<div class="row" data-s="between"><div class="offzp">${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></div><div class="amt" data-s="fixed">${btcAmt(o.sats)}</div></div><div class="small muted">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
+const offerHead = o => `<div class="row" data-s="between"><div class="offzp tname">${zpLogo(24)}<span>${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></span></div><div class="amt" data-s="fixed">${btcAmt(o.sats)}</div></div><div class="small muted">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
 function buyView() {
   const me = mySellers(), b = myBuy();
   const list = S.swap.offers.filter(o => !me.has(o.seller) && o.state !== 'closed');
@@ -810,7 +811,7 @@ const views = {
       <div class="wallets" role="tablist">${ws.map(w => `<button class="chip ${w.id === a.id ? 'on' : ''}" data-wallet="${esc(w.id)}" role="tab">${esc(w.name)}${w.kind === 'watch' ? ' 👁' : ''}</button>`).join('')}
         <button class="chip" data-go="add" aria-label="Add a wallet">+ Add</button></div>
       <div><div class="muted small">${esc(a.name)}${ws.length > 1 ? ` · all wallets ${formatZP(total)} ZP` : ''}</div>
-        <div class="balance">${d.state ? formatZP(zp?.spendable || 0n) : '…'} <small>ZP</small></div>
+        <div class="balance">${d.state ? formatZP(zp?.spendable || 0n) : '…'} <small class="tname">${zpLogo(22)}ZP</small></div>
         ${zp?.maturing ? `<div class="muted small">${formatZP(zp.maturing)} ZP mining rewards maturing · spendable from block ${zp.maturesAt.toLocaleString('en-US')}</div>` : ''}
         ${d.error ? `<div class="err small">${esc(d.error)}</div>` : ''}</div>
       <div class="actions">
@@ -830,7 +831,7 @@ const views = {
     const a = active(), assets = (S.data.get(a.id)?.state?.assets || []).filter(x => x.asset === '00' || x.spendable > 0n);
     const asset = assets.some(x => x.asset === S.draft.asset) ? S.draft.asset : '00', held = assets.find(x => x.asset === asset), u = unitOf(asset);
     return `${backBar(asset === '00' ? 'Send ZP' : 'Send ' + esc(u))}<form data-form="send" class="screen">
-      ${assets.length > 1 ? `<div class="field"><span>What</span><div class="tokpick" role="radiogroup" aria-label="What to send">${assets.map(x => `<button type="button" role="radio" aria-checked="${x.asset === asset}" class="chip tokchip ${x.asset === asset ? 'on' : ''}" data-act="send-asset" data-asset="${esc(x.asset)}">${x.asset === '00' ? '<span class="zpdot">ZP</span>' : tokenIcon(x.asset, 22)}<span><b>${esc(unitOf(x.asset))}</b><small>${esc(tokenAmount(x.asset, x.spendable))}</small></span></button>`).join('')}</div><input type="hidden" name="asset" value="${esc(asset)}"></div>` : ''}
+      ${assets.length > 1 ? `<div class="field"><span>What</span><div class="tokpick" role="radiogroup" aria-label="What to send">${assets.map(x => `<button type="button" role="radio" aria-checked="${x.asset === asset}" class="chip tokchip ${x.asset === asset ? 'on' : ''}" data-act="send-asset" data-asset="${esc(x.asset)}">${x.asset === '00' && !ICONS.zp ? '<span class="zpdot">ZP</span>' : tokenIcon(x.asset, 22)}<span><b>${esc(unitOf(x.asset))}</b><small>${esc(tokenAmount(x.asset, x.spendable))}</small></span></button>`).join('')}</div><input type="hidden" name="asset" value="${esc(asset)}"></div>` : ''}
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
       <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(asset, 18)}Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
@@ -874,7 +875,7 @@ const views = {
     const m = S.markets, base = siteBase(), tab = S.settings.mtab || 'oracle', loading = !m && !S.marketsError;
     const unit = (asset, v) => withUnit(asset, BigInt(v));
     const tabs = [['oracle', 'Oracle'], ['dex', 'Dex'], ['swap', 'ZP ⇄ BTC']];
-    const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${k === 'swap' ? `<span class="tname">ZP ⇄ ${btcLogo(16)}BTC</span>` : l}</button>`).join('')}</div>`;
+    const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${k === 'swap' ? `<span class="tname tight">${zpLogo(15)}ZP⇄${btcLogo(15)}BTC</span>` : l}</button>`).join('')}</div>`;
     const errCard = S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : '';
     let body = '';
     if (tab === 'oracle') {
@@ -926,7 +927,7 @@ const views = {
     <div class="card"><h2>Wallets on ${net() === 'main' ? 'mainnet' : 'testnet'}</h2><div class="list">${walletsHere().map(w => `<div class="item"><div><div>${esc(w.name)}</div><div class="muted small">${{ mnemonic: '24 words', key: 'Private key', watch: 'Watch only' }[w.kind]}</div></div>
       <span class="row" data-s="fixed">${w.kind !== 'watch' ? `<button class="btn" data-act="reveal" data-id="${esc(w.id)}">Backup</button>` : ''}<button class="btn danger" data-act="remove" data-id="${esc(w.id)}">Remove</button></span></div>`).join('') || '<p class="muted small">None.</p>'}</div></div>
     <button class="btn big" data-act="lock">Lock now</button>
-    <p class="muted small">ZP Wallet ${esc(WALLET_VERSION)} · open source and community-run. Not affiliated with Zen Protocol Ltd. Wallet names and logos are trademarks of their owners; the Bitcoin logo is public domain.</p></div>${nav('settings')}`,
+    <p class="muted small">ZP Wallet ${esc(WALLET_VERSION)} · open source and community-run. Not affiliated with Zen Protocol Ltd. Wallet names and logos are trademarks of their owners; the Bitcoin logo is public domain; the ZP logo is Zen Protocol's original.</p></div>${nav('settings')}`,
 };
 
 const alloc = () => { const a = S.cgp?.allocation; return Number.isInteger(a) && a >= 0 && a <= 100 ? a : 90; };

@@ -229,3 +229,4 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .btn .wicon { margin-right: 2px; }
 .fee { background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }
 .wicon.brand { background: #FFFFFF; padding: 2px; }
+.tname.tight { gap: 3px; white-space: nowrap; }

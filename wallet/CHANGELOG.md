@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.23.0 — 2026-10-15
+
+### Added
+- The original ZP coin logo (from Zen Protocol's explorer repository, unchanged) next to the ZP balance, in the token
+  and send pickers, on ZP ⇄ BTC offers and on the Markets tab. Alon decided to use it: the project closed in 2024 with
+  no team left (its licence grants no trademark rights; web/icons/README.md).
+
 ## 0.22.0 — 2026-10-15
 
 ### Added
