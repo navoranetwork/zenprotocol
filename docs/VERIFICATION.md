@@ -25,6 +25,7 @@ Fixes the tests forced: the wallet only sees outputs locked to its tracked keys,
 | Market maker: an ask at 0.101 and a bid at 0.099 USD per ZP around 0.10 | working; found and fixed duplicate orders (waiting for the index), a wait that started before the order was sent, and surplus copies are now cancelled |
 | Bridge deposit on **Base Sepolia**: a link signed with the EVM key, 10 test USDC sent to the bridge, zUSDC issued to the linked ZP address | working |
 | Bridge withdrawal: 5,000,000 zUSDC units sent to the bridge address, burned, 5 USDC paid back to the EVM address | working |
+| Bridge on the **V1** zUSDC (2026-10-15): deposits of 2, 1 and 10 USDC from a MetaMask account issued as zUSDC; a withdrawal of 1 zUSDC sent from the ZP Wallet paid automatically after 2 ZP blocks, and a later claim for it returned the same payout (paid once) | working |
 | Pages over HTTPS at `testnet.navora.network` (`site/setup-testnet-web.sh`) | working |
 
 Fixes the live tests forced: public RPC nodes refuse log queries over ~500 blocks (the bridge now asks in 450-block ranges); and a withdrawal now checks the requested EVM address's own link, because one ZP address can be linked to several EVM addresses.
@@ -34,5 +35,5 @@ Fixes the live tests forced: public RPC nodes refuse log queries over ~500 block
 - The quorum rule on the server (it is built and self-tested, not switched on).
 - Partial Take on the Dex, and orders from other users than the market maker.
 - A clean install from nothing with the scripts only (`DEPLOY.md`).
-- Bridge: pause, limits, proof of reserves, custody by several keys.
+- Bridge: pause, limits, custody by several keys; a trust-minimised bridge (research, docs/BRIDGE.md).
 - A second seed server, a domain with HTTPS.
