@@ -36,6 +36,8 @@ with sync_playwright() as p:
     pg.click('button[data-act=send-asset][data-asset="%s"]' % ZUSDC); pg.wait_for_selector('text=Amount (zUSDC)')
     ok('Available 2.00' in pg.inner_text('main') and 'Send zUSDC' in pg.inner_text('body'), 'choosing zUSDC: title, unit and available amount follow it')
     to = get('/__addr')['other']
+    pg.fill('input[name=to]', 'tzn1q27ngrump3ahlrtrys9y03c84hj9j8pjupsz0f6qrach80j3jjy6sn0732d'); pg.wait_for_selector('text=not the USDC bridge', timeout=5000)
+    ok('Market maker' in pg.inner_text('main'), 'a named address (the testnet market maker) says it is not the bridge')
     pg.fill('input[name=to]', to); pg.wait_for_selector('text=Withdrawal to USDC', timeout=5000)
     ok('pays the same amount of USDC' in pg.inner_text('main') and 'about 8 to 10 minutes' in pg.inner_text('main'), 'sending zUSDC to the bridge address: shown as a withdrawal with the wait')
     pg.click('button[data-act=send-asset][data-asset="00"]'); pg.wait_for_selector('text=It takes only zUSDC'); ok(True, 'sending ZP to the bridge: warned that only zUSDC is taken')

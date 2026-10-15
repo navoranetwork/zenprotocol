@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.17.1 — 2026-10-15
+
+### Changed
+- Named plain addresses: the testnet's market maker (its own key since today) shows as "the market maker" in the
+  activity and the confirm screen; sending to it says it is not the USDC bridge (nothing sent there is paid out as
+  USDC). Names come from the site's contract-names.json, which can now name plain addresses too.
+
 ## 0.17.0 — 2026-10-15
 
 ### Added

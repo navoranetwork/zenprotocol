@@ -1,5 +1,5 @@
 {
-  "_comment": "Display names for contracts on the stats page and in ZP Wallet. Key: contract address (czen1...) or contract ID. Add a line to name a new contract.",
+  "_comment": "Display names for contracts on the stats page and in ZP Wallet. Key: contract address (czen1...) or contract ID. Add a line to name a new contract. Plain (PK) addresses can be named too, e.g. the testnet market maker.",
   "00000000cdaa2a511cd2e1d07555b00314d1be40a649d3b6f419eb1e4e7a8e63240a36d1": "CGP",
   "000000006ea5457ed23e3e13f31fe4cfd46c200587f2e4cc22df30ac77790f6d2c15cc12": "VCGP",
   "czen1qqqqqqqrw54zha5378cflx8lyel2xcgq9slewfnpzmuc2camepakjc9wvzga8dtw0": "VCGP",
@@ -15,5 +15,6 @@
   "000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577": "zUSDC (bridge token, V1)",
   "ctzn1qqqqqqqy7psyxj3nr8tg908ajjgz8y5rey6epzkvsjpajvv4hn2taq0wf6vyvdhp0": "zUSDC (V0, closed)",
   "ctzn1qqqqqqq0at25gfvnqqk9lnrdsd4ezekck96xtq0h2hyst4plvl2hy53wtlym8deln": "ZenDex (V1)",
-  "00000001fd5aa884b260058bf98db06d722cdb162e8cb03eeab920ba87ecfaae4a45cbf9": "ZenDex (V1)"
+  "00000001fd5aa884b260058bf98db06d722cdb162e8cb03eeab920ba87ecfaae4a45cbf9": "ZenDex (V1)",
+  "tzn1q27ngrump3ahlrtrys9y03c84hj9j8pjupsz0f6qrach80j3jjy6sn0732d": "Market maker"
 }

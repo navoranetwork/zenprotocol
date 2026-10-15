@@ -37,6 +37,8 @@ const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || ''
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
 function bridgeNote(to, asset) {
+  const named = contractNames[String(to || '').trim()];
+  if (!toBridge(to) && typeof named === 'string') return `<div class="card small">This is the <b>${esc(named)}</b>, not the USDC bridge: nothing sent here is paid out as USDC.</div>`;
   if (!toBridge(to)) return '';
   return asset === S.bridge.asset
     ? `<div class="card small"><b>Withdrawal to USDC.</b> This is the USDC bridge: it destroys the zUSDC and pays the same amount of USDC to the EVM address linked to this wallet's address, by itself, ${bridgeWait()}. Follow it on <a href="/bridge.html" rel="noopener">the bridge page</a>.</div>`
@@ -792,7 +794,7 @@ function activityRow(h, w) {
         back = `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(S.bridge.zp)}" data-asset="${esc(h.asset)}">Withdraw</button><button type="button" class="chip mini" data-act="copy" data-text="${esc(h.txHash)}" title="${esc(h.txHash)}">Copy id</button>`;
       } else if (o && o.address) {
         what = inn ? 'Received from' : 'Sent to';
-        who = name ? esc(name.replace(/^the /, 'The ')) : S.bridge && o.address === S.bridge.zp ? `<span title="${esc(o.address)}">the USDC bridge</span>` : `<span class="mono" title="${esc(o.address)}">${esc(shortAddr(o.address))}</span>`;
+        who = name ? esc(name.replace(/^the /, 'The ')) : S.bridge && o.address === S.bridge.zp ? `<span title="${esc(o.address)}">the USDC bridge</span>` : typeof contractNames[o.address] === 'string' ? `<span title="${esc(o.address)}">the ${esc(contractNames[o.address].toLowerCase())}</span>` : `<span class="mono" title="${esc(o.address)}">${esc(shortAddr(o.address))}</span>`;
         const copy = `<button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address)}">Copy</button>`;
         back = (inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}" data-asset="${esc(h.asset)}">Send back</button>` : !inn && o.kind !== 'Contract' ? `<button type="button" class="chip mini" data-act="send-back" data-to="${esc(o.address)}" data-asset="${esc(h.asset)}">Send again</button>` : '') + (o.kind !== 'Contract' ? copy : '')
           + `<button type="button" class="chip mini" data-act="copy" data-text="${esc(h.txHash)}" title="${esc(h.txHash)}">Copy id</button>`;
@@ -884,7 +886,7 @@ function modalHtml() {
   const m = S.modal; if (!m) return '';
   if (m.type === 'confirm-send') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm transfer</h2>
     <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt tname">${tokenIcon(m.asset || '00')}${esc(withUnit(m.asset || '00', m.amount))}</span></div>
-    <div class="kv"><span class="muted">To</span><span class="mono small">${toBridge(m.to) ? '<b>USDC bridge</b> ' : ''}${esc(m.to)}</span></div>
+    <div class="kv"><span class="muted">To</span><span class="mono small">${toBridge(m.to) ? '<b>USDC bridge</b> ' : typeof contractNames[m.to] === 'string' ? `<b>${esc(contractNames[m.to])}</b> ` : ''}${esc(m.to)}</span></div>
     <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div>
     <div class="kv"><span class="muted">Fee</span><span>None</span></div></div>
     <p class="muted small">Transfers cannot be reversed. Check the address.</p>${errBox()}
@@ -1414,7 +1416,7 @@ $app.addEventListener('click', async e => {
 
 $app.addEventListener('input', e => {
   const t = e.target; S.lastActivity = Date.now();
-  if (t.name === 'to' && t.closest('[data-form=send]') && (toBridge(t.value) !== toBridge(S.draft.to))) { S.draft = { ...S.draft, to: t.value, amount: $app.querySelector('[name=amount]')?.value || '' }; render(); const i = $app.querySelector('[name=to]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } return; }
+  if (t.name === 'to' && t.closest('[data-form=send]') && (toBridge(t.value) !== toBridge(S.draft.to) || !!contractNames[t.value.trim()] !== !!contractNames[String(S.draft.to || '').trim()])) { S.draft = { ...S.draft, to: t.value, amount: $app.querySelector('[name=amount]')?.value || '' }; render(); const i = $app.querySelector('[name=to]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } return; }
   if (t.name === 'asset' && t.closest('[data-form=send]')) { S.draft = { ...S.draft, asset: t.value, to: $app.querySelector('[name=to]')?.value || '', amount: '' }; S.error = ''; return render(); }
   if (t.name === 'pct') syncAlloc(t.value, 'field');
   else if (t.name === 'pctr') syncAlloc(t.value, 'slider');
