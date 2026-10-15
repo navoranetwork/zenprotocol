@@ -1075,6 +1075,11 @@ function activityRow(h, w) {
   const amt = BigInt(h.amount), inn = amt > 0n, info = h.txHash ? S.txInfo.get(h.txHash) : null;
   const mineVote = (S.myVotes ||= loadVotes()).find(v => v.hash === h.txHash);
   let what = h.lock?.Coinbase ? 'Mining reward' : inn ? 'Received' : 'Sent', who = '', back = '';
+  if (amt === 0n && !h.lock?.Coinbase) {   // nothing in or out: the coins moved between this wallet's own addresses
+    return `<div class="item act"><div class="act-main"><div>Moved within this wallet</div>
+      <div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'} · to your own address, no fee</div></div>
+    <div class="amt muted">${tokenIcon(h.asset, 16)}0 ${esc(unitOf(h.asset))}</div></div>`;
+  }
   if (!h.lock?.Coinbase && info) {
     // a ballot costs 1 kalapa and pays nobody: votes from another device are recognised by that too
     if (!inn && (info.vote || mineVote || (amt === -1n && !info.to))) { what = 'CGP ballot'; who = mineVote ? esc(mineVote.kind + ': ' + mineVote.label) : 'vote fee (1 kalapa)'; }

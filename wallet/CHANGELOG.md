@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.5 — 2026-10-16
+
+### Fixed
+- Activity: a transfer between the wallet's own addresses (nothing in or out) shows as "Moved within this wallet",
+  0 ZP, instead of "Sent −0 ZP".
+
 ## 0.27.4 — 2026-10-16
 
 ### Fixed
