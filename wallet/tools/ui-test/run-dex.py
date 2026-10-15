@@ -30,10 +30,10 @@ with sync_playwright() as p:
     t = pg.inner_text('.book')
     asks = [e.inner_text().split('\n')[0] for e in pg.query_selector_all('.asks .lvl')]; bids = [e.inner_text().split('\n')[0] for e in pg.query_selector_all('.bids .lvl')]
     ok(asks == ['0.1500', '0.1040', '0.1015', '0.1010'] and bids == ['0.0990', '0.0985'], f'the book: asks high to low above, bids below, best prices in the middle ({asks} / {bids})')
-    ok('Spread 0.0020 zUSDC (2.0%)' in t and 'Last 0.1010' in t, 'spread from the best ask and bid, last trade')
-    ok('Yours' in pg.inner_text('.asks .lvl:nth-child(1)') and pg.is_disabled('.asks .lvl:nth-child(1)'), 'the own order is marked Yours and cannot be taken from the book')
-    ok('pending' in pg.inner_text('.asks .lvl:nth-child(2)') and pg.is_disabled('.asks .lvl:nth-child(2)'), 'a mempool order shows as pending and cannot be taken')
-    ok('Recent trades' in pg.inner_text('main') and pg.query_selector('.trade .bid') is not None, 'recent trades: a buy in green')
+    ok('Spread 0.0020 · 2.0%' in t and pg.inner_text('.midp') == '0.1010 ↑' and 'up' in pg.get_attribute('.midp', 'class'), 'the middle: the last trade price large (green, up), the spread beside it')
+    ok('mine' in pg.get_attribute('.asks .lvl:nth-child(1)', 'class') and pg.query_selector('.asks .lvl:nth-child(1) .dot') is not None and pg.is_disabled('.asks .lvl:nth-child(1)'), 'the own order is marked with a dot and cannot be taken from the book')
+    ok('pend' in pg.get_attribute('.asks .lvl:nth-child(2)', 'class') and pg.is_disabled('.asks .lvl:nth-child(2)'), 'a mempool order shows faded and cannot be taken')
+    ok('Trades' in pg.inner_text('main') and pg.query_selector('.trade .bid') is not None, 'recent trades: a buy in green')
     ok(pg.query_selector('button[data-act=dex-cancel]') is not None, 'Your orders: Cancel')
     pg.screenshot(path=f'{OUT}/d1-orders.png', full_page=True)
     # take part of the bid: give 10 ZP, get 0.99 zUSDC; anonymous call
@@ -48,7 +48,7 @@ with sync_playwright() as p:
     ok(L == {'command': 'Take', 'provided': '1000000000', 'payout': '990000', 'signed': False} and w.get('command') == 'Take' and w.get('signed') is False and w.get('pk', [])[-1] == 'FollowingWitnesses',
        'Take sent anonymous: 10 ZP for 990000 units, the last input signature covers the contract witness ' + json.dumps(w))
     pg.click('button[data-act=close]'); pg.wait_for_timeout(300)
-    ok('being taken' in pg.inner_text('.bids .lvl[data-i="0"]') and pg.is_disabled('.bids .lvl[data-i="0"]'), 'the taken order is marked in the book until it leaves')
+    ok('busy' in pg.get_attribute('.bids .lvl[data-i="0"]', 'class') and pg.is_disabled('.bids .lvl[data-i="0"]'), 'the taken order is marked in the book until it leaves')
     # an order the book still shows but that is gone on the chain: refused before signing
     mock(goneLive='a2' * 32); pg.click('.asks .lvl[data-i="1"]'); pg.wait_for_selector('form[data-form=dex-take]')
     pg.fill('form[data-form=dex-take] input[name=give]', '1'); pg.click('form[data-form=dex-take] button.primary'); pg.wait_for_selector('.sheet .err', timeout=15000)
@@ -75,8 +75,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/d4-limit-confirm.png')
     pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your order is on its way', timeout=15000)
     ok(get('/__lastdex') == {'command': 'Make', 'signed': True}, 'the limit order is a Make signed by the maker key'); pg.click('button[data-act=close]'); pg.wait_for_timeout(200)
-    lv = [e.inner_text() for e in pg.query_selector_all('.asks .lvl')]
-    ok(any(x.startswith('0.0980') and 'Yours · sent' in x for x in lv) and pg.input_value('form[data-form=dex-limit] input[name=amount]') == '' and 'Waiting for its block' in pg.inner_text('main'), 'the sent order shows in the book at once ("Yours · sent") and under Your orders; the form is cleared')
+    lv = [(e.inner_text(), e.get_attribute('class')) for e in pg.query_selector_all('.asks .lvl')]
+    ok(any(x.startswith('0.0980') and 'mine' in c and 'pend' in c for x, c in lv) and pg.input_value('form[data-form=dex-limit] input[name=amount]') == '' and 'Waiting for its block' in pg.inner_text('main'), 'the sent order shows in the book at once (yours, faded until its block) and under Your orders; the form is cleared')
     pg.click('button[data-act=dex-side][data-v=buy]'); pg.fill('form[data-form=dex-limit] input[name=price]', '0.5'); pg.fill('form[data-form=dex-limit] input[name=amount]', '0.5')
     pg.click('form[data-form=dex-limit] button.primary'); pg.wait_for_timeout(400); ok('At least 1 ZP' in pg.inner_text('main'), 'less than 1 ZP is refused')
     # any pair: give 1 ZP for 0.5 zUSDC

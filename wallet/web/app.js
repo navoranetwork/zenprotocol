@@ -81,20 +81,20 @@ function bookView(m, me, spendable) {
   S.bookView = { asks: la, bids: lb, q: d.q };
   const max = [...la, ...lb].reduce((a, l) => l.total > a ? l.total : a, 1n);
   const row = (l, side, i) => {
-    const take = l.rows.find(r => !r.pending && !r.busy && !myOrder(r.o, me)), mineL = l.rows.some(r => myOrder(r.o, me)), pend = l.rows.every(r => r.pending), busy = l.rows.every(r => r.busy || r.pending);
-    return `<button type="button" class="lvl ${side}" data-act="dex-level" data-side="${side}" data-i="${i}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${mineL && pend ? '<em title="Waiting for its block, about 4 min">Yours · sent</em> ' : mineL ? '<em>Yours</em> ' : pend ? '<em>pending</em> ' : busy ? '<em>being taken</em> ' : ''}${zpShort(l.total)}</span></button>`;
+    const take = l.rows.find(r => !r.pending && !r.busy && !myOrder(r.o, me)), mineL = l.rows.some(r => myOrder(r.o, me)), pend = l.rows.every(r => r.pending), busy = !pend && l.rows.every(r => r.busy || r.pending);
+    const tip = [mineL ? (pend ? 'Your order, waiting for its block (about 4 min)' : 'Your order: cancel it under Your orders') : '', !mineL && pend ? 'Waiting for its block: it can be taken after that' : '', busy ? 'Being taken by someone' : '', take && spendable ? `Tap to ${side === 'ask' ? 'buy' : 'sell'} at ${l.price.toFixed(4)}` : ''].filter(Boolean).join('. ');
+    return `<button type="button" class="lvl ${side}${mineL ? ' mine' : ''}${pend ? ' pend' : ''}${busy ? ' busy' : ''}" data-act="dex-level" data-side="${side}" data-i="${i}" title="${esc(tip)}" ${take && spendable ? '' : 'disabled'}><span class="ld" data-w="${Number(l.total * 100n / max)}"></span><span class="lp">${l.price.toFixed(4)}${mineL ? '<i class="dot" aria-label="yours"></i>' : ''}</span><span class="ls">${zpShort(l.size)}</span><span class="lt">${zpShort(l.total)}</span></button>`;
   };
   const ba = d.asks.find(r => !r.pending), bb = d.bids.find(r => !r.pending);
-  const spread = ba && bb ? `Spread ${(ba.price - bb.price).toFixed(4)} zUSDC (${((ba.price - bb.price) / ((ba.price + bb.price) / 2) * 100).toFixed(1)}%)${ba.price <= bb.price ? ' · crossed: a bid is at or above an ask' : ''}` : 'No spread yet: one side is empty';
-  const last = d.last && Number(d.last.price) > 0 ? `Last ${Number(d.last.price).toFixed(4)}` : '';
-  return `<div class="card book"><div class="row" data-s="between"><h2 class="tname">${zpLogo(20)}ZP / ${tokenIcon(d.q, 20)}zUSDC</h2><span class="small muted" data-s="fixed">${last}${last && d.asOf ? ' · ' : ''}${d.asOf ? 'block ' + d.asOf.toLocaleString('en-US') : ''}</span></div>
-    <div class="bookhead"><span>Price (zUSDC)</span><span>Size (ZP)</span><span>Total (ZP)</span></div>
-    <div class="sidelbl ask">Asks · selling ZP: tap to buy</div>
-    <div class="asks">${la.length ? la.map((l, i) => row(l, 'ask', i)).reverse().join('') : '<p class="muted small">No one is selling ZP.</p>'}</div>
-    <div class="spreadrow">${esc(spread)}</div>
-    <div class="sidelbl bid">Bids · buying ZP: tap to sell</div>
-    <div class="bids">${lb.length ? lb.map((l, i) => row(l, 'bid', i)).join('') : '<p class="muted small">No one is buying ZP.</p>'}</div>
-    <p class="muted small" data-s="mt10">${spendable ? 'You can take part of an order.' : 'Open a wallet that can sign to trade.'} Orders waiting for their block show as pending.</p></div>
+  const lp = d.last && Number(d.last.price) > 0 ? Number(d.last.price) : null, mid = ba && bb ? (ba.price + bb.price) / 2 : null, big = lp ?? mid;
+  const up = d.last?.side === 'buy', spreadTxt = ba && bb ? `Spread ${(ba.price - bb.price).toFixed(4)} · ${((ba.price - bb.price) / ((ba.price + bb.price) / 2) * 100).toFixed(1)}%${ba.price <= bb.price ? ' · crossed' : ''}` : 'One side is empty';
+  const midRow = `<div class="midrow"><span class="midp ${lp ? (up ? 'up' : 'down') : ''}">${big ? big.toFixed(4) : '–'}${lp ? (up ? ' ↑' : ' ↓') : ''}</span><span class="mids">${lp ? 'last trade' : mid ? 'mid price' : ''}<br>${esc(spreadTxt)}</span></div>`;
+  return `<div class="card book"><div class="row" data-s="between"><h2 class="tname">${zpLogo(20)}ZP / ${tokenIcon(d.q, 20)}zUSDC</h2><span class="small muted" data-s="fixed">${d.asOf ? 'block ' + d.asOf.toLocaleString('en-US') : ''}</span></div>
+    <div class="bookhead"><span>Price (zUSDC)</span><span>Size (ZP)</span><span>Sum (ZP)</span></div>
+    <div class="asks" aria-label="Asks: people selling ZP">${la.length ? la.map((l, i) => row(l, 'ask', i)).reverse().join('') : '<p class="muted small empty">No one is selling ZP.</p>'}</div>
+    ${midRow}
+    <div class="bids" aria-label="Bids: people buying ZP">${lb.length ? lb.map((l, i) => row(l, 'bid', i)).join('') : '<p class="muted small empty">No one is buying ZP.</p>'}</div>
+    <p class="muted small booknote">${spendable ? 'Tap a red price to buy, a green one to sell.' : 'Open a wallet that can sign to trade.'} <i class="dot"></i> yours · faded: waiting for its block</p></div>
     ${spendable ? limitForm(d, ba, bb) : ''}${tradesCard(m)}`;
 }
 function limitForm(d, ba, bb) {
@@ -112,10 +112,10 @@ function syncLimit() {
     out.textContent = (S.draft.dside === 'sell' ? 'You get ' : 'You pay ') + withUnit(S.bookView.q, S.draft.dside === 'sell' ? o.pairTotal : o.underAmount); } catch { out.textContent = ''; }
 }
 function tradesCard(m) {
-  const ts = (Array.isArray(m.trades) ? m.trades : []).filter(t => Number(t.price) > 0).slice(0, 10); if (!ts.length) return '';
-  const when = t => { const x = Number(t.time); return x ? ago(x < 1e12 ? x * 1000 : x) : t.pending ? 'pending' : ''; };
-  return `<div class="card"><h2>Recent trades</h2><div class="trades">${ts.map(t => `<div class="trade"><span class="${t.side === 'buy' ? 'bid' : 'ask'}">${Number(t.price).toFixed(4)}</span><span>${zpShort(t.size)} ZP</span><span class="muted">${esc(when(t))}</span></div>`).join('')}</div>
-    <p class="muted small" data-s="mt10">Green: someone bought ZP. Red: someone sold ZP.</p></div>`;
+  const ts = (Array.isArray(m.trades) ? m.trades : []).filter(t => Number(t.price) > 0).slice(0, 12); if (!ts.length) return '';
+  const when = t => { const x = Number(t.time); return x ? new Date(x < 1e12 ? x * 1000 : x).toLocaleTimeString('en-GB') : t.pending ? 'pending' : ''; };
+  return `<div class="card"><h2>Trades</h2><div class="tradehead"><span>Price (zUSDC)</span><span>Amount (ZP)</span><span>Time</span></div><div class="trades">${ts.map(t => `<div class="trade"><span class="${t.side === 'buy' ? 'bid' : 'ask'}">${Number(t.price).toFixed(4)}</span><span>${zpShort(t.size)}</span><span class="muted">${esc(when(t))}</span></div>`).join('')}</div>
+    <p class="muted small booknote">Green: someone bought ZP. Red: someone sold.</p></div>`;
 }
 function dexView(m, base, loading) {
   if (!m?.dex) return `<div class="card"><p class="muted small">${loading ? 'Loading…' : 'This site has no Dex.'}</p></div>`;

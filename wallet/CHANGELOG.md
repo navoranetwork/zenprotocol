@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.0 — 2026-10-15
+
+### Changed
+- A cleaner order book, as exchanges show it (Alon): compact rows in a fixed-width face, Price / Size / Sum, flat
+  depth bars; the last trade price large in the middle (green up, red down) with the spread beside it; your orders
+  marked with a dot, orders waiting for their block faded, with the details on hover. Trades as a table with the time.
+
 ## 0.26.1 — 2026-10-15
 
 ### Fixed
