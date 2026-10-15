@@ -9,7 +9,9 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 ## Unreleased
 
-Nothing yet.
+### Added
+- zUSDC shows its icon (Navora's own, distinct from the USDC logo) in the Tokens card, the activity, Send and the
+  confirm screen.
 
 ## 0.16.0 — 2026-10-15
 

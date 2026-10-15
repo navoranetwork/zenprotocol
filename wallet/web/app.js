@@ -30,6 +30,8 @@ function fmtUnits(units, dec) {
 }
 const tokenAmount = (asset, units) => asset === '00' ? formatZP(units) : fmtUnits(units, decimalsOf(asset));
 const withUnit = (asset, units) => tokenAmount(asset, units) + ' ' + unitOf(asset);
+// a token's icon where the wallet has one (zUSDC: Navora's own icon for the bridge token)
+const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || '') ? `<img class="ticon" src="icons/zusdc.svg" alt="" width="${size}" height="${size}">` : '';
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
@@ -613,7 +615,7 @@ const views = {
         <div class="row k"><span>CGP · INTERVAL ${c.community}</span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt4">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
         <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
-      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span title="${esc(x.asset)}">${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
+      ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<div class="item"><span class="tname" title="${esc(x.asset)}">${tokenIcon(x.asset)}${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)}</span></div>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
       <div class="list">${!d.history ? '<p class="muted small">Loading…</p>' : d.history.length === 0 ? '<p class="muted small">No transactions yet.</p>' : d.history.map(h => activityRow(h, a)).join('')}</div></div>${nav('home')}`;
   },
@@ -624,7 +626,7 @@ const views = {
     return `${backBar(asset === '00' ? 'Send ZP' : 'Send ' + esc(u))}<form data-form="send" class="screen">
       ${assets.length > 1 ? `<label class="field">What<select name="asset" data-act="send-asset">${assets.map(x => `<option value="${esc(x.asset)}" ${x.asset === asset ? 'selected' : ''}>${esc(unitOf(x.asset))} · ${esc(tokenAmount(x.asset, x.spendable))}</option>`).join('')}</select></label>` : ''}
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
-      <label class="field"><span class="row" data-s="between"><span>Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
+      <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(asset, 18)}Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
       ${bridgeNote(S.draft.to, asset)}
       <div class="card small"><div class="kv"><span class="muted">From</span><span>${esc(a.name)}</span></div><div class="kv"><span class="muted">Network fee</span><span>None</span></div><div class="kv"><span class="muted">Change returns to</span><span class="mono">${esc(shortAddr(receiveAddress(S.open.get(a.id))))}</span></div></div>
@@ -796,7 +798,7 @@ function activityRow(h, w) {
   return `<div class="item act"><div class="act-main"><div>${what}${who ? ` <span class="act-who">${who}</span>` : ''}</div>
       <div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'}</div>
       ${back ? `<div class="row" data-s="mt4">${back}</div>` : ''}</div>
-    <div class="amt ${inn ? 'in' : ''}">${inn ? '+' : '−'}${esc(withUnit(h.asset, inn ? amt : -amt))}</div></div>`;
+    <div class="amt ${inn ? 'in' : ''}">${tokenIcon(h.asset, 16)}${inn ? '+' : '−'}${esc(withUnit(h.asset, inn ? amt : -amt))}</div></div>`;
 }
 
 // ---------------------------------------------------------------- CGP ballots
@@ -876,7 +878,7 @@ function modalHtml() {
     <button class="btn" data-act="close">Cancel</button></div></div>`;
   const m = S.modal; if (!m) return '';
   if (m.type === 'confirm-send') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm transfer</h2>
-    <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt">${esc(withUnit(m.asset || '00', m.amount))}</span></div>
+    <div class="card"><div class="kv"><span class="muted">Send</span><span class="amt tname">${tokenIcon(m.asset || '00')}${esc(withUnit(m.asset || '00', m.amount))}</span></div>
     <div class="kv"><span class="muted">To</span><span class="mono small">${toBridge(m.to) ? '<b>USDC bridge</b> ' : ''}${esc(m.to)}</span></div>
     <div class="kv"><span class="muted">From</span><span>${esc(active().name)}</span></div>
     <div class="kv"><span class="muted">Fee</span><span>None</span></div></div>

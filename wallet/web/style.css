@@ -182,3 +182,8 @@ input::placeholder, textarea::placeholder { color: #5E7076; font-style: italic; 
 .bdot.done { background: var(--accent); border-color: var(--accent); }
 .bdot.run { border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* token icons next to names and amounts */
+.tname { display: inline-flex; align-items: center; gap: 8px; }
+.ticon { flex: none; vertical-align: middle; border-radius: 50%; }
+.amt .ticon { margin-right: 6px; }

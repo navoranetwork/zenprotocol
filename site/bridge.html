@@ -71,6 +71,10 @@
   .zp .addr .kk { color: var(--s-muted); } .zp .addr code { word-break: break-all; }
   .zp .addr button { font-size: 12px; padding: 4px 10px; }
   .zp .more { margin-top: 26px; }
+  .zp .tabs small.pair { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 4px; }
+  .zp .amtbox .unit { display: inline-flex; align-items: center; gap: 6px; }
+  .zp img.inl { vertical-align: middle; margin: 0 6px 0 2px; position: relative; top: -1px; }
+  .zp .job .top span:last-child { display: inline-flex; align-items: center; }
   [hidden] { display: none !important; }
   @media (max-width: 520px) { .zp .addr { grid-template-columns: 1fr auto; } .zp .addr .kk { grid-column: 1 / -1; } .zp .card { padding: 14px; } }
 </style>
@@ -84,8 +88,8 @@
 
 <div class="card">
   <div class="tabs" role="tablist">
-    <button type="button" role="tab" id="t-dep" aria-selected="true">Deposit<small>USDC → zUSDC</small></button>
-    <button type="button" role="tab" id="t-wd" aria-selected="false">Withdraw<small>zUSDC → USDC</small></button>
+    <button type="button" role="tab" id="t-dep" aria-selected="true">Deposit<small class="pair"><img src="/shell/icons/usdc.svg" alt="" width="24" height="24"> → <img src="/shell/icons/zusdc.svg" alt="" width="24" height="24"></small></button>
+    <button type="button" role="tab" id="t-wd" aria-selected="false">Withdraw<small class="pair"><img src="/shell/icons/zusdc.svg" alt="" width="24" height="24"> → <img src="/shell/icons/usdc.svg" alt="" width="24" height="24"></small></button>
   </div>
 
   <div class="pick" id="pick" hidden></div>
@@ -106,7 +110,7 @@
     </div>
     <form id="depf" autocomplete="off" hidden>
       <label class="k" for="amt">Amount</label>
-      <div class="amtbox"><input id="amt" inputmode="decimal" placeholder="0.00" required><span class="unit">USDC</span><button type="button" class="ghost" id="max">Max</button></div>
+      <div class="amtbox"><input id="amt" inputmode="decimal" placeholder="0.00" required><span class="unit"><img src="/shell/icons/usdc.svg" alt="" width="24" height="24">USDC</span><button type="button" class="ghost" id="max">Max</button></div>
       <p class="sub" id="bal"></p>
       <div class="to" id="dto"></div>
       <button class="big" id="depb" type="submit">Deposit</button>
@@ -117,7 +121,7 @@
 
   <section id="p-wd" hidden>
     <ol class="steps3">
-      <li><span>In the <a href="/wallet/">ZP Wallet</a>, tap <b>Send</b> and choose <b>zUSDC</b>.</span></li>
+      <li><span>In the <a href="/wallet/">ZP Wallet</a>, tap <b>Send</b> and choose <img class="inl" src="/shell/icons/zusdc.svg" alt="" width="18" height="18"><b>zUSDC</b>.</span></li>
       <li><span>Send it to the bridge:
         <span class="copyaddr"><code id="bzp">…</code><button type="button" class="ghost" id="cpbzp">Copy</button></span></span></li>
       <li><span>That's all. USDC arrives <span id="wto">at your linked wallet</span> by itself.</span></li>
@@ -149,6 +153,7 @@
 <details><summary>Reserves and addresses</summary>
   <p id="resline">–</p>
   <div id="addrs"></div>
+  <p class="sub">USDC and the USDC logo are trademarks of Circle Internet Financial. zUSDC is this test bridge's token, not issued or endorsed by Circle.</p>
 </details>
 <details><summary>Is this real money?</summary><p>No. Base Sepolia and the ZP testnet are test networks; their USDC, ETH and ZP have no value. Never use a wallet or key that holds real funds here.</p></details>
 <details><summary>Who holds the USDC?</summary><p>One operator key holds the reserves and is the only key that can issue or destroy zUSDC. Fine for a prototype, not for real money: before any real use the plan is multi-signature custody decided by a community vote, limits, a pause switch and an independent audit.</p></details>
@@ -162,6 +167,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const usdc = v => { try { const n = BigInt(v), w = n / 1000000n, f = String(n % 1000000n).padStart(6, '0').replace(/0+$/, '').padEnd(2, '0'); return w.toLocaleString('en-US') + '.' + f; } catch { return '–'; } };
   const toUnits = s => { const m = /^\s*(\d+)(?:\.(\d{0,6}))?\s*$/.exec(s); if (!m) return null; return BigInt(m[1]) * 1000000n + BigInt((m[2] || '').padEnd(6, '0')); };
+  const tok = t => `<img class="inl" src="/shell/icons/${t}.svg" alt="" width="24" height="24">`;
   const short = (a, n = 6) => a ? esc(a.slice(0, n + 4)) + '…' + esc(a.slice(-n)) : '';
   const NETS = { 84532: ['Base Sepolia', 'https://sepolia.basescan.org'], 11155111: ['Ethereum Sepolia', 'https://sepolia.etherscan.io'] };
   const BASE_SEPOLIA = { chainId: '0x14a34', chainName: 'Base Sepolia', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://sepolia.base.org'], blockExplorerUrls: ['https://sepolia.basescan.org'] };
@@ -367,15 +373,15 @@
       for (let i = sentDeposits.length - 1; i >= 0; i--) if (known.has(sentDeposits[i].evmTx)) { recentDone.set('d' + sentDeposits[i].evmTx, true); sentDeposits.splice(i, 1); }
       const need = S?.confirmations ?? 12, zneed = S?.zpConfirmations ?? 2;
       const jobs = [
-        ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => d.failed ? job('Deposit', usdc(d.amount) + ' USDC', 0, 0, 'Failed on Base Sepolia') :
-          job('Deposit', usdc(d.amount) + ' USDC', 1, Math.min(1, d.confs / need), d.confs >= need ? 'Confirmed on Base · zUSDC in the next ZP block' : `Confirming on Base Sepolia: ${Math.max(0, d.confs)} of ${need}`)),
-        ...j.waiting.map(d => job('Deposit', usdc(d.amount) + ' USDC', 2, .5, j.zp ? 'Issuing zUSDC: in the next ZP block (about 4 minutes)' : 'Waiting: link a ZP address above')),
-        ...(j.arriving || []).map(d => job('Withdrawal', usdc(d.amount) + ' zUSDC', 1, d.confirmations / d.need, `Received · ZP blocks ${d.confirmations} of ${d.need} · then USDC is sent (about ${4 * Math.max(1, d.need - d.confirmations)} minutes)`)),
-        ...j.deposits.filter(d => recentDone.has('d' + String(d.evmTx).toLowerCase())).map(d => job('Deposit', usdc(d.amount) + ' USDC', 3, 1, `Done · zUSDC issued ${zpLink('tx', d.zpTx)}`)),
-        ...j.withdrawals.filter(d => recentDone.has('w' + d.zpTx)).map(d => job('Withdrawal', usdc(d.amount) + ' zUSDC', 3, 1, 'Done · USDC sent' + (String(d.evmTx).startsWith('mock') ? '' : ' ' + evmLink('tx', d.evmTx))))];
+        ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => d.failed ? job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 0, 0, 'Failed on Base Sepolia') :
+          job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 1, Math.min(1, d.confs / need), d.confs >= need ? 'Confirmed on Base · zUSDC in the next ZP block' : `Confirming on Base Sepolia: ${Math.max(0, d.confs)} of ${need}`)),
+        ...j.waiting.map(d => job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 2, .5, j.zp ? 'Issuing zUSDC: in the next ZP block (about 4 minutes)' : 'Waiting: link a ZP address above')),
+        ...(j.arriving || []).map(d => job('Withdrawal', tok('zusdc') + usdc(d.amount) + ' zUSDC', 1, d.confirmations / d.need, `Received · ZP blocks ${d.confirmations} of ${d.need} · then USDC is sent (about ${4 * Math.max(1, d.need - d.confirmations)} minutes)`)),
+        ...j.deposits.filter(d => recentDone.has('d' + String(d.evmTx).toLowerCase())).map(d => job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 3, 1, `Done · zUSDC issued ${zpLink('tx', d.zpTx)}`)),
+        ...j.withdrawals.filter(d => recentDone.has('w' + d.zpTx)).map(d => job('Withdrawal', tok('zusdc') + usdc(d.amount) + ' zUSDC', 3, 1, 'Done · USDC sent' + (String(d.evmTx).startsWith('mock') ? '' : ' ' + evmLink('tx', d.evmTx))))];
       for (const d of j.arriving || []) recentDone.set('w' + d.zpTx, true);
       if (evm.toLowerCase() === account) { $('track').hidden = !jobs.length; $('track').innerHTML = jobs.length ? '<h3>In progress</h3>' + jobs.join('') : ''; }
-      const hist = [...j.deposits.map(d => ['Deposit', usdc(d.amount) + ' USDC', evmLink('tx', d.evmTx)]), ...j.withdrawals.map(d => ['Withdrawal', usdc(d.amount) + ' zUSDC', zpLink('tx', d.zpTx)])];
+      const hist = [...j.deposits.map(d => ['Deposit', tok('usdc') + usdc(d.amount) + ' USDC', evmLink('tx', d.evmTx)]), ...j.withdrawals.map(d => ['Withdrawal', tok('zusdc') + usdc(d.amount) + ' zUSDC', zpLink('tx', d.zpTx)])];
       $('lk').innerHTML = `<p class="sub">${j.zp ? 'Linked to <code>' + short(j.zp) + '</code>' : 'Not linked to a ZP address.'}</p>` +
         (hist.length ? `<table class="recent"><tbody>${hist.map(h => `<tr><td>${h[0]}</td><td>${h[1]}</td><td>${h[2]}</td></tr>`).join('')}</tbody></table>` : '<p class="sub">No deposits or withdrawals yet.</p>');
     } catch (e) { $('lk').innerHTML = '<p class="msg err">' + errText(e) + '</p>'; }
