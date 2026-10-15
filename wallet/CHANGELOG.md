@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.6 — 2026-10-16
+
+### Changed
+- A contract call may use up to 1,000 of the wallet's outputs (was 50; the protocol sets no limit, about 130 bytes
+  each). Above that, or when the node refuses a call with more than 50, the wallet offers "Combine my ZP now".
+
 ## 0.27.5 — 2026-10-16
 
 ### Fixed

@@ -269,6 +269,7 @@ export async function prepareSignedCall({ amount = 0n, signer, ...rest }) {
   if (!signer?.privateKey || !signer?.publicKey) throw new Error('No key to sign the call');
   return prepareContractCall({ ...rest, signer, spends: amount ? [{ asset: '00', amount }] : [] });
 }
+export const MAX_CALL_INPUTS = 1000;
 export async function prepareContractCall({ w, state, node, contractId, command, body, spends = [], signer = null, expect, exclude = [] }) {
   if (!canSpend(w)) throw new Error('This is a watch-only wallet');
   if (signer && (!signer.privateKey || !signer.publicKey)) throw new Error('No key to sign the call');
@@ -288,15 +289,23 @@ export async function prepareContractCall({ w, state, node, contractId, command,
     fund.push(...took.map(u => ({ ...u, assetObj: assetFromId(asset) })));
     if (sum > amt) outputs.push({ lock: change(changeHash), spend: { asset: assetFromId(asset), amount: sum - amt } });
   }
-  if (fund.length > 50) throw Object.assign(new Error(`Your ZP is in too many small pieces (${fund.length} needed, at most 50 in one contract call): combine them first by sending all your ZP to yourself in one transfer`), { combine: true });
+  // MAX_CALL_INPUTS is the wallet's own cap (the protocol sets none): about 130 bytes per input, so 1,000 inputs make a
+  // transaction of about 130 KB. Above it, or when the node refuses a call with many inputs, the wallet offers to
+  // combine the pieces first (one transfer to its own address).
+  const tooMany = () => Object.assign(new Error(`Your ZP is in too many small pieces (${fund.length} needed for this call): combine them first by sending all your ZP to yourself in one transfer`), { combine: true });
+  if (fund.length > MAX_CALL_INPUTS) throw tooMany();
   outputs.push({ lock: { type: 'Fee' }, spend: { asset: ZEN_ASSET, amount: fee } });
   const inputs = fund.map(u => ({ outpoint: u.outpoint, lock: u.lock, spend: { asset: u.assetObj, amount: u.spend.amount } }));
   const bw = new Writer(); Data.write(bw, body); const bodyHex = hex(bw.out());
 
-  const res = await node.executeContract({
-    address: encodeAddress(unhex(contractId), w.network, true), command, messageBody: bodyHex,
-    options: signer ? { sender: hex(signer.publicKey) } : {}, tx: skeletonHex(inputs, outputs),
-  });
+  let res;
+  try {
+    res = await node.executeContract({
+      address: encodeAddress(unhex(contractId), w.network, true), command, messageBody: bodyHex,
+      options: signer ? { sender: hex(signer.publicKey) } : {}, tx: skeletonHex(inputs, outputs),
+    });
+  } catch (e) { if (fund.length > 50) throw tooMany(); throw e; }
+  if (fund.length > 50 && (typeof res !== 'string' || !/^([0-9a-f]{2})+$/.test(res))) throw tooMany();
   if (typeof res !== 'string' || !/^([0-9a-f]{2})+$/.test(res)) throw new Error(typeof res === 'string' && res ? 'The contract refused: ' + res.slice(0, 200) : 'The node sent an invalid answer');
 
   const tx = deserializeTx(unhex(res));
