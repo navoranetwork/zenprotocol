@@ -49,6 +49,9 @@
     .zp .addr { grid-template-columns: 1fr auto; } .zp .addr .k { grid-column: 1 / -1; }
     .zp .health span.sub { margin-left: 0; }
   }
+.pick[hidden] { display: none; }
+.pick { flex-wrap: wrap; gap: 8px; align-items: center; } .pick p { margin: 0; width: 100%; } .pick img { vertical-align: middle; border-radius: 4px; }
+button.link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 </style>
 <script src="/shell/shell.js" defer></script>
 </head>
@@ -75,6 +78,7 @@
     <h3>Connect your EVM wallet</h3>
     <p>The page asks your wallet to switch to Base Sepolia. Nothing is sent in this step.</p>
     <div class="row"><button id="connect" type="button">Connect wallet</button></div>
+    <div class="row pick" id="pick" hidden></div>
     <div class="acct" id="acct" hidden></div>
     <div class="msg" id="m1" hidden></div>
   </li>
@@ -177,7 +181,32 @@
   }
 
   // ---- wallet -------------------------------------------------------------------------------
-  const eth = () => window.ethereum;
+  // Several wallet extensions (MetaMask, Trust Wallet, …) each claim window.ethereum; EIP-6963 lets each announce
+  // itself, so the page asks which one to use and remembers it (per browser).
+  const wallets = [];   // { info: { name, icon, rdns, uuid }, provider }
+  let chosen = null;
+  const PICK = 'navora.bridge.wallet';
+  window.addEventListener('eip6963:announceProvider', ev => {
+    const d = ev.detail; if (!d?.info?.uuid || !d.provider || wallets.some(w => w.info.uuid === d.info.uuid)) return;
+    wallets.push(d);
+    let want = null; try { want = localStorage.getItem(PICK); } catch { }
+    if (!chosen && want && d.info.rdns === want) choose(d);
+  });
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+  const eth = () => chosen?.provider || (wallets.length === 1 ? wallets[0].provider : window.ethereum);
+  function choose(w) {
+    chosen = w; try { localStorage.setItem(PICK, w.info.rdns || ''); } catch { }
+    if (w.provider.on) { w.provider.on('accountsChanged', a => useAccount(a[0])); w.provider.on('chainChanged', () => balance()); }
+    $('pick').hidden = true;
+  }
+  function pickWallet() {   // resolves with the chosen wallet when there are several and none is chosen yet
+    if (chosen || wallets.length < 2) return Promise.resolve();
+    return new Promise(done => {
+      const box = $('pick'); box.hidden = false;
+      box.innerHTML = '<p>Which wallet?</p>' + wallets.map((w, i) => `<button type="button" data-w="${i}"><img src="${esc(w.info.icon || '')}" alt="" width="20" height="20"> ${esc(w.info.name || 'Wallet')}</button>`).join(' ');
+      box.onclick = ev => { const b = ev.target.closest('[data-w]'); if (!b) return; choose(wallets[+b.dataset.w]); done(); };
+    });
+  }
   function gate() {
     const ready = !!account && !!S && S.evm !== 'mock';
     $('linkb').disabled = !ready; $('depb').disabled = !ready || !S.bridgeEvm;
@@ -193,7 +222,8 @@
   async function useAccount(a) {
     account = a ? a.toLowerCase() : null; gate();
     if (!account) { $('acct').hidden = true; $('s1').classList.remove('done'); return; }
-    $('s1').classList.add('done'); $('acct').hidden = false; $('acct').innerHTML = 'Connected: <code>' + esc(account) + '</code>';
+    $('s1').classList.add('done'); $('acct').hidden = false; $('acct').innerHTML = 'Connected: <code>' + esc(account) + '</code>' + (chosen ? ' with ' + esc(chosen.info.name || 'your wallet') : '') + (wallets.length > 1 ? ' <button type="button" class="link" id="other">Use another wallet</button>' : '');
+    if ($('other')) $('other').onclick = () => { chosen = null; try { localStorage.removeItem(PICK); } catch { } useAccount(null); $('connect').click(); };
     $('lkevm').value = account; if (!$('wevm').value) $('wevm').value = account;
     balance(); lookup(account);
   }
@@ -201,6 +231,7 @@
     $('m1').hidden = true;
     if (!eth()) return show('m1', 'err', 'No browser wallet found. Install <a href="https://metamask.io/" rel="noopener">MetaMask</a> (or another EVM wallet) and reload this page.');
     try {
+      await pickWallet();
       const [a] = await eth().request({ method: 'eth_requestAccounts' });
       if (!S?.chainId || NETS[S.chainId]) {   // a known test network: ask the wallet to switch to it
         const want = '0x' + (S?.chainId || 84532).toString(16);
@@ -210,7 +241,7 @@
       await useAccount(a);
     } catch (e) { show('m1', 'err', 'Could not connect: ' + errText(e)); }
   };
-  if (eth()?.on) { eth().on('accountsChanged', a => useAccount(a[0])); eth().on('chainChanged', () => balance()); }
+  setTimeout(() => { if (!chosen && wallets.length <= 1 && eth()?.on) { eth().on('accountsChanged', a => useAccount(a[0])); eth().on('chainChanged', () => balance()); } }, 300);
 
   $('linkf').onsubmit = async ev => {
     ev.preventDefault(); const zp = $('zpaddr').value.trim();
@@ -317,7 +348,8 @@
   setInterval(() => { if (!live) refresh(); }, 60000);
 
   loadStatus();
-  if (eth()) eth().request({ method: 'eth_accounts' }).then(a => a[0] && useAccount(a[0])).catch(() => { });
+  // reconnect silently only to a wallet already chosen here (or the only one)
+  setTimeout(() => { if ((chosen || wallets.length <= 1) && eth()) eth().request({ method: 'eth_accounts' }).then(a => a[0] && useAccount(a[0])).catch(() => { }); }, 300);
 })();
 </script>
 </body>
