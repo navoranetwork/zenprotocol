@@ -62,3 +62,53 @@ export function expectCancel(o, myHash) {
     if (sum(added.outputs, x => pkTo(x.lock, myHash) && assetToId(x.spend.asset) === o.underAsset) !== o.underAmount) throw new Error('The Dex would not give back the whole order');
   };
 }
+
+// ---------------------------------------------------------------- the order book of ZP against one token (quote)
+// Every order is a limit order. One that sells ZP for the quote is an ask, one that sells the quote for ZP is a bid;
+// price = quote units per ZP, size = ZP (kalapas). The book is for display: a Take always names the exact order.
+export const ZP_DEC = 8;
+const whole = (v, dec) => Number(v) / 10 ** dec;
+export function bookRow(o, quote, qdec = 6) {
+  if (o.underAsset === '00' && o.pairAsset === quote) return { side: 'ask', price: whole(o.pairTotal, qdec) / whole(o.underAmount, ZP_DEC), size: o.underAmount, o };
+  if (o.underAsset === quote && o.pairAsset === '00') return { side: 'bid', price: whole(o.underAmount, qdec) / whole(o.pairTotal, ZP_DEC), size: o.pairTotal, o };
+  return null;
+}
+export function bookFromOrders(orders, quote, qdec = 6) {
+  const rows = orders.map(o => bookRow(o, quote, qdec)).filter(Boolean);
+  return { asks: rows.filter(r => r.side === 'ask').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.side === 'bid').sort((a, b) => b.price - a.price) };
+}
+// rows (best first) grouped by a display tick: asks round up, bids round down, so a level never looks better than its orders
+export function levels(rows, side, tick = 0.0001) {
+  const out = [];
+  for (const r of rows) {
+    const k = side === 'ask' ? Math.ceil(r.price / tick - 1e-9) : Math.floor(r.price / tick + 1e-9);
+    const last = out.at(-1);
+    if (last && last.k === k) { last.size += r.size; last.rows.push(r); } else out.push({ k, price: k * tick, size: r.size, rows: [r] });
+  }
+  let cum = 0n; for (const l of out) { cum += l.size; l.total = cum; }
+  return out;
+}
+// "1.0125" -> the price x 1e8 (BigInt), at most 8 decimals
+export function parsePrice(text) {
+  const m = String(text).trim().match(/^(\d+)(?:\.(\d{1,8}))?$/);
+  if (!m) throw new Error('Enter the price, for example 1.0125');
+  const v = BigInt(m[1]) * 100000000n + BigInt((m[2] || '').padEnd(8, '0'));
+  if (v <= 0n) throw new Error('The price must be above zero');
+  return v;
+}
+// A limit order: buy or sell `amount` kalapas of ZP at `price8` (quote per ZP x 1e8). Minimums: 1 ZP and 0.01 of the quote.
+export function limitOrder({ side, price8, amount, quote, qdec = 6 }) {
+  amount = BigInt(amount);
+  if (amount < 100000000n) throw new Error('At least 1 ZP');
+  const q = (amount * price8 * 10n ** BigInt(qdec) + 5n * 10n ** 15n) / 10n ** 16n;   // quote units, rounded to nearest
+  if (q < 10n ** BigInt(Math.max(0, qdec - 2))) throw new Error('At least 0.01 of the token on the other side');
+  return side === 'sell' ? { underAsset: '00', underAmount: amount, pairAsset: quote, pairTotal: q } : { underAsset: quote, underAmount: q, pairAsset: '00', pairTotal: amount };
+}
+// What to give to get `want` from one order, capped at the whole order:
+//   an ask (buying ZP): want = ZP, gives quote;  a bid (selling ZP): want = the ZP sold, gives ZP.
+export function takeFor(row, want) {
+  want = BigInt(want); const o = row.o;
+  let provided = row.side === 'ask' ? (want * o.pairTotal + o.underAmount - 1n) / o.underAmount : want;
+  if (provided > o.pairTotal) provided = o.pairTotal;
+  return { provided, payout: payoutFor(o, provided) };
+}

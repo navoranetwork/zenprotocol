@@ -11,6 +11,24 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.25.0 — 2026-10-15
+
+### Added
+- Markets → Dex is an order book for ZP / zUSDC, from the site's new /dex/book (fresh to one block; mempool orders
+  shown as pending and not takeable), or built from /dex/orders on an older site:
+  - asks (red) above, bids (green) below, best prices next to the spread, price levels by 0.0001 zUSDC with size,
+    running total and a depth bar; the own orders marked "Yours", orders being taken marked;
+  - tap a price to take its best order (part or whole, as before); before signing, the wallet checks the order is
+    still open on the chain ("Someone took it first" otherwise);
+  - Buy ZP / Sell ZP limit orders (price and amount, at least 1 ZP and 0.01 zUSDC), with what you pay or get as you
+    type, and a warning when the price crosses the other side or is more than 5% from the middle of the book;
+  - recent trades (green: someone bought ZP, red: sold), the last price, and Your orders with Cancel;
+  - the full order list and orders of any pair stay under "All orders and other pairs"; the tab refreshes every 20 s.
+
+### Fixed
+- Sizes set through the DOM instead of style attributes, which the page's CSP refuses: the Bitcoin confirmations bar
+  had one column per confirmation only in tests without the CSP.
+
 ## 0.24.0 — 2026-10-15
 
 ### Changed

@@ -47,14 +47,27 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
-        case '/explorer/api/dex/orders': {
+        case '/explorer/api/dex/orders':
+        case '/explorer/api/dex/book':
+        case '/explorer/api/dex/trades': {
+          // as the site's explorer API: orders (fresh to one block), the ZP/zUSDC book (mempool orders pending), fills
           const ZU = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';
           const all = [{ tx: 'b1'.repeat(32), block: 2090, under_asset: ZU, under_amount: '9900000', pair_asset: '00', pair_total: '10000000000', maker: MM_PUB },
             { tx: 'a1'.repeat(32), block: 2091, under_asset: '00', under_amount: '10000000000', pair_asset: ZU, pair_total: '10100000', maker: MM_PUB },
-            ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])];
-          return send(res, 200, { tip: st.tip, dex: DEX, orders: all.filter(o => !(st.dexGone || []).includes(o.tx)) });
+            ...(st.book ? [{ tx: 'a2'.repeat(32), block: 2092, under_asset: '00', under_amount: '10000000000', pair_asset: ZU, pair_total: '10150000', maker: MM_PUB },
+              { tx: 'b2'.repeat(32), block: 2092, under_asset: ZU, under_amount: '9850000', pair_asset: '00', pair_total: '10000000000', maker: MM_PUB }] : []),
+            ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])]
+            .filter(o => !(st.dexGone || []).includes(o.tx)).map(o => ({ ...o, confirmations: st.tip - o.block + 1, pending: false }));
+          if (u.pathname.endsWith('/orders')) return send(res, 200, { tip: st.tip, dex: DEX, orders: all.filter(o => o.tx !== st.goneLive) });
+          if (!st.book) return send(res, 404, { error: 'unknown path' });
+          if (u.pathname.endsWith('/trades')) return send(res, 200, { tip: st.tip, trades: [{ tx: 'd1'.repeat(32), block: 2095, time: Date.now() - 600e3, side: 'buy', price: 0.101, size: '1000000000', quoteAmount: '1010000', maker: MM_PUB, pending: false, confirmations: 6 },
+            { tx: 'd2'.repeat(32), block: 2093, time: Date.now() - 1500e3, side: 'sell', price: 0.099, size: '500000000', quoteAmount: '495000', maker: MM_PUB, pending: false, confirmations: 8 }] });
+          const pend = { tx: 'a9'.repeat(32), block: null, under_asset: '00', under_amount: '5000000000', pair_asset: ZU, pair_total: '5200000', maker: MM_PUB, confirmations: 0, pending: true };
+          const row = o => { const ask = o.under_asset === '00'; return { price: ask ? (o.pair_total / 1e6) / (o.under_amount / 1e8) : (o.under_amount / 1e6) / (o.pair_total / 1e8), size: ask ? o.under_amount : o.pair_total, tx: o.tx, maker: o.maker, pending: o.pending, confirmations: o.confirmations, ...(st.pendingTake === o.tx ? { pendingTake: 'ee'.repeat(32) } : {}), order: { under_asset: o.under_asset, under_amount: o.under_amount, pair_asset: o.pair_asset, pair_total: o.pair_total, maker: o.maker } }; };
+          const rows = [...all, pend].map(row);
+          return send(res, 200, { tip: st.tip, indexedTo: st.tip - 10, base: '00', quote: ZU, asks: rows.filter(r => r.order.under_asset === '00').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.order.under_asset !== '00').sort((a, b) => b.price - a.price), last: { side: 'buy', price: 0.101, size: '1000000000' } });
         }
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
         case '/__published': return send(res, 200, st.published);

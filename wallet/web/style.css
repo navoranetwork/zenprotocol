@@ -231,3 +231,20 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .wicon.brand { background: #FFFFFF; padding: 2px; }
 .tname.tight { gap: 3px; white-space: nowrap; }
 .lead { font-size: 15px; } .lead b { color: var(--accent); }
+/* the Dex order book: asks (red) above, bids (green) below, depth bars from the right */
+.book h2 { margin: 0; }
+.bookhead, .lvl { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.bookhead { margin-top: 10px; padding: 0 8px 6px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line2); }
+.bookhead span:not(:first-child), .lvl span:not(:first-child) { text-align: right; }
+.lvl { position: relative; width: 100%; background: none; border: 0; border-radius: 6px; padding: 7px 8px; color: var(--ink); font: 500 14px var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; overflow: hidden; }
+.lvl:hover:not([disabled]) { background: var(--surface2); }
+.lvl[disabled] { cursor: default; opacity: 1; }
+.lvl > span { position: relative; }
+.lvl .ld { position: absolute; right: 0; top: 2px; bottom: 2px; border-radius: 4px; opacity: .16; }
+.lvl.ask .lp { color: var(--bad); font-weight: 650; } .lvl.ask .ld { background: var(--bad); }
+.lvl.bid .lp { color: var(--accent); font-weight: 650; } .lvl.bid .ld { background: var(--accent); }
+.lvl em { font-style: normal; font-size: 11px; color: var(--amber); margin-right: 4px; }
+.spreadrow { margin: 4px 0; padding: 6px 8px; border-radius: 6px; background: var(--surface2); text-align: center; font-size: 12px; color: var(--ink2); }
+.trades { display: grid; gap: 2px; } .trade { display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 14px; font-variant-numeric: tabular-nums; padding: 4px 0; }
+.trade span:not(:first-child) { text-align: right; } .trade .ask { color: var(--bad); font-weight: 600; } .trade .bid { color: var(--accent); font-weight: 600; }
+form[data-form=dex-limit] { display: grid; gap: 12px; }

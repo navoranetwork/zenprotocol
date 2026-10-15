@@ -56,3 +56,25 @@ test('what the Dex adds is checked before signing', () => {
   expectMake(mine)({ inputs: [], outputs: [out(toDex, ZUSDC, 9900000n), out(toDex, ZUSDC, 1n)] }, dex);
   assert.throws(() => expectMake(mine)({ inputs: [], outputs: [out(toMe, ZUSDC, 9900000n)] }, dex), /elsewhere/);
 });
+
+// ---- the order book
+import { bookFromOrders, levels, parsePrice, limitOrder, takeFor } from '../src/dex.js';
+test('order book: asks and bids of ZP/zUSDC, levels by tick, limit orders, take amounts', () => {
+  const ZU = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577', mk = '02' + 'ab'.repeat(32);
+  const o = (under, ua, pair, pt, tx) => orderOf({ under_asset: under, under_amount: String(ua), pair_asset: pair, pair_total: String(pt), maker: mk, tx });
+  const orders = [o('00', 40e8, ZU, 40.4e6, 'a1'), o('00', 40e8, ZU, 40.6e6, 'a2'), o('00', 10e8, ZU, 10.1e6, 'a3'), o(ZU, 39.6e6, '00', 40e8, 'b1'), o(ZU, 39.4e6, '00', 40e8, 'b2'), o('00', 1e8, '00'.padEnd(72, '1'), 5, 'x')];
+  const b = bookFromOrders(orders, ZU);
+  assert.deepEqual(b.asks.map(r => [r.o.tx, +r.price.toFixed(6)]), [['a1', 1.01], ['a3', 1.01], ['a2', 1.015]]);
+  assert.deepEqual(b.bids.map(r => [r.o.tx, +r.price.toFixed(6)]), [['b1', 0.99], ['b2', 0.985]]);
+  const la = levels(b.asks, 'ask');
+  assert.equal(la.length, 2); assert.equal(la[0].size, 50n * 100000000n); assert.equal(la[1].total, 90n * 100000000n); assert.ok(Math.abs(la[0].price - 1.01) < 1e-9);
+  assert.equal(parsePrice('1.0125'), 101250000n); assert.throws(() => parsePrice('abc'));
+  assert.deepEqual(limitOrder({ side: 'sell', price8: parsePrice('1.02'), amount: 5e8, quote: ZU }), { underAsset: '00', underAmount: 500000000n, pairAsset: ZU, pairTotal: 5100000n });
+  assert.deepEqual(limitOrder({ side: 'buy', price8: parsePrice('0.98'), amount: 5e8, quote: ZU }), { underAsset: ZU, underAmount: 4900000n, pairAsset: '00', pairTotal: 500000000n });
+  assert.throws(() => limitOrder({ side: 'sell', price8: parsePrice('1'), amount: 5e7, quote: ZU }), /At least 1 ZP/);
+  assert.throws(() => limitOrder({ side: 'sell', price8: parsePrice('0.001'), amount: 2e8, quote: ZU }), /0.01/);
+  const buy = takeFor(b.asks[0], 10e8);   // 10 ZP from the 1.01 ask: 10.1 zUSDC
+  assert.deepEqual(buy, { provided: 10100000n, payout: 1000000000n });
+  assert.deepEqual(takeFor(b.asks[0], 100e8), { provided: 40400000n, payout: 4000000000n });   // capped at the whole order
+  assert.deepEqual(takeFor(b.bids[0], 10e8), { provided: 1000000000n, payout: 9900000n });     // sell 10 ZP into the 0.99 bid
+});
