@@ -23,8 +23,9 @@ FAKE = """
 window.__btcCalls = [];
 window.FakeBtc = { request: async (m, p) => { window.__btcCalls.push([m, p]); return m === 'getAddresses' ? { jsonrpc: '2.0', result: { addresses: [{ address: '%s', purpose: 'payment' }] } } : { error: { code: -32601, message: 'no' } }; } };
 window.TestnetBtc = { request: async () => ({ result: { addresses: [{ address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx', purpose: 'payment' }] } }) };
+window.unisat = { requestAccounts: async () => ['%s'], sendBitcoin: async () => 'cc'.repeat(32) };
 window.btc_providers = [{ id: 'FakeBtc', name: 'Fake Wallet', icon: '%s' }, { id: 'TestnetBtc', name: 'Testnet Wallet' }];
-""" % (WALLET_ADDR, ICON)
+""" % (WALLET_ADDR, WALLET_ADDR, ICON)
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 390, 'height': 860})
     ctx.add_init_script("if (!localStorage.getItem('zp-wallet.settings.v1')) localStorage.setItem('zp-wallet.settings.v1', JSON.stringify({network:'test', nodes:{test:'%s/node', main:'%s/node'}, mtab:'swap', stab:'sell'}))" % (NODE, NODE))
@@ -74,7 +75,8 @@ with sync_playwright() as p:
     # 3. a connected Bitcoin wallet: its own icon and name, one fixed address, one reservation
     pg.click('button[data-act=swap-new]'); pg.wait_for_selector('form[data-form=offer]')
     pg.click('button[data-act=addr-src][data-v=wallet]'); pg.wait_for_selector('.wtile')
-    ok(pg.query_selector('.wtile img.wicon[src^="data:image/svg+xml"]') is not None and 'Fake Wallet' in pg.inner_text('.sheet') and 'Testnet Wallet' in pg.inner_text('.sheet'), 'Bitcoin wallets listed with the icon each gives (none bundled)')
+    ok(pg.query_selector('.wtile img.wicon[src^="data:image/svg+xml"]') is not None and 'Fake Wallet' in pg.inner_text('.sheet') and 'Testnet Wallet' in pg.inner_text('.sheet'), 'Bitcoin wallets listed with the icon each gives')
+    ok(pg.query_selector('.wtile:has-text("UniSat") img.wicon.brand[src^="data:image/png"]') is not None, 'UniSat, which gives no icon, shows its original logo (bundled)')
     pg.screenshot(path=f'{OUT}/k3-wallets.png')
     pg.click('button[data-act=btcw-sell] >> text=Testnet Wallet'); pg.wait_for_timeout(400)
     ok('is on Bitcoin testnet' in pg.inner_text('.sheet'), 'a wallet on Bitcoin testnet is refused clearly')
@@ -89,6 +91,7 @@ with sync_playwright() as p:
     # 4. Settings: the Bitcoin data source and the saved key
     pg.click('nav >> text=Settings'); pg.wait_for_selector('form[data-form=btcapi]')
     t = pg.inner_text('form[data-form=btcapi]'); ok('sees those addresses and your IP address' in t and 'GutZYs' in t, 'Settings: what the Bitcoin service learns, and the saved key')
+    ok('Wallet names and logos are trademarks of their owners' in pg.inner_text('main'), 'Settings: the trademark line')
     pg.fill('form[data-form=btcapi] input[name=url]', 'ftp://example.org'); pg.click('form[data-form=btcapi] button.primary'); pg.wait_for_timeout(300)
     ok('Use https://' in pg.inner_text('form[data-form=btcapi]'), 'a bad Esplora address is refused')
     pg.route('https://esplora.example.org/**', lambda r: r.fulfill(status=200, content_type='text/plain', headers={'Access-Control-Allow-Origin': '*'}, body='900123'))

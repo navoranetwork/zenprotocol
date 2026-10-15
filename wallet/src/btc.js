@@ -95,7 +95,7 @@ export async function fetchFeeRate(api, fetchFn = (...a) => globalThis.fetch(...
 
 // ---------------------------------------------------------------- Bitcoin wallets in the browser
 // Wallets that register under window.btc_providers (WBIP004: Xverse, Leather, Magic Eden…) give their own name and icon.
-// UniSat and OKX inject window.unisat and window.okxwallet.bitcoin with no icon: they show their name only.
+// UniSat and OKX inject window.unisat and window.okxwallet.bitcoin with no icon: they get their original logo, bundled.
 const okIcon = s => typeof s === 'string' && /^data:image\/(svg\+xml|png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 200000 ? s : null;
 const at = (root, path) => String(path).split('.').reduce((o, k) => (o == null ? o : o[k]), root);
 const rpc = async (p, method, params) => {
@@ -108,7 +108,8 @@ const pickAddress = list => {
   const btc = xs.filter(a => !a.symbol || a.symbol === 'BTC');
   return (btc.find(a => a.purpose === 'payment') || btc.find(a => /p2wpkh/i.test(a.type || a.addressType || '')) || btc[0])?.address || null;
 };
-export function findBtcWallets(win = globalThis) {
+// logos: the original logos bundled for wallets that give none ({ unisat, okx }: data URIs, web/icons/README.md)
+export function findBtcWallets(win = globalThis, logos = {}) {
   const out = [], names = new Set();
   for (const e of Array.isArray(win.btc_providers) ? win.btc_providers : []) {
     const p = e && typeof e.id === 'string' && at(win, e.id); if (!p || typeof p.request !== 'function' || names.has(e.name)) continue;
@@ -118,10 +119,10 @@ export function findBtcWallets(win = globalThis) {
       address: async () => { let r; try { r = await rpc(p, 'getAddresses', { purposes: ['payment'] }); } catch (err) { if (err.code === 4001) throw err; r = await rpc(p, 'getAccounts', { purposes: ['payment'] }); } return pickAddress(r); },
       send: async (to, sats) => (await rpc(p, 'sendTransfer', { recipients: [{ address: to, amount: leather ? String(sats) : Number(sats) }], ...(leather ? { network: 'mainnet' } : {}) }))?.txid || null });
   }
-  if (win.unisat?.requestAccounts && !names.has('UniSat')) out.push({ id: 'unisat', name: 'UniSat', icon: null,
+  if (win.unisat?.requestAccounts && !names.has('UniSat')) out.push({ id: 'unisat', name: 'UniSat', icon: okIcon(logos.unisat), bundled: !!okIcon(logos.unisat),
     address: async () => (await win.unisat.requestAccounts())?.[0] || null, send: async (to, sats, feeRate) => win.unisat.sendBitcoin(to, Number(sats), feeRate ? { feeRate } : undefined) });
   const okx = win.okxwallet?.bitcoin;
-  if (okx?.connect && !names.has('OKX Wallet')) out.push({ id: 'okx', name: 'OKX Wallet', icon: null,
+  if (okx?.connect && !names.has('OKX Wallet')) out.push({ id: 'okx', name: 'OKX Wallet', icon: okIcon(logos.okx), bundled: !!okIcon(logos.okx),
     address: async () => (await okx.connect())?.address || null, send: async (to, sats, feeRate) => okx.sendBitcoin(to, Number(sats), feeRate ? { feeRate } : undefined) });
   return out;
 }

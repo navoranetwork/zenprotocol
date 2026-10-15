@@ -103,6 +103,9 @@ test('Bitcoin wallets: WBIP004 providers with their icon, UniSat and OKX without
   assert.deepEqual(ws.map(w => w.name), ['Xverse Wallet', 'Leather', 'UniSat', 'OKX Wallet']);
   assert.equal(ws[0].icon, 'data:image/svg+xml;base64,PHN2Zy8+');
   assert.equal(ws[1].icon, null);                                          // not a data: image: not shown
+  assert.equal(ws[2].icon, null);                                          // UniSat gives none and none was bundled
+  const withLogos = findBtcWallets(win, { unisat: 'data:image/png;base64,AAAA', okx: 'data:image/webp;base64,BBBB' });
+  assert.deepEqual(withLogos.map(w => [w.name, w.icon, !!w.bundled]), [['Xverse Wallet', 'data:image/svg+xml;base64,PHN2Zy8+', false], ['Leather', null, false], ['UniSat', 'data:image/png;base64,AAAA', true], ['OKX Wallet', 'data:image/webp;base64,BBBB', true]]);
   assert.equal(await connectBtcWallet(ws[0]), 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
   assert.equal(await connectBtcWallet(ws[1]), 'bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g');
   await assert.rejects(connectBtcWallet(ws[2]), /UniSat is on Bitcoin testnet/);

@@ -34,6 +34,9 @@ const tokenAmount = (asset, units) => asset === '00' ? formatZP(units) : fmtUnit
 const withUnit = (asset, units) => tokenAmount(asset, units) + ' ' + unitOf(asset);
 // a token's icon where the wallet has one (zUSDC: Navora's own icon for the bridge token)
 const ICONS = typeof __ICONS__ === 'object' && __ICONS__ ? __ICONS__ : {};
+// the Bitcoin logo (public domain) next to BTC amounts and the Bitcoin side
+const btcLogo = (n = 18) => ICONS.btc ? `<img class="ticon" src="${ICONS.btc}" alt="" width="${n}" height="${n}">` : '';
+const btcAmt = (sats, n = 18) => `<span class="tname">${btcLogo(n)}${esc(formatBTC(sats))} BTC</span>`;
 const tokenIcon = (asset, size = 20) => /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
@@ -240,9 +243,9 @@ const stepsAt = (labels, now) => labels.map((l, i) => ({ ...l, state: i < now ? 
 const confBar = (c, need) => `<div class="bar" style="grid-template-columns: repeat(${need}, 1fr)" aria-hidden="true">${Array.from({ length: need }, (_, i) => `<span class="${i < c ? 'on' : ''}"></span>`).join('')}</div>`;
 // Bitcoin wallets in this browser, each with the icon it gives (none bundled here)
 const BTC_WALLET_KEY = 'zp-wallet.btc-wallet.v1';
-const btcWallets = () => findBtcWallets(window);
+const btcWallets = () => findBtcWallets(window, ICONS);
 const chosenBtc = () => { const ws = btcWallets(); let id = null; try { id = localStorage.getItem(BTC_WALLET_KEY); } catch { /* private mode */ } return ws.find(w => w.id === id) || (ws.length === 1 ? ws[0] : null); };
-const btcIcon = (w, n = 24) => w.icon ? `<img class="wicon" src="${esc(w.icon)}" alt="" width="${n}" height="${n}">` : `<span class="wicon blank" style="width:${n}px;height:${n}px" aria-hidden="true">${esc(w.name.charAt(0))}</span>`;
+const btcIcon = (w, n = 24) => w.icon ? `<img class="wicon${w.bundled ? ' brand' : ''}" src="${esc(w.icon)}" alt="" width="${n}" height="${n}">` : `<span class="wicon blank" style="width:${n}px;height:${n}px" aria-hidden="true">${esc(w.name.charAt(0))}</span>`;
 const btcTiles = act => `<div class="wtiles">${btcWallets().map(w => `<button type="button" class="chip wtile" data-act="${act}" data-id="${esc(w.id)}">${btcIcon(w, 28)}<b>${esc(w.name)}</b></button>`).join('')}</div>`;
 // the Bitcoin account key (xpub/zpub) a seller shared once: new receive addresses come from it; kept on this device only
 const BTC_ACCOUNT_KEY = 'zp-wallet.btc-account.v1';
@@ -272,7 +275,7 @@ function payBox(o, b, left, rest) {
   else if (ws.length && o.sats > WALLET_PAY_CAP) pay = `<p class="muted small">Paying from a connected wallet is limited to ${formatBTC(WALLET_PAY_CAP)} BTC for now: use the QR code.</p>`;
   else if (ws.length) pay = w ? `<button class="btn primary big" data-act="btc-pay">${btcIcon(w)} Pay with ${esc(w.name)}</button>${ws.length > 1 ? '<button type="button" class="linkbtn" data-act="btcw-choose">Use another Bitcoin wallet</button>' : ''}`
     : '<button class="btn primary big" data-act="btcw-choose">Pay with a Bitcoin wallet</button>';
-  return `<div class="kv"><span class="muted">Exact amount</span><span class="amt">${esc(amt)} BTC <button type="button" class="chip mini" data-act="copy" data-text="${esc(amt)}">Copy</button></span></div>
+  return `<div class="kv"><span class="muted">Exact amount</span><span class="amt">${btcAmt(o.sats)} <button type="button" class="chip mini" data-act="copy" data-text="${esc(amt)}">Copy</button></span></div>
     <div class="kv"><span class="muted">To</span><span class="mono small" data-s="wrap">${esc(o.address || '–')} <button type="button" class="chip mini" data-act="copy" data-text="${esc(o.address || '')}">Copy</button></span></div>
     <div class="countdown">⏱ Pay within <b>${hm(left - rest)}</b> <span class="muted">(held for you ${hm(left)} in all)</span></div>
     ${b.btcTx ? '' : feeNote()}
@@ -298,11 +301,11 @@ function buyCard() {
     { label: 'Proof sent to the contract', eta: 'about 4 min', detail: 'The proof was sent. The ZP arrives with the next ZP block.' },
     { label: 'ZP received', eta: '', detail: '' },
   ], stage);
-  const title = ['Reserving…', `Pay ${esc(formatBTC(sats))} BTC`, 'Payment received', 'Releasing your ZP', 'You received the ZP'][stage];
+  const title = ['Reserving…', `<span class="tname">Pay ${btcLogo(22)}${esc(formatBTC(sats))} BTC</span>`, 'Payment received', 'Releasing your ZP', 'You received the ZP'][stage];
   return `${head(title)}${stage === 4 ? '<p class="ok small">The contract checked your Bitcoin payment and released the ZP to this wallet.</p>' : ''}${stepper(steps)}
     ${stage === 4 ? '<button class="btn primary" data-act="buy-done">Done</button>' : stage === 0 ? '' : '<p class="muted small">This screen updates by itself.</p>'}</div>`;
 }
-const offerHead = o => `<div class="row" data-s="between"><div class="offzp">${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></div><div class="amt">${esc(formatBTC(o.sats))} BTC</div></div><div class="small muted">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
+const offerHead = o => `<div class="row" data-s="between"><div class="offzp">${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></div><div class="amt" data-s="fixed">${btcAmt(o.sats)}</div></div><div class="small muted">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
 function buyView() {
   const me = mySellers(), b = myBuy();
   const list = S.swap.offers.filter(o => !me.has(o.seller) && o.state !== 'closed');
@@ -871,7 +874,7 @@ const views = {
     const m = S.markets, base = siteBase(), tab = S.settings.mtab || 'oracle', loading = !m && !S.marketsError;
     const unit = (asset, v) => withUnit(asset, BigInt(v));
     const tabs = [['oracle', 'Oracle'], ['dex', 'Dex'], ['swap', 'ZP ⇄ BTC']];
-    const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${l}</button>`).join('')}</div>`;
+    const head = `<div class="tabs3 sticky" role="tablist" aria-label="Markets">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-mtab="${k}">${k === 'swap' ? `<span class="tname">ZP ⇄ ${btcLogo(16)}BTC</span>` : l}</button>`).join('')}</div>`;
     const errCard = S.marketsError ? `<div class="card"><p class="muted small">${esc(S.marketsError)}</p></div>` : '';
     let body = '';
     if (tab === 'oracle') {
@@ -923,7 +926,7 @@ const views = {
     <div class="card"><h2>Wallets on ${net() === 'main' ? 'mainnet' : 'testnet'}</h2><div class="list">${walletsHere().map(w => `<div class="item"><div><div>${esc(w.name)}</div><div class="muted small">${{ mnemonic: '24 words', key: 'Private key', watch: 'Watch only' }[w.kind]}</div></div>
       <span class="row" data-s="fixed">${w.kind !== 'watch' ? `<button class="btn" data-act="reveal" data-id="${esc(w.id)}">Backup</button>` : ''}<button class="btn danger" data-act="remove" data-id="${esc(w.id)}">Remove</button></span></div>`).join('') || '<p class="muted small">None.</p>'}</div></div>
     <button class="btn big" data-act="lock">Lock now</button>
-    <p class="muted small">ZP Wallet ${esc(WALLET_VERSION)} · open source and community-run. Not affiliated with Zen Protocol Ltd.</p></div>${nav('settings')}`,
+    <p class="muted small">ZP Wallet ${esc(WALLET_VERSION)} · open source and community-run. Not affiliated with Zen Protocol Ltd. Wallet names and logos are trademarks of their owners; the Bitcoin logo is public domain.</p></div>${nav('settings')}`,
 };
 
 const alloc = () => { const a = S.cgp?.allocation; return Number.isInteger(a) && a >= 0 && a <= 100 ? a : 90; };
@@ -1148,7 +1151,7 @@ function modalHtml() {
     ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Review</button></div></form></div></div>`;
   if (m.type === 'confirm-offer') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Confirm offer</h2>
     <div class="card"><div class="kv"><span class="muted">Sell</span><span class="amt">${formatZP(m.amount)} ZP</span></div>
-    <div class="kv"><span class="muted">For (total)</span><span class="amt">${esc(formatBTC(m.sats))} BTC${btcUsd() ? ` <span class="muted small">≈ $${(Number(m.sats) / 1e8 * btcUsd()).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div>
+    <div class="kv"><span class="muted">For (total)</span><span class="amt">${btcAmt(m.sats)}${btcUsd() ? ` <span class="muted small">≈ $${(Number(m.sats) / 1e8 * btcUsd()).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div>
     <div class="kv"><span class="muted">Price per ZP</span><span>${esc(rateText(m.sats, m.amount))}</span></div>
     ${m.src === 'key' ? '<div class="kv"><span class="muted">Bitcoin addresses</span><span class="small">New, from your account key</span></div>' : ''}
     ${m.addrs.map((a, i) => `<div class="kv"><span class="muted">Bitcoin address ${i + 1}</span><span class="mono small" data-s="wrap">${esc(a)}</span></div>`).join('')}
@@ -1182,12 +1185,13 @@ function modalHtml() {
   if (m.type === 'btcw') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Choose your Bitcoin wallet</h2>
     ${btcWallets().length ? btcTiles('btcw-pick') : '<p class="muted small">No Bitcoin wallet found in this browser. Use the QR code.</p>'}
     <p class="muted small">Your Bitcoin wallet shows the payment and asks you to confirm it. The ZP Wallet never sees your Bitcoin keys.</p>
+    <p class="muted small">Wallet names and logos are trademarks of their owners.</p>
     <button class="btn" data-act="close">Cancel</button></div></div>`;
   if (m.type === 'btc-pay') {
     const o = S.swap?.offers.find(x => x.id === m.id), w = btcWallets().find(x => x.id === m.walletId); if (!o || !w) return '';
     const why = payCheck({ offer: o, buy: myBuy(), zpTip: S.swap?.zpTip ?? 0, cap: WALLET_PAY_CAP }), same = o.address === m.address && o.sats === m.sats, amt = formatBTC(m.sats);
     return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="tname">${btcIcon(w, 28)}Pay with ${esc(w.name)}</h2>
-    <div class="card"><div class="kv"><span class="muted">Amount</span><span class="amt">${esc(amt)} BTC${btcUsd() ? ` <span class="muted small">≈ $${(m.sats / 1e8 * btcUsd()).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div>
+    <div class="card"><div class="kv"><span class="muted">Amount</span><span class="amt">${btcAmt(m.sats)}${btcUsd() ? ` <span class="muted small">≈ $${(m.sats / 1e8 * btcUsd()).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>` : ''}</span></div>
       <div class="kv"><span class="muted">To</span><span class="mono small" data-s="wrap">${esc(m.address)}</span></div>
       <div class="kv"><span class="muted">For</span><span>${esc(formatZP(BigInt(o.amount)))} ZP to ${esc(active().name)}</span></div>
       <div class="kv"><span class="muted">Network fee</span><span>${S.feeRate ? `at least ${S.feeRate} sat/vB` : 'the fastest'}</span></div></div>
@@ -1199,7 +1203,7 @@ function modalHtml() {
     const o = S.swap?.offers.find(x => x.id === m.id); if (!o) return '';
     const to = receiveAddress(S.open.get(active().id));
     return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Buy ${esc(formatZP(BigInt(o.amount)))} ZP</h2>
-    <div class="card"><div class="kv"><span class="muted">You pay</span><span class="amt">${esc(formatBTC(o.sats))} BTC</span></div><div class="kv"><span class="muted">Price</span><span class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</span></div>
+    <div class="card"><div class="kv"><span class="muted">You pay</span><span class="amt">${btcAmt(o.sats)}</span></div><div class="kv"><span class="muted">Price</span><span class="small">${esc(rateText(o.sats, BigInt(o.amount)))}</span></div>
       <div class="kv"><span class="muted">ZP to</span><span class="mono small">${esc(active().name)} · ${esc(shortAddr(to))}</span></div></div>
     <ol class="small steps-list"><li>Reserve: the offer is held for you about <b>${hm(holdOf(o.sats))}</b> (no fee for you).</li><li>Pay the bitcoin within the first <b>${hm(payOf(o.sats))}</b>, from any Bitcoin wallet.</li><li>After ${o.confs} Bitcoin confirmations (about ${o.confs * 10} min) the contract releases the ZP here by itself: about <b>${afterPayMin(o.sats)} min</b> after you pay.</li></ol>
     ${realBanner('buy')}

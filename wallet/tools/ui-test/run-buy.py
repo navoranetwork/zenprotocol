@@ -31,6 +31,7 @@ with sync_playwright() as p:
     pg.click('nav >> text=Markets'); pg.wait_for_selector('h2:has-text("Offers")', timeout=15000)
     ok('Real bitcoin, test ZP' in pg.inner_text('main') and pg.query_selector('[data-act=stab][data-v=buy].on') is not None, 'opens on Buy ZP, with the "real bitcoin, test ZP" banner')
     ok('about 26 min after you pay' in pg.inner_text('main'), 'each offer says how long after paying the ZP arrives')
+    ok(pg.query_selector('.offer img.ticon[src^="data:image/svg+xml"]') is not None and pg.query_selector('[data-mtab=swap] img.ticon') is not None, 'the Bitcoin logo next to BTC amounts and on the ZP ⇄ BTC tab')
     pg.screenshot(path=f'{OUT}/b0-offers.png', full_page=True)
     t = pg.inner_text('main'); ok('7 ZP' in t and pg.query_selector('button[data-act=buy][data-id=o-other]') is not None and pg.query_selector('button[data-act=buy][data-id=o-mine1]') is None, "others' offers can be bought, own offers not")
     pg.click('button[data-act=buy][data-id=o-other]'); pg.wait_for_selector('text=Buy 7 ZP')

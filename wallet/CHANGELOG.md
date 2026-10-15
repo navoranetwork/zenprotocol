@@ -11,6 +11,18 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.22.0 — 2026-10-15
+
+### Added
+- Original logos (Alon): the Bitcoin logo (public domain, from bitcoin.org) next to BTC amounts, on the ZP ⇄ BTC tab
+  and the pay screens; UniSat's and OKX's own logos, unchanged, on their connect buttons only (they announce no icon;
+  wallets that do, such as Xverse and Leather, keep showing their own). Sources and terms in web/icons/README.md.
+- Settings and the Bitcoin wallet picker: "Wallet names and logos are trademarks of their owners."
+
+### Not changed
+- ZP keeps its own mark: the Zen Protocol coin logo is in the original repositories, but their licence grants no
+  trademark rights and forbids using the marks without written consent. Alon decides.
+
 ## 0.21.0 — 2026-10-15
 
 ### Added
