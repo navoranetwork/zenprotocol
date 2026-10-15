@@ -50,7 +50,12 @@
     .zp .health span.sub { margin-left: 0; }
   }
 .pick[hidden] { display: none; }
-.pick { flex-wrap: wrap; gap: 8px; align-items: center; } .pick p { margin: 0; width: 100%; } .pick img { vertical-align: middle; border-radius: 4px; }
+.zp .pick { flex-direction: column; align-items: stretch; gap: 8px; max-width: 360px; }
+.zp .pick p { margin: 0; color: var(--s-muted); font-size: 14px; }
+.zp .pick button { display: flex; align-items: center; gap: 12px; background: var(--s-card); color: var(--s-ink); border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; text-align: left; font-weight: 600; }
+.zp .pick button:hover, .zp .pick button:focus-visible { border-color: var(--s-accent); }
+.zp .pick img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
+.zp .pick .noicon { width: 32px; height: 32px; border-radius: 8px; flex: none; background: var(--s-line); }
 button.link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 </style>
 <script src="/shell/shell.js" defer></script>
@@ -203,7 +208,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
     if (chosen || wallets.length < 2) return Promise.resolve();
     return new Promise(done => {
       const box = $('pick'); box.hidden = false;
-      box.innerHTML = '<p>Which wallet?</p>' + wallets.map((w, i) => `<button type="button" data-w="${i}"><img src="${esc(w.info.icon || '')}" alt="" width="20" height="20"> ${esc(w.info.name || 'Wallet')}</button>`).join(' ');
+      box.innerHTML = '<p>Several wallets are installed. Which one?</p>' + wallets.map((w, i) => `<button type="button" data-w="${i}">${/^data:image\//.test(w.info.icon || '') ? `<img src="${esc(w.info.icon)}" alt="">` : '<span class="noicon"></span>'}<span>${esc(w.info.name || 'Wallet')}</span></button>`).join('');
       box.onclick = ev => { const b = ev.target.closest('[data-w]'); if (!b) return; choose(wallets[+b.dataset.w]); done(); };
     });
   }
@@ -229,7 +234,7 @@ button.link { background: none; border: 0; padding: 0; color: inherit; text-deco
   }
   $('connect').onclick = async () => {
     $('m1').hidden = true;
-    if (!eth()) return show('m1', 'err', 'No browser wallet found. Install <a href="https://metamask.io/" rel="noopener">MetaMask</a> (or another EVM wallet) and reload this page.');
+    if (!eth() && !wallets.length) return show('m1', 'err', 'No browser wallet found. Install <a href="https://metamask.io/" rel="noopener">MetaMask</a> (or another EVM wallet) and reload this page.');
     try {
       await pickWallet();
       const [a] = await eth().request({ method: 'eth_requestAccounts' });
