@@ -325,6 +325,7 @@
       const data = '0xa9059cbb' + S.bridgeEvm.slice(2).toLowerCase().padStart(64, '0') + units.toString(16).padStart(64, '0');
       const tx = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: S.usdc, data }] });
       sentDeposits.push({ evmTx: String(tx).toLowerCase(), amount: String(units), from: account, confs: 0 });
+      show('m3', 'ok', `Sent: ${usdc(units)} USDC · ${evmLink('tx', String(tx))}. Follow it under "In progress" below.`);
       $('amt').value = ''; lookup(account); trackSent(); watch();
     } catch (e) { show('m3', 'err', 'Not sent: ' + errText(e)); }
   };
@@ -375,12 +376,16 @@
     try {
       const r = await fetch('/bridge/lookup?evm=' + encodeURIComponent(evm.toLowerCase()), { cache: 'no-store' });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
-      if (account && evm.toLowerCase() === account) { linked = j.zp || null; gate(); }
+      if (account && evm.toLowerCase() === account) {
+        linked = j.zp || null; gate();
+        if (j.funder) show('m3', 'info', 'This address funds the bridge\'s reserves: USDC sent from it adds to the reserves and <b>issues no zUSDC</b>. To get zUSDC, deposit from another address.');
+      }
       const known = new Set([...j.waiting, ...j.deposits].map(d => String(d.evmTx).toLowerCase()));
       for (let i = sentDeposits.length - 1; i >= 0; i--) if (known.has(sentDeposits[i].evmTx)) { recentDone.set('d' + sentDeposits[i].evmTx, true); sentDeposits.splice(i, 1); }
       const need = S?.confirmations ?? 12, zneed = S?.zpConfirmations ?? 2;
       const jobs = [
         ...sentDeposits.filter(d => d.from === evm.toLowerCase()).map(d => d.failed ? job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 0, 0, 'Failed on Base Sepolia') :
+          j.funder ? job('Reserve top-up', tok('usdc') + usdc(d.amount) + ' USDC', d.confs >= need ? 3 : 1, Math.min(1, d.confs / need), d.confs >= need ? 'Added to the reserves · no zUSDC (this address is a funder)' : `Confirming on Base Sepolia: ${Math.max(0, d.confs)} of ${need} · a reserve top-up, no zUSDC`) :
           job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 1, Math.min(1, d.confs / need), d.confs >= need ? 'Confirmed on Base · zUSDC in the next ZP block' : `Confirming on Base Sepolia: ${Math.max(0, d.confs)} of ${need}`)),
         ...j.waiting.map(d => job('Deposit', tok('usdc') + usdc(d.amount) + ' USDC', 2, .5, j.zp ? 'Issuing zUSDC: in the next ZP block (about 4 minutes)' : 'Waiting: link a ZP address above')),
         ...(j.arriving || []).map(d => job('Withdrawal', tok('zusdc') + usdc(d.amount) + ' zUSDC', 1, d.confirmations / d.need, `Received · ZP blocks ${d.confirmations} of ${d.need} · then USDC is sent (about ${4 * Math.max(1, d.need - d.confirmations)} minutes)`)),

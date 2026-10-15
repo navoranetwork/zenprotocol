@@ -233,7 +233,7 @@ http.createServer(async (req, res) => {
       const evm = String(u.searchParams.get('evm') || '').toLowerCase();
       if (!/^0x[0-9a-f]{40}$/.test(evm)) throw new Error('bad address');
       const mine = Object.entries(done);
-      return json(res, 200, { evm, zp: links[evm]?.zp || null,
+      return json(res, 200, { evm, zp: links[evm]?.zp || null, funder: FUNDERS.has(evm),   // a funder's USDC tops up the reserves: no zUSDC
         deposits: mine.filter(([, d]) => d.zpTx && d.from === evm).map(([k, d]) => ({ evmTx: k.split(':')[0], amount: d.amount, zpTx: d.zpTx })),
         waiting: pendingDeposits.filter(d => d.from === evm).map(d => ({ evmTx: d.tx, amount: d.amount })),
         withdrawals: mine.filter(([, d]) => d.burn && String(d.to).toLowerCase() === evm).map(([k, d]) => ({ zpTx: k.slice(2), amount: d.amount, evmTx: d.evmTx })),
