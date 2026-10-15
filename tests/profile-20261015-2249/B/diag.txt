@@ -1,0 +1,1 @@
+Warning: the target runtime does not support non-lossy (Block) buffering, which requires .NET 11+. Falling back to the default lossy buffering; the gcdump may be incomplete on large heaps.
