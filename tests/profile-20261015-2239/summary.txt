@@ -1,2 +1,6 @@
 [2026-10-15 22:39] profile of ours at 3000/min; Release + LOCALCHAIN, 10 s blocks
 [2026-10-15 22:39] B: ac632a07 Throughput measurement switches: ZP_VERIFIED_SIGNATURES=0 tur; load tool: zenprotocol 8afd78a4 ZP Wallet 0.28.0: Combine my ZP in batche
+[2026-10-15 22:39] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-15 22:39] B: node up, block 320, senders 1 and 2 funded
+[2026-10-15 22:39] profile: load 3000/min (two senders), trace 60 s at minute 2
+[2026-10-15 22:49] profile done: busy samples (weight): 127,079  threads by busy samples: 
