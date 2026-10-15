@@ -14,6 +14,7 @@
 //   BRIDGE_LOG_RANGE (190) blocks per log query (sepolia.base.org allows 200)   BRIDGE_CONFIRMATIONS (12)   BRIDGE_DATA (./data)   BRIDGE_LISTEN (127.0.0.1:8090)   BRIDGE_INTERVAL (15 s)
 //   BRIDGE_FUNDERS   comma-separated EVM addresses whose USDC transfers top up the reserves: never treated as deposits, no zUSDC issued
 //   BRIDGE_ZO        command that runs zen-oracle (dotnet src/Oracle/bin/Release/zen-oracle.dll)
+//   (a funder's top-up meant as a deposit: `node bridge.mjs credit <evm tx> <zp address>`, below)
 //   BRIDGE_ZP_CONFIRMATIONS (2) ZP blocks before a withdrawal is paid   BRIDGE_AUTO_WITHDRAW (1) pay withdrawals without a claim
 import http from 'node:http';
 import fs from 'node:fs';
@@ -210,6 +211,35 @@ async function withdrawalsRound() {
 // GET  /events    server-sent events: `change` {kind: deposit | waiting | arriving | withdrawal | link | reserves, evm?} when it happens
 const json = (res, code, v) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(v)); };
 const readBody = req => new Promise((ok, no) => { let b = ''; req.on('data', c => { b += c; if (b.length > 8192) no(new Error('too large')); }); req.on('end', () => ok(b)); });
+// `node bridge.mjs credit <evm tx> <zp address>`: a funder's top-up sent by mistake for zUSDC (it issued nothing) is
+// issued now, as a deposit, to that ZP address, and recorded like one, so the reserves stay matched by zUSDC out.
+// Run with the bridge service stopped (it writes done.json). Refused for a transfer already credited or deposited, one
+// not from a funder, one short of BRIDGE_CONFIRMATIONS, or the bridge's own ZP address (it would be paid out as USDC).
+if (process.argv[2] === 'credit') {
+  const [, , , evmTx, zpTo] = process.argv;
+  try {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(evmTx || '') || !decodeAddress(zpTo || '').hash) throw new Error('usage: node bridge.mjs credit <evm tx 0x…> <zp address tzn1…>');
+    if (zpTo === await bridgeZp()) throw new Error("that is the bridge's own ZP address: zUSDC there is paid out as USDC");
+    await evmInit(); if (!provider) throw new Error('needs a real BRIDGE_EVM');
+    const rc = await provider.getTransactionReceipt(evmTx), tip = await provider.getBlockNumber();
+    if (!rc || rc.status !== 1) throw new Error('transaction not found or failed on the EVM chain');
+    if (tip - rc.blockNumber + 1 < CONF) throw new Error(`only ${tip - rc.blockNumber + 1} of ${CONF} confirmations`);
+    const iface = new ethers.Interface(['event Transfer(address indexed from, address indexed to, uint256 value)']);
+    const ts = rc.logs.filter(l => l.address.toLowerCase() === USDC.toLowerCase()).map(l => { try { return { l, e: iface.parseLog(l) }; } catch { return null; } })
+      .filter(x => x && x.e.name === 'Transfer' && x.e.args.to.toLowerCase() === bridgeEvm());
+    if (!ts.length) throw new Error('no USDC transfer to the bridge in that transaction');
+    for (const { l, e } of ts) {
+      const key = rc.hash + ':' + l.index, from = e.args.from.toLowerCase(), amount = String(e.args.value);
+      if (done[key] || done[key.toLowerCase()]) throw new Error(key + ' was already credited or deposited');
+      if (!FUNDERS.has(from)) throw new Error(`${from} is not a funder: its transfer is a normal deposit`);
+      const tx = await issue(zpTo, amount);
+      done[key] = { zpTx: tx, amount, zp: zpTo, from, asset: ASSET, credited: Date.now() }; save('done.json', done);
+      log('credited top-up', amount, 'from', from, '-> issued to', zpTo, tx);
+    }
+    process.exit(0);
+  } catch (e) { console.error('credit refused: ' + e.message); process.exit(1); }
+}
+
 http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, 'http://x');
