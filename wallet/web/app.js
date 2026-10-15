@@ -820,7 +820,7 @@ async function ccTry(v) {
 }
 
 function fail(e) {
-  S.error = e?.message || String(e); S.errField = e?.field || null; S.busy = false; render();
+  S.error = e?.message || String(e); S.errField = e?.field || null; S.errCombine = !!e?.combine; S.busy = false; render();
   const box = $app.querySelector('.modal .err, .err'); box?.scrollIntoView?.({ block: 'center' }); box?.focus?.({ preventScroll: true });
 }   // the message may sit below the button that was pressed
 
@@ -834,7 +834,7 @@ const backBar = (title, to = 'home') => `<div class="back"><button class="iconbt
 const errBox = () => {
   if (!S.error) return '';
   const i = S.error.indexOf(': '), head = i > 0 && i < 80 ? S.error.slice(0, i) : S.error, rest = i > 0 && i < 80 ? S.error.slice(i + 2) : '';
-  return `<div class="err" role="alert" tabindex="-1"><span class="err-ic" aria-hidden="true">!</span><div><b>${esc(head)}</b>${rest ? `<div class="err-more">${esc(rest)}</div>` : ''}</div></div>`;
+  return `<div class="err" role="alert" tabindex="-1"><span class="err-ic" aria-hidden="true">!</span><div><b>${esc(head)}</b>${rest ? `<div class="err-more">${esc(rest)}</div>` : ''}${S.errCombine ? '<button type="button" class="btn small" data-s="mt10" data-act="combine">Combine my ZP now</button>' : ''}</div></div>`;
 };
 const fieldError = (message, field) => Object.assign(new Error(message), { field });
 const nav = cur => `<nav class="nav">${[['home', 'Wallet', I.home], ['markets', 'Markets', I.chart], ['vote', 'Vote', I.vote], ['contracts', 'Contracts', I.doc], ['settings', 'Settings', I.gear]]
@@ -921,6 +921,7 @@ const views = {
       <label class="field">To address<input name="to" class="mono" autocomplete="off" spellcheck="false" placeholder="${net() === 'main' ? 'zen1q…' : 'tzn1q…'}" value="${esc(S.draft.to || '')}" required></label>
       <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(asset, 18)}Amount (${esc(u)})</span><span data-s="right">Available ${esc(tokenAmount(asset, held?.spendable || 0n))}</span></span>
         <span class="row"><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.amount || '')}" required><button type="button" class="btn" data-act="max" data-s="fixed">Max</button></span></label>
+      ${S.draft.combine && asset === '00' ? '<div class="card small"><b>Combining your ZP.</b> This sends all your ZP to your own address in one transfer, so a contract call needs only one piece. Nothing leaves the wallet. After its block (about 4 minutes), try again.</div>' : ''}
       ${bridgeNote(S.draft.to, asset)}
       <div class="card small"><div class="kv"><span class="muted">From</span><span>${esc(a.name)}</span></div><div class="kv"><span class="muted">Network fee</span><span>None</span></div><div class="kv"><span class="muted">Change returns to</span><span class="mono">${esc(shortAddr(receiveAddress(S.open.get(a.id))))}</span></div></div>
       <p class="muted small">Signed on this device. The node only receives the signed transaction.</p>
@@ -1750,6 +1751,13 @@ $app.addEventListener('click', async e => {
         setBuy({ ...b, btcTx: typeof txid === 'string' && txid ? txid : 'sent', btcWallet: w.name }); S.modal = null;
       } finally { S.busy = false; }
       render(); setTimeout(loadSwap, 10000); return;
+    }
+    if (act === 'combine') {   // one transfer to this wallet's own address gathers the small outputs into one
+      const a = active(), w = S.open.get(a.id); await refreshWallet(a.id);
+      const z = S.data.get(a.id)?.state?.assets.find(x => x.asset === '00')?.spendable || 0n;
+      stopScan(); S.modal = null; S.error = ''; S.errCombine = false;
+      S.draft = { to: receiveAddress(w), amount: formatZP(z).replace(/,/g, ''), asset: '00', combine: true };
+      return go('send');
     }
     if (act === 'offer-max') { const i = $app.querySelector('form[data-form=offer] input[name=zp]'), bal = S.modal?.balance; if (i && bal) { i.value = formatZP(bal > 1n ? bal - 1n : 0n).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
     if (act === 'addr-src') { keepOffer(); S.modal.src = t.dataset.v; S.error = ''; freshScreen = true; render(); return syncOffer(); }

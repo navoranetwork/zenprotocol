@@ -288,7 +288,7 @@ export async function prepareContractCall({ w, state, node, contractId, command,
     fund.push(...took.map(u => ({ ...u, assetObj: assetFromId(asset) })));
     if (sum > amt) outputs.push({ lock: change(changeHash), spend: { asset: assetFromId(asset), amount: sum - amt } });
   }
-  if (fund.length > 50) throw new Error('This needs too many small outputs: send yourself the ZP in one transfer first');
+  if (fund.length > 50) throw Object.assign(new Error(`Your ZP is in too many small pieces (${fund.length} needed, at most 50 in one contract call): combine them first by sending all your ZP to yourself in one transfer`), { combine: true });
   outputs.push({ lock: { type: 'Fee' }, spend: { asset: ZEN_ASSET, amount: fee } });
   const inputs = fund.map(u => ({ outpoint: u.outpoint, lock: u.lock, spend: { asset: u.assetObj, amount: u.spend.amount } }));
   const bw = new Writer(); Data.write(bw, body); const bodyHex = hex(bw.out());

@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.4 — 2026-10-16
+
+### Fixed
+- A contract call (an offer, a Dex order, a bet…) that would need more than 50 small outputs now says how many it
+  needs and offers "Combine my ZP now": Send opens with all the wallet's ZP to its own address, explained. One
+  transfer (no fee) gathers the pieces; after its block the call works.
+
 ## 0.27.3 — 2026-10-16
 
 ### Changed
