@@ -92,7 +92,7 @@ if [ -z "$(get MM_SIGN)" ]; then   # the market maker's own key, off the bridge'
   MMK=$($D run --rm --network host -v "$DIR:/b" -w /b node:22-alpine node scripts/v1/mm-key.mjs "$API" "$PW" | sed -n "s/^MM_SIGN=//p")
   [ -n "$MMK" ] && put MM_SIGN "$MMK" || { echo "could not make the market maker's key (scripts/v1/mm-key.mjs)"; exit 1; }
 fi
-[ -n "$(get MM_PRICE)" ] || put MM_PRICE 0.10
+[ -n "$(get MM_PRICE)" ] || put MM_PRICE 1; [ -n "$(get MM_SIZE_ZP)" ] || put MM_SIZE_ZP 3   # 3 levels per side: 3 x 3 ZP and about 9 zUSDC
 [ -n "$(get ORACLE_PROVIDER)" ] || put ORACLE_PROVIDER "${ORACLE_PROVIDER:-auto}"
 [ "$(get ORACLE_PROVIDER)" = frankfurter ] && echo "$(get ORACLE_TICKERS)" | grep -q BTC && put ORACLE_PROVIDER auto   # frankfurter has no BTC
 [ -n "$(get ORACLE_TICKERS)" ] || put ORACLE_TICKERS "${ORACLE_TICKERS:-EUR,GBP,JPY,CHF,AUD,BTC,ETH,SPY,AAPL,MSFT,XAU}"

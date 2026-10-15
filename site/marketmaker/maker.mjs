@@ -10,7 +10,7 @@
 //   MM_NODE (http://127.0.0.1:31567)  MM_PASSWORD  MM_SIGN (a key of the node wallet, so proceeds show in the wallet; not the
 //               main key m/44'/258'/0'/0/0 when a bridge uses that wallet: scripts/v1/mm-key.mjs makes one)
 //   MM_DEX      Dex contract address (ctzn1...)       MM_ASSET  zUSDC asset id (hex)
-//   MM_PRICE    fixed reference price in USD per ZP (default 0.10)
+//   MM_PRICE    fixed reference price in USD per ZP (default 1: the testnet's starting price)
 //   MM_ORACLE   oracle service url + ticker, e.g. http://127.0.0.1:8085/ZPUSD : takes the price from the latest round instead (falls back to MM_PRICE)
 //   MM_LEVELS (3 per side)  MM_STEP_BPS (50 = 0.5% between levels)  MM_SPREAD_BPS (100 = 1%: the inner level's distance from the price)
 //   MM_REQUOTE_BPS (50, at most half the step)  MM_SIZE_ZP (ZP per order, 100; funds needed: levels x size on each side)  MM_INTERVAL (30 s)
@@ -26,7 +26,7 @@ import { plan, impliedPrice, sideOf } from './levels.mjs';
 const env = (k, d) => process.env[k] ?? d;
 const NODE = env('MM_NODE', 'http://127.0.0.1:31567'), PW = env('MM_PASSWORD', 'testnet'), SIGN = env('MM_SIGN', "m/44'/258'/0'/0/0");
 const DEX = env('MM_DEX', ''), USDC = env('MM_ASSET', ''), EXPLORER = env('MM_EXPLORER', 'http://127.0.0.1:11581/explorer/api');
-const FIXED = Number(env('MM_PRICE', '0.10')), ORACLE = env('MM_ORACLE', '');
+const FIXED = Number(env('MM_PRICE', '1')), ORACLE = env('MM_ORACLE', '');
 const SPREAD = Number(env('MM_SPREAD_BPS', '100')) / 1e4;
 const SIZE = Number(env('MM_SIZE_ZP', '100')), EVERY = Number(env('MM_INTERVAL', '30')) * 1000, DRY = env('MM_DRY', '') === '1';
 const LEVELS = Math.max(1, Math.floor(Number(env('MM_LEVELS', '3')))), STEP = Number(env('MM_STEP_BPS', '50')) / 1e4;

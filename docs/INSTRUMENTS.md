@@ -33,7 +33,7 @@ Needs Docker and a testnet node with the public test wallet (see [TESTNET.md](TE
 
 `site/marketmaker/maker.mjs` keeps several sell-ZP and buy-ZP orders (levels) on the Dex around a reference price, so the order book is never empty and has depth. It runs as the `marketmaker` service of the testnet stack.
 
-- Price: `MM_PRICE` (USD per ZP, default 0.10), or `MM_ORACLE=http://127.0.0.1:8085/<TICKER>` to take it from the latest oracle round.
+- Price: `MM_PRICE` (USD per ZP, default 1: the testnet's starting price), or `MM_ORACLE=http://127.0.0.1:8085/<TICKER>` to take it from the latest oracle round.
 - `MM_LEVELS` (3 per side), `MM_STEP_BPS` (50 = 0.5 % between levels), `MM_SPREAD_BPS` (100 = 1 %: the inner level's distance from the price), `MM_SIZE_ZP` (ZP per order), `MM_INTERVAL` seconds. Funds needed: levels x size on each side (ZP for the asks, size x price zUSDC per bid); with less it makes the inner levels it can pay for.
 - Every open order is matched to its nearest level; one more than `MM_REQUOTE_BPS` (50, at most half the step) away is cancelled and that level re-made. When the price moves by one step the orders shift by a level, so only the level that fell off the end changes, not all of them. A taken level is made again. The logic is in `site/marketmaker/levels.mjs` (test: `node --test site/test/maker.test.mjs`).
 - At most `MM_MAX_TX` (6) Make/Cancel per cycle, `MM_TX_PAUSE` (3) seconds apart: the node wallet spends its own unconfirmed change, and long chains of that are not tested. A side with a cancel on its way makes nothing until it is mined.
