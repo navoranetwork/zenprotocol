@@ -75,6 +75,10 @@
   .zp .amtbox .unit { display: inline-flex; align-items: center; gap: 6px; }
   .zp img.inl { vertical-align: middle; margin: 0 6px 0 2px; position: relative; top: -1px; }
   .zp .job .top span:last-child { display: inline-flex; align-items: center; }
+  .zp .resline { display: grid; gap: 8px; } .zp .resline span { display: flex; align-items: center; gap: 2px; }
+  .zp .tm { line-height: 2.1; }
+  .zp .health .nw { white-space: nowrap; display: inline-flex; align-items: center; margin-left: 6px; }
+  .zp .addr .kk { display: flex; align-items: center; }
   [hidden] { display: none !important; }
   @media (max-width: 520px) { .zp .addr { grid-template-columns: 1fr auto; } .zp .addr .kk { grid-column: 1 / -1; } .zp .card { padding: 14px; } }
 </style>
@@ -124,7 +128,7 @@
       <li><span>In the <a href="/wallet/">ZP Wallet</a>, tap <b>Send</b> and choose <img class="inl" src="/shell/icons/zusdc.svg" alt="" width="18" height="18"><b>zUSDC</b>.</span></li>
       <li><span>Send it to the bridge:
         <span class="copyaddr"><code id="bzp">…</code><button type="button" class="ghost" id="cpbzp">Copy</button></span></span></li>
-      <li><span>That's all. USDC arrives <span id="wto">at your linked wallet</span> by itself.</span></li>
+      <li><span>That's all. <img class="inl" src="/shell/icons/usdc.svg" alt="" width="24" height="24">USDC arrives <span id="wto">at your linked wallet</span> by itself.</span></li>
     </ol>
     <div class="time">⏱ About 8 to 10 minutes (<span id="zpconf">2</span>&nbsp;ZP blocks).</div>
     <a class="btn big" href="/wallet/" style="display:block;text-align:center;text-decoration:none">Open ZP Wallet</a>
@@ -151,9 +155,9 @@
   <div id="lk"></div>
 </details>
 <details><summary>Reserves and addresses</summary>
-  <p id="resline">–</p>
+  <p id="resline" class="resline">–</p>
   <div id="addrs"></div>
-  <p class="sub">USDC and the USDC logo are trademarks of Circle Internet Financial. zUSDC is this test bridge's token, not issued or endorsed by Circle.</p>
+  <p class="sub tm"><img class="inl" src="/shell/icons/usdc.svg" alt="" width="24" height="24">USDC and the USDC logo are trademarks of Circle Internet Financial.<br><img class="inl" src="/shell/icons/zusdc.svg" alt="" width="24" height="24">zUSDC is this test bridge's token, not issued or endorsed by Circle.</p>
 </details>
 <details><summary>Is this real money?</summary><p>No. Base Sepolia and the ZP testnet are test networks; their USDC, ETH and ZP have no value. Never use a wallet or key that holds real funds here.</p></details>
 <details><summary>Who holds the USDC?</summary><p>One operator key holds the reserves and is the only key that can issue or destroy zUSDC. Fine for a prototype, not for real money: before any real use the plan is multi-signature custody decided by a community vote, limits, a pause switch and an independent audit.</p></details>
@@ -204,20 +208,21 @@
     let h;
     if (mock) h = ['warn', 'Simulated EVM chain', 'browser-wallet deposits are not picked up'];
     else if (res == null) h = ['warn', 'Running', 'reserves not readable right now'];
-    else if (res >= out) h = ['ok', 'Fully backed', `${usdc(res)} USDC held · ${usdc(out)} zUSDC out`];
+    else if (res >= out) h = ['ok', 'Fully backed', `<span class="nw">${tok('usdc')}${usdc(res)} USDC held</span> <span class="nw">${tok('zusdc')}${usdc(out)} zUSDC out</span>`];
     else h = ['bad', 'Reserves below zUSDC out', 'do not deposit until resolved'];
-    $('health').innerHTML = `<span class="dot ${h[0]}"></span><b>${esc(h[1])}</b> · ${esc(h[2])}`;
-    $('resline').textContent = `${res == null ? 'unknown' : usdc(res)} USDC held by the bridge on ${net}; ${usdc(out)} zUSDC in circulation. ${S.links} linked wallets, ${S.deposits} deposits, ${S.withdrawals} withdrawals.`;
+    $('health').innerHTML = `<span class="dot ${h[0]}"></span><b>${esc(h[1])}</b> ${h[0] === 'ok' ? h[2] : esc(h[2])}`;
+    const n = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
+    $('resline').innerHTML = `<span>${tok('usdc')}<b>${res == null ? 'unknown' : usdc(res)} USDC</b> held by the bridge on ${esc(net)}</span><span>${tok('zusdc')}<b>${usdc(out)} zUSDC</b> in circulation</span><span class="sub">${n(S.links, 'linked wallet')} · ${n(S.deposits, 'deposit')} · ${n(S.withdrawals, 'withdrawal')}</span>`;
     $('zpconf').textContent = S.zpConfirmations ?? 2;
     $('bzp').textContent = S.bridgeZp || '…';
     const rows = [
-      ['USDC goes to', S.bridgeEvm, mock ? '' : `${scan()}/address/${S.bridgeEvm}`],
-      ['zUSDC goes to', S.bridgeZp, S.bridgeZp ? `/explorer.html?address=${encodeURIComponent(S.bridgeZp)}` : ''],
-      ['USDC token', S.usdc, mock ? '' : `${scan()}/token/${S.usdc}`],
-      ['zUSDC asset id', S.asset, ''],
-      ['zUSDC contract', S.contract, '']
+      ['USDC goes to', S.bridgeEvm, mock ? '' : `${scan()}/address/${S.bridgeEvm}`, 'usdc'],
+      ['zUSDC goes to', S.bridgeZp, S.bridgeZp ? `/explorer.html?address=${encodeURIComponent(S.bridgeZp)}` : '', 'zusdc'],
+      ['USDC token', S.usdc, mock ? '' : `${scan()}/token/${S.usdc}`, 'usdc'],
+      ['zUSDC asset id', S.asset, '', 'zusdc'],
+      ['zUSDC contract', S.contract, '', 'zusdc']
     ].filter(r => r[1]);
-    $('addrs').innerHTML = rows.map(([k, v, href], i) => `<div class="addr"><span class="kk">${esc(k)}</span><code>${esc(v)}</code><span class="row">` +
+    $('addrs').innerHTML = rows.map(([k, v, href, t], i) => `<div class="addr"><span class="kk">${tok(t)}${esc(k)}</span><code>${esc(v)}</code><span class="row">` +
       `<button class="ghost" type="button" data-copy="${i}">Copy</button>${href ? `<a class="btn ghost" href="${esc(href)}" rel="noopener" style="font-size:12px;padding:4px 10px">Open</a>` : ''}</span></div>`).join('');
     $('addrs').onclick = ev => { const b = ev.target.closest('[data-copy]'); if (b) copy(b, rows[+b.dataset.copy][1]); };
     gate();
