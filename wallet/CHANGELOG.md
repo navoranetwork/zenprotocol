@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.28.1 — 2026-10-16
+
+### Changed
+- The large balance shows two decimals (cut, never rounded up): 185.99 ZP instead of 185.99999991. The exact amount
+  shows on hover, and Send and Max use it.
+
 ## 0.28.0 — 2026-10-16
 
 ### Added

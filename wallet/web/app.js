@@ -231,6 +231,8 @@ const rateText = (sats, kalapas) => {
   const usd = btcUsd() ? per / 1e8 * btcUsd() : null;
   return `${(per / 1e8).toFixed(8)} BTC per ZP (${per.toLocaleString('en-US', { maximumFractionDigits: per < 10 ? 2 : 0 })} sat)${usd ? ` ≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: usd < 1 ? 4 : 2 })}` : ''}`;
 };
+// the large balance: two decimals, cut (never rounded up past what is there); the exact amount on hover and in Send
+const balShort = k => { const n = BigInt(k), c = n / 1000000n * 1000000n, f = formatZP(c); return (f.includes('.') ? f.replace(/(\.\d)$/, '$10') : f + '.00'); };
 const zpStr = v => Number.isFinite(v) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '–';
 
 function go(screen, extra = {}) { freshScreen = true; Object.assign(S, { screen, error: '', modal: null }, extra); if (screen === 'vote') S.cands = null; /* the candidate list belongs to one interval: ask the node again */ render(); if (screen === 'vote') refreshVotes(); window.scrollTo(0, 0); if (screen === 'markets') loadMarkets(); if (screen === 'contracts') loadEngine(); }
@@ -897,7 +899,7 @@ const views = {
       <div class="wallets" role="tablist">${ws.map(w => `<button class="chip ${w.id === a.id ? 'on' : ''}" data-wallet="${esc(w.id)}" role="tab">${esc(w.name)}${w.kind === 'watch' ? ' 👁' : ''}</button>`).join('')}
         <button class="chip" data-go="add" aria-label="Add a wallet">+ Add</button></div>
       <div><div class="muted small">${esc(a.name)}${ws.length > 1 ? ` · all wallets ${formatZP(total)} ZP` : ''}</div>
-        <div class="balance">${d.state ? formatZP(zp?.spendable || 0n) : '…'} <small class="tname">${zpLogo(22)}ZP</small></div>
+        <div class="balance" title="${d.state ? esc(formatZP(zp?.spendable || 0n)) + ' ZP exactly' : ''}">${d.state ? balShort(zp?.spendable || 0n) : '…'} <small class="tname">${zpLogo(22)}ZP</small></div>
         ${zp?.maturing ? `<div class="muted small">${formatZP(zp.maturing)} ZP mining rewards maturing · spendable from block ${zp.maturesAt.toLocaleString('en-US')}</div>` : ''}
         ${d.error ? `<div class="err small">${esc(d.error)}</div>` : ''}</div>
       <div class="actions">
