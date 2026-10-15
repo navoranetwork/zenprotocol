@@ -9,13 +9,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 ## Unreleased
 
-### Added
-- zUSDC shows its icon (Navora's own, distinct from the USDC logo) in the Tokens card, the activity, Send and the
-  confirm screen.
+Nothing yet.
 
 ## 0.16.0 — 2026-10-15
 
 ### Added
+- zUSDC shows its icon (Navora's own, distinct from the USDC logo) in the Tokens card, the activity, Send and the
+  confirm screen.
 - The site's USDC bridge is recognised (read from its /bridge/status): its ZP address shows as "the USDC bridge" in the
   activity and the confirm screen. Sending zUSDC there says it is a withdrawal, that the bridge pays the USDC to the
   linked EVM address by itself, and how long it takes (2 ZP blocks, about 8 to 10 minutes); sending any other asset
