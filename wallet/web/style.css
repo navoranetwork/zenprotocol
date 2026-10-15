@@ -254,3 +254,9 @@ button.item.tokrow:last-child { border-bottom: 0; }
 .trades { display: grid; } .trade { padding: 3px 6px; font: 500 13px/18px var(--mono); font-variant-numeric: tabular-nums; }
 .trade .ask { color: var(--bad); } .trade .bid { color: var(--accent); }
 form[data-form=dex-limit] { display: grid; gap: 12px; }
+/* buying is green, selling red, as in the order book: the tabs, the offer cards and their labels */
+.seg2 .chip.buy.on { border-color: var(--accent); color: var(--accent); background: rgba(63, 193, 160, .08); }
+.seg2 .chip.sell.on { border-color: var(--bad); color: var(--bad); background: rgba(239, 123, 123, .08); }
+.offer.buy { border-left: 3px solid var(--accent); } .offer.sell { border-left: 3px solid var(--bad); }
+.olbl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.offer.buy .olbl:first-child { color: var(--accent); } .offer.sell .olbl:first-child { color: var(--bad); }

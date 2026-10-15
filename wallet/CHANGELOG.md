@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.29.0 — 2026-10-16
+
+### Changed
+- ZP ⇄ BTC: buying and selling look different. Buying is green, selling red, as in the order book: the Buy ZP and Sell
+  ZP tabs, a coloured edge on each offer, and the offer from your side: "You get / You pay" on others' offers, "You
+  sell / You receive" on yours. Headings "Buy from others" and "Your sell offers". The Dex's Buy / Sell tabs too.
+
 ## 0.28.1 — 2026-10-16
 
 ### Changed

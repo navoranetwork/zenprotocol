@@ -41,7 +41,7 @@ with sync_playwright() as p:
     pg.fill('input[name=p1]', 'password123'); pg.fill('input[name=p2]', 'password123'); pg.click('form[data-form=create-vault] button.primary')
     pg.wait_for_selector('form[data-form=add-wallet]'); pg.click('button[data-tab=phrase]'); pg.fill('textarea[name=words]', PHRASE); pg.click('form[data-form=add-wallet] button.primary')
     pg.wait_for_selector('[data-go=markets]'); pg.wait_for_timeout(600)
-    pg.click('nav >> text=Markets'); pg.wait_for_selector('h2:has-text("Your offers")', timeout=15000)
+    pg.click('nav >> text=Markets'); pg.wait_for_selector('h2:has-text("Your sell offers")', timeout=15000)
     ok('Real bitcoin, test ZP' in pg.inner_text('main'), 'the "real bitcoin, test ZP" banner on the Sell tab')
     # 1. account key, 2 reservations: index 0, then 2 (index 1 received bitcoin before)
     pg.click('button[data-act=swap-new]'); pg.wait_for_selector('form[data-form=offer]')
@@ -65,7 +65,7 @@ with sync_playwright() as p:
     # 2. after a reload the next offer continues at index 3; the key is not asked again
     mock(utxo=1)
     pg.reload(); pg.wait_for_selector('form[data-form=unlock]'); pg.fill('input[name=p]', 'password123'); pg.click('form[data-form=unlock] button.primary')
-    pg.wait_for_selector('[data-go=markets]'); pg.click('nav >> text=Markets'); pg.wait_for_selector('h2:has-text("Your offers")', timeout=15000)
+    pg.wait_for_selector('[data-go=markets]'); pg.click('nav >> text=Markets'); pg.wait_for_selector('h2:has-text("Your sell offers")', timeout=15000)
     pg.click('button[data-act=swap-new]'); pg.wait_for_selector('form[data-form=offer]')
     ok(pg.query_selector('input[name=xpub]') is None and 'GutZYs' in pg.inner_text('.sheet'), 'the saved key shows shortened; it is not asked again')
     pg.click('button[data-act=price-mode][data-v=total]'); pg.fill('input[name=zp]', '1'); pg.fill('input[name=btc]', '0.0002'); pg.click('button[data-act=addr-count][data-v="1"]')

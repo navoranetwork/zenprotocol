@@ -101,7 +101,7 @@ function bookView(m, me, spendable) {
 }
 function limitForm(d, ba, bb) {
   const side = S.draft.dside === 'sell' ? 'sell' : 'buy', ref = side === 'buy' ? ba : bb;
-  return `<form class="card" data-form="dex-limit"><div class="seg2" role="tablist" aria-label="Buy or sell">${[['buy', 'Buy ZP'], ['sell', 'Sell ZP']].map(([k, l]) => `<button type="button" class="chip ${side === k ? 'on' : ''}" role="tab" aria-selected="${side === k}" data-act="dex-side" data-v="${k}">${l}</button>`).join('')}</div>
+  return `<form class="card" data-form="dex-limit"><div class="seg2" role="tablist" aria-label="Buy or sell">${[['buy', 'Buy ZP'], ['sell', 'Sell ZP']].map(([k, l]) => `<button type="button" class="chip ${k} ${side === k ? 'on' : ''}" role="tab" aria-selected="${side === k}" data-act="dex-side" data-v="${k}">${l}</button>`).join('')}</div>
     <label class="field">Price (zUSDC per ZP)<input name="price" inputmode="decimal" autocomplete="off" placeholder="${ref ? ref.price.toFixed(4) : '1.0000'}" value="${esc(S.draft.dprice || '')}"></label>
     <label class="field">Amount (ZP)<input name="amount" inputmode="decimal" autocomplete="off" placeholder="10" value="${esc(S.draft.damt || '')}"></label>
     <div class="small muted" id="dex-total" aria-live="polite"></div>
@@ -394,18 +394,20 @@ function buyCard() {
   return `${head(title)}${stage === 4 ? '<p class="ok small">The contract checked your Bitcoin payment and released the ZP to this wallet.</p>' : ''}${stepper(steps)}
     ${stage === 4 ? '<button class="btn primary" data-act="buy-done">Done</button>' : stage === 0 ? '' : '<p class="muted small">This screen updates by itself.</p>'}</div>`;
 }
-const offerHead = o => `<div class="row" data-s="between"><div class="offzp tname">${zpLogo(24)}<span>${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></span></div><div class="amt" data-s="fixed">${btcAmt(o.sats)}</div></div><div class="small muted">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
+// an offer from the side of the one looking at it: a buyer gets ZP and pays BTC, a seller sells ZP and receives BTC
+const offerHead = (o, side = 'buy') => `<div class="row" data-s="between"><div><div class="olbl">${side === 'buy' ? 'You get' : 'You sell'}</div><div class="offzp tname">${zpLogo(24)}<span>${esc(formatZP(BigInt(o.amount)))} <span class="muted">ZP</span></span></div></div>
+  <div data-s="fixed right"><div class="olbl">${side === 'buy' ? 'You pay' : 'You receive'}</div><div class="amt">${btcAmt(o.sats)}</div></div></div><div class="small muted" data-s="mt4">${esc(rateText(o.sats, BigInt(o.amount)))}</div>`;
 function buyView() {
   const me = mySellers(), b = myBuy();
   const list = S.swap.offers.filter(o => !me.has(o.seller) && o.state !== 'closed');
   const cards = list.map(o => {
     const status = o.state === 'reserved' ? `Reserved, free again in about ${hm(Number(o.until) - (S.swap.zpTip ?? 0))}` : o.state === 'closing' ? 'Being taken back by the seller' : '';
-    return `<div class="offer">${offerHead(o)}
+    return `<div class="offer buy">${offerHead(o, 'buy')}
       <div class="row" data-s="between mt6"><span class="badge" data-s="fixed">⏱ about ${buyMin(o.sats)} min in all</span>
       ${b?.id === o.id ? '<span class="muted small" data-s="fixed">Yours</span>' : `<button class="btn primary mini" data-s="fixed" data-act="buy" data-id="${esc(o.id)}" ${o.canReserve && !b ? '' : 'disabled'}>Buy</button>`}</div>
       ${status ? `<div class="muted small" data-s="mt4">${esc(status)}</div>` : ''}</div>`;
   }).join('');
-  return `${buyCard()}<div class="card"><h2>Offers</h2>${cards ? `<div class="offers">${cards}</div>` : '<p class="muted small">No offers from others right now.</p>'}
+  return `${buyCard()}<div class="card"><h2>Buy from others</h2>${cards ? `<div class="offers">${cards}</div>` : '<p class="muted small">No offers from others right now.</p>'}
     ${b ? '<p class="muted small" data-s="mt10">Finish or close your purchase above to buy another.</p>' : '<p class="muted small" data-s="mt10">The offer is held for you while you pay: nobody else can take it and the seller cannot take it back. The ZP comes to the wallet you have open.</p>'}</div>`;
 }
 
@@ -432,16 +434,16 @@ function sellerSteps(o) {
 }
 function sellView() {
   const sw = S.swap, me = mySellers(), mine = sw.offers.filter(o => me.has(o.seller)), a = active(), can = !!(a && S.open.get(a.id) && canSpend(S.open.get(a.id)));
-  const waiting = pendingOffers().map(p => `<div class="offer">${offerHead(p)}
+  const waiting = pendingOffers().map(p => `<div class="offer sell">${offerHead(p, 'sell')}
         <div class="muted small" data-s="mt6"><span class="spin"></span> Sent: waiting for the next block (about 4 minutes), then it is in the market</div></div>`).join('');
   const rows = mine.map(o => {
     const why = takeBackWhy(o), live = o.state === 'reserved' || o.payment;
-    return `<div class="offer">${offerHead(o)}
+    return `<div class="offer sell">${offerHead(o, 'sell')}
       <div class="muted small" data-s="mt6">${esc(me.get(o.seller).name)} · ${o.scripts - o.used} of ${o.scripts} reservations left</div>
       ${live && !takingBack(o) ? sellerSteps(o) : `<div class="small" data-s="mt6">${esc(o.state === 'expired' ? 'Open again: a reservation expired' : swapState(o))}</div>`}
       ${takingBack(o) ? '' : `<div class="row" data-s="mt6 between"><span class="muted small">${why ? esc(why) : ''}</span><button class="btn small" data-s="fixed" data-act="swap-cancel" data-id="${esc(o.id)}" ${why ? 'disabled' : ''}>Take back</button></div>`}</div>`;
   }).join('');
-  return `<div class="card"><div class="row" data-s="between"><h2>Your offers</h2><button class="btn primary small" data-s="fixed" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
+  return `<div class="card"><div class="row" data-s="between"><h2>Your sell offers</h2><button class="btn primary small" data-s="fixed" data-act="swap-new" ${can ? '' : 'disabled'}>New offer</button></div>
     ${waiting || rows ? `<div class="offers">${waiting}${rows}</div>` : '<p class="muted small">You have no offers. Sell ZP for bitcoin: the buyer pays straight to your Bitcoin address.</p>'}
     ${S.modal ? '' : errBox()}</div>
     <div class="card"><div class="kv"><span>Offers in the market</span><span class="amt">${sw.offers.length}</span></div>
@@ -451,7 +453,7 @@ function swapCard() {
   if (!siteBase()) return '<div class="card"><p class="muted small">ZP ⇄ BTC needs the community node, which serves the swap next to it.</p></div>';
   if (!S.swap) return `<div class="card"><p class="muted small">${esc(S.swapError || 'Loading…')}</p></div>`;
   const tab = S.settings.stab === 'sell' ? 'sell' : 'buy';
-  return `<div class="seg2" role="tablist" aria-label="Buy or sell">${[['buy', 'Buy ZP'], ['sell', 'Sell ZP']].map(([k, l]) => `<button class="chip ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-act="stab" data-v="${k}">${l}</button>`).join('')}</div>
+  return `<div class="seg2" role="tablist" aria-label="Buy or sell">${[['buy', 'Buy ZP'], ['sell', 'Sell ZP']].map(([k, l]) => `<button class="chip ${k} ${tab === k ? 'on' : ''}" role="tab" aria-selected="${tab === k}" data-act="stab" data-v="${k}">${l}</button>`).join('')}</div>
     ${realBanner(tab)}${tab === 'buy' ? buyView() : sellView()}`;
 }
 
