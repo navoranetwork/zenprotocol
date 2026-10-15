@@ -1,0 +1,129 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tput
+#1 transferring dockerfile: 1.80kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0
+#2 DONE 0.0s
+
+#3 [internal] load metadata for mcr.microsoft.com/dotnet/runtime:10.0
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [build 1/5] FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
+#6 resolve mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
+#6 resolve mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa 0.0s done
+#6 DONE 0.0s
+
+#7 [stage-1 1/6] FROM mcr.microsoft.com/dotnet/runtime:10.0@sha256:939555726cae4c916d212323ac3c0792996dcac2614f00e82cc40fcf059e1af3
+#7 resolve mcr.microsoft.com/dotnet/runtime:10.0@sha256:939555726cae4c916d212323ac3c0792996dcac2614f00e82cc40fcf059e1af3 0.0s done
+#7 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 2.45MB 0.1s done
+#5 DONE 0.1s
+
+#8 [build 2/5] WORKDIR /src
+#8 CACHED
+
+#9 [build 3/5] COPY nuget.config ./
+#9 CACHED
+
+#10 [build 4/5] COPY src ./src
+#10 DONE 0.1s
+
+#11 [build 5/5] RUN dotnet restore src/ContractTool/ContractTool.fsproj  && dotnet restore src/Node/Node.fsproj  && dotnet restore src/Cli/Cli.fsproj  && dotnet build src/ContractTool/ContractTool.fsproj -c Release -p:DefineConstants=LOCALCHAIN --no-restore -v minimal  && dotnet build src/Node/Node.fsproj -c Release -p:DefineConstants=LOCALCHAIN --no-restore -v minimal  && dotnet build src/Cli/Cli.fsproj -c Release -p:DefineConstants=LOCALCHAIN --no-restore -v minimal  && mkdir -p /out  && cp -r src/Node/bin/Release/. /out/  && cp -rn src/Cli/bin/Release/. /out/  && test -f /out/contract-tool/zen-contract-tool.exe && test -f /out/libsecp256k1.so && test -x /out/z3-linux
+#11 0.874   Determining projects to restore...
+#11 5.296   Restored /src/src/ContractTool/ContractTool.fsproj (in 4.1 sec).
+#11 6.024   Determining projects to restore...
+#11 7.572   Restored /src/src/ZenAbi/ZenAbi.csproj (in 153 ms).
+#11 8.894   Restored /src/src/Infrastructure/Infrastructure.fsproj (in 1.49 sec).
+#11 8.899   Restored /src/src/Consensus/Consensus.fsproj (in 1.51 sec).
+#11 8.906   Restored /src/src/Node/Node.fsproj (in 1.51 sec).
+#11 8.910   Restored /src/src/Messaging/Messaging.fsproj (in 1.31 sec).
+#11 8.910   Restored /src/src/AddressDB/AddressDB.fsproj (in 1.51 sec).
+#11 8.910   Restored /src/src/Api/Api.fsproj (in 1.51 sec).
+#11 8.910   Restored /src/src/Wallet/Wallet.fsproj (in 1.51 sec).
+#11 8.924   Restored /src/src/Blockchain/Blockchain.fsproj (in 1.51 sec).
+#11 8.930   Restored /src/src/DataAccess/DataAccess.fsproj (in 26 ms).
+#11 8.943   Restored /src/src/Network/Network.fsproj (in 42 ms).
+#11 8.960   Restored /src/src/Miner/Miner.fsproj (in 42 ms).
+#11 8.976   Restored /src/src/Cli/Cli.fsproj (in 49 ms).
+#11 9.740   Determining projects to restore...
+#11 10.59   All projects are up-to-date for restore.
+#11 14.14   ContractTool -> /src/src/ContractTool/bin/Release/zen-contract-tool.exe
+#11 14.27 
+#11 14.27 Build succeeded.
+#11 14.27     0 Warning(s)
+#11 14.27     0 Error(s)
+#11 14.27 
+#11 14.27 Time Elapsed 00:00:03.39
+#11 18.12   ZenAbi -> /src/src/ZenAbi/bin/Release/ZenAbi.dll
+#11 19.89   Infrastructure -> /src/src/Infrastructure/bin/Release/Infrastructure.dll
+#11 23.02   DataAccess -> /src/src/DataAccess/bin/Release/DataAccess.dll
+#11 27.93   Consensus -> /src/src/Consensus/bin/Release/Consensus.dll
+#11 32.42   Messaging -> /src/src/Messaging/bin/Release/Messaging.dll
+#11 36.23   Miner -> /src/src/Miner/bin/Release/Miner.dll
+#11 37.61   Wallet -> /src/src/Wallet/bin/Release/Wallet.dll
+#11 38.37   Network -> /src/src/Network/bin/Release/Network.dll
+#11 43.39   Api -> /src/src/Api/bin/Release/Api.dll
+#11 44.02   Blockchain -> /src/src/Blockchain/bin/Release/Blockchain.dll
+#11 47.99   AddressDB -> /src/src/AddressDB/bin/Release/AddressDB.dll
+#11 48.26   Cli -> /src/src/Cli/bin/Release/zen-cli.dll
+#11 52.50   Node -> /src/src/Node/bin/Release/zen-node.dll
+#11 52.64 
+#11 52.64 Build succeeded.
+#11 52.64     0 Warning(s)
+#11 52.64     0 Error(s)
+#11 52.64 
+#11 52.64 Time Elapsed 00:00:38.07
+#11 53.63   Infrastructure -> /src/src/Infrastructure/bin/Release/Infrastructure.dll
+#11 53.63   ZenAbi -> /src/src/ZenAbi/bin/Release/ZenAbi.dll
+#11 53.70   DataAccess -> /src/src/DataAccess/bin/Release/DataAccess.dll
+#11 53.72   Consensus -> /src/src/Consensus/bin/Release/Consensus.dll
+#11 53.81   Messaging -> /src/src/Messaging/bin/Release/Messaging.dll
+#11 53.92   Wallet -> /src/src/Wallet/bin/Release/Wallet.dll
+#11 54.15   Api -> /src/src/Api/bin/Release/Api.dll
+#11 54.30   Cli -> /src/src/Cli/bin/Release/zen-cli.dll
+#11 54.38 
+#11 54.38 Build succeeded.
+#11 54.38     0 Warning(s)
+#11 54.38     0 Error(s)
+#11 54.38 
+#11 54.38 Time Elapsed 00:00:01.46
+#11 54.53 cp: warning: behavior of -n is non-portable and may change in future; use --update=none instead
+#11 DONE 54.7s
+
+#12 [stage-1 2/6] RUN apt-get update  && apt-get install -y --no-install-recommends mono-devel liblmdb-dev libgomp1 curl unzip zip ca-certificates  && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [stage-1 3/6] COPY --from=build /out /zen
+#13 DONE 0.2s
+
+#14 [stage-1 4/6] COPY Docker/devnet-entrypoint.sh /entrypoint.sh
+#14 DONE 0.0s
+
+#15 [stage-1 5/6] RUN sed -i "s/\r$//" /entrypoint.sh && chmod +x /entrypoint.sh /zen/z3-linux /zen/contract-tool/z3-linux
+#15 DONE 0.2s
+
+#16 [stage-1 6/6] WORKDIR /zen
+#16 DONE 0.0s
+
+#17 exporting to image
+#17 exporting layers
+#17 exporting layers 9.0s done
+#17 exporting manifest sha256:bd1096d2d059c9e6dc647875ee0b71eabf150b1362f00a7560831824d05c12db done
+#17 exporting config sha256:1a9bee6296c8f192959ef48840cc5f44a43778db95d23698570fea6b4e51f4b5 done
+#17 exporting attestation manifest sha256:5f6a9e5290aa790a62018fcf7614aaa6d7d6426c1fde4f675509b410287adb6c done
+#17 exporting manifest list sha256:7b6d4240d4b086bad337ff18770eab5e3501a30d114f59b8761f2aaf982cc4da done
+#17 naming to docker.io/library/zen-tput-b:latest done
+#17 unpacking to docker.io/library/zen-tput-b:latest
+#17 unpacking to docker.io/library/zen-tput-b:latest 0.7s done
+#17 DONE 9.7s
