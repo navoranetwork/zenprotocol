@@ -294,7 +294,7 @@ const realBanner = side => realBtc() ? `<div class="warn small"><b>Real bitcoin,
 const keepOffer = () => { const f = $app.querySelector('form[data-form=offer]'), m = S.modal; if (f && m) for (const k of ['zp', 'btc', 'per', 'addrs', 'xpub']) if (f[k]) m[k] = f[k].value; };
 function offerAddrs(m) {
   const src = m.src || 'key', acc = btcAccount(), n = m.count || 2;
-  const chips = `<div class="small">Where the bitcoin goes</div><div class="tabs3" role="group" aria-label="Bitcoin addresses">${[['key', 'Account key'], ['wallet', 'Bitcoin wallet'], ['type', 'Type addresses']].map(([k, l]) =>
+  const chips = `<div class="small tname">${btcLogo(16)}Where the bitcoin goes</div><div class="tabs3" role="group" aria-label="Bitcoin addresses">${[['key', 'Account key'], ['wallet', 'Bitcoin wallet'], ['type', 'Type addresses']].map(([k, l]) =>
     `<button type="button" class="chip ${src === k ? 'on' : ''}" data-act="addr-src" data-v="${k}">${l}</button>`).join('')}</div>`;
   if (src === 'key') return `${chips}
     ${acc && !m.newKey ? `<div class="card small"><div class="kv"><span class="muted">Account key</span><span class="mono">${esc(acc.key.slice(0, 4))}…${esc(acc.key.slice(-6))} <button type="button" class="chip mini" data-act="btc-acc-change">Change</button></span></div></div>
@@ -1224,13 +1224,13 @@ function modalHtml() {
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'offer') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>New offer</h2>
     <form data-form="offer" class="screen" data-s="flush">
-    <label class="field">ZP to sell<input name="zp" inputmode="decimal" autocomplete="off" value="${esc(m.zp || '')}" required></label>
+    <label class="field"><span class="tname">${zpLogo(16)}ZP to sell</span><input name="zp" inputmode="decimal" autocomplete="off" value="${esc(m.zp || '')}" required></label>
     <p class="muted small row" data-s="between"><span>From ${esc(active().name)}: ${m.balance === null ? '–' : formatZP(m.balance) + ' ZP'} spendable.</span>${m.balance ? '<button type="button" class="chip mini" data-s="fixed" data-act="offer-max">Max</button>' : ''}</p>
     <div class="small">Price</div>
     <div class="tabs3" role="group" aria-label="How to give the price">${[['usd', '$ per ZP'], ['total', 'Total in BTC'], ['sat', 'sat per ZP']].map(([k, l]) =>
       `<button type="button" class="chip ${(m.mode || 'total') === k ? 'on' : ''}" data-act="price-mode" data-v="${k}" ${k === 'usd' && !btcUsd() ? 'disabled title="No Bitcoin price from the oracle right now"' : ''}>${l}</button>`).join('')}</div>
     ${(m.mode || 'total') === 'total'
-      ? `<label class="field">Total price (BTC, for all of it)<input name="btc" inputmode="decimal" autocomplete="off" placeholder="0.0005" value="${esc(m.btc || '')}" required></label>`
+      ? `<label class="field"><span class="tname">${btcLogo(16)}Total price (BTC, for all of it)</span><input name="btc" inputmode="decimal" autocomplete="off" placeholder="0.0005" value="${esc(m.btc || '')}" required></label>`
       : `<label class="field">${m.mode === 'usd' ? 'Price per ZP ($)' : 'Price per ZP (satoshis)'}<input name="per" inputmode="decimal" autocomplete="off" placeholder="${m.mode === 'usd' ? '1.25' : '1250'}" value="${esc(m.per || '')}" required></label>`}
     <div class="small muted" id="offer-rate" aria-live="polite"></div>
     ${m.mode === 'usd' ? `<p class="muted small">At the oracle's Bitcoin price, $${esc(btcUsd()?.toLocaleString('en-US'))}. The offer keeps the total in BTC: if Bitcoin moves, the dollar price per ZP moves with it.</p>` : ''}

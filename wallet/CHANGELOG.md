@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.27.3 — 2026-10-16
+
+### Changed
+- The new-offer form shows the ZP and Bitcoin logos next to "ZP to sell", the BTC price and "Where the bitcoin goes".
+
 ## 0.27.2 — 2026-10-16
 
 ### Fixed
