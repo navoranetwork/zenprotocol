@@ -1,0 +1,475 @@
+{
+  "node": "http://127.0.0.1:20000",
+  "started": "2026-10-15T00:47:43.164Z",
+  "stopReason": null,
+  "steps": [
+    {
+      "rate_per_min": 3000,
+      "achieved_per_min": 338,
+      "start": "2026-10-15T00:48:59.209Z",
+      "end": "2026-10-15T00:55:06.307Z",
+      "sent": 2069,
+      "accepted": 2069,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 4305,
+        "p95": 7870,
+        "max": 11273
+      },
+      "mempool": {
+        "avg": 1169,
+        "max": 1710
+      },
+      "blocks": 5,
+      "txs_per_block": {
+        "avg": 593.2,
+        "max": 1009
+      },
+      "ours_in_blocks": 1467,
+      "block_seconds_avg": 75
+    },
+    {
+      "rate_per_min": 7500,
+      "achieved_per_min": 315,
+      "start": "2026-10-15T00:55:06.309Z",
+      "end": "2026-10-15T01:01:13.247Z",
+      "sent": 1929,
+      "accepted": 1929,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 4693,
+        "p95": 8367,
+        "max": 11038
+      },
+      "mempool": {
+        "avg": 825,
+        "max": 1243
+      },
+      "blocks": 8,
+      "txs_per_block": {
+        "avg": 561.4,
+        "max": 709
+      },
+      "ours_in_blocks": 1603,
+      "block_seconds_avg": 49
+    },
+    {
+      "rate_per_min": 3000,
+      "achieved_per_min": 447,
+      "start": "2026-10-15T01:01:13.250Z",
+      "end": "2026-10-15T01:07:18.105Z",
+      "sent": 2720,
+      "accepted": 2720,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 3663,
+        "p95": 6005,
+        "max": 7564
+      },
+      "mempool": {
+        "avg": 379,
+        "max": 656
+      },
+      "blocks": 20,
+      "txs_per_block": {
+        "avg": 277.8,
+        "max": 408
+      },
+      "ours_in_blocks": 2433,
+      "block_seconds_avg": 18
+    },
+    {
+      "rate_per_min": 7500,
+      "achieved_per_min": 565,
+      "start": "2026-10-15T01:07:18.111Z",
+      "end": "2026-10-15T01:13:20.738Z",
+      "sent": 3415,
+      "accepted": 3415,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2824,
+        "p95": 4506,
+        "max": 6057
+      },
+      "mempool": {
+        "avg": 302,
+        "max": 452
+      },
+      "blocks": 34,
+      "txs_per_block": {
+        "avg": 203.7,
+        "max": 260
+      },
+      "ours_in_blocks": 3118,
+      "block_seconds_avg": 11
+    },
+    {
+      "rate_per_min": 1500,
+      "achieved_per_min": 563,
+      "start": "2026-10-15T01:13:20.749Z",
+      "end": "2026-10-15T01:19:23.892Z",
+      "sent": 3408,
+      "accepted": 3408,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2786,
+        "p95": 4442,
+        "max": 5673
+      },
+      "mempool": {
+        "avg": 275,
+        "max": 414
+      },
+      "blocks": 38,
+      "txs_per_block": {
+        "avg": 189.8,
+        "max": 266
+      },
+      "ours_in_blocks": 3129,
+      "block_seconds_avg": 10
+    },
+    {
+      "rate_per_min": 150,
+      "achieved_per_min": 148,
+      "start": "2026-10-15T01:19:23.902Z",
+      "end": "2026-10-15T01:25:29.151Z",
+      "sent": 900,
+      "accepted": 900,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 57,
+        "p95": 5311,
+        "max": 16810
+      },
+      "mempool": {
+        "avg": 328,
+        "max": 709
+      },
+      "blocks": 13,
+      "txs_per_block": {
+        "avg": 142.9,
+        "max": 421
+      },
+      "ours_in_blocks": 622,
+      "block_seconds_avg": 25
+    },
+    {
+      "rate_per_min": 1500,
+      "achieved_per_min": 668,
+      "start": "2026-10-15T01:25:29.162Z",
+      "end": "2026-10-15T01:31:32.297Z",
+      "sent": 4040,
+      "accepted": 4040,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2403,
+        "p95": 4043,
+        "max": 17154
+      },
+      "mempool": {
+        "avg": 238,
+        "max": 372
+      },
+      "blocks": 55,
+      "txs_per_block": {
+        "avg": 148.9,
+        "max": 308
+      },
+      "ours_in_blocks": 3812,
+      "block_seconds_avg": 7
+    },
+    {
+      "rate_per_min": 750,
+      "achieved_per_min": 613,
+      "start": "2026-10-15T01:31:32.307Z",
+      "end": "2026-10-15T01:37:35.581Z",
+      "sent": 3710,
+      "accepted": 3710,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2762,
+        "p95": 4156,
+        "max": 5450
+      },
+      "mempool": {
+        "avg": 266,
+        "max": 392
+      },
+      "blocks": 39,
+      "txs_per_block": {
+        "avg": 188.3,
+        "max": 234
+      },
+      "ours_in_blocks": 3544,
+      "block_seconds_avg": 9
+    },
+    {
+      "rate_per_min": 1500,
+      "achieved_per_min": 588,
+      "start": "2026-10-15T01:37:35.595Z",
+      "end": "2026-10-15T01:43:36.834Z",
+      "sent": 3542,
+      "accepted": 3542,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2722,
+        "p95": 4727,
+        "max": 6279
+      },
+      "mempool": {
+        "avg": 267,
+        "max": 402
+      },
+      "blocks": 38,
+      "txs_per_block": {
+        "avg": 187.9,
+        "max": 261
+      },
+      "ours_in_blocks": 3425,
+      "block_seconds_avg": 10
+    },
+    {
+      "rate_per_min": 150,
+      "achieved_per_min": 150,
+      "start": "2026-10-15T01:43:36.849Z",
+      "end": "2026-10-15T01:49:36.850Z",
+      "sent": 900,
+      "accepted": 900,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 55,
+        "p95": 3225,
+        "max": 22439
+      },
+      "mempool": {
+        "avg": 312,
+        "max": 678
+      },
+      "blocks": 11,
+      "txs_per_block": {
+        "avg": 139.3,
+        "max": 441
+      },
+      "ours_in_blocks": 653,
+      "block_seconds_avg": 28
+    },
+    {
+      "rate_per_min": 7500,
+      "achieved_per_min": 577,
+      "start": "2026-10-15T01:49:36.865Z",
+      "end": "2026-10-15T01:55:40.207Z",
+      "sent": 3495,
+      "accepted": 3495,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2201,
+        "p95": 4103,
+        "max": 20026
+      },
+      "mempool": {
+        "avg": 248,
+        "max": 416
+      },
+      "blocks": 52,
+      "txs_per_block": {
+        "avg": 143.9,
+        "max": 317
+      },
+      "ours_in_blocks": 3271,
+      "block_seconds_avg": 8
+    },
+    {
+      "rate_per_min": 300,
+      "achieved_per_min": 300,
+      "start": "2026-10-15T01:55:40.231Z",
+      "end": "2026-10-15T02:01:40.253Z",
+      "sent": 1800,
+      "accepted": 1800,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 114,
+        "p95": 6363,
+        "max": 13242
+      },
+      "mempool": {
+        "avg": 233,
+        "max": 511
+      },
+      "blocks": 27,
+      "txs_per_block": {
+        "avg": 137.6,
+        "max": 333
+      },
+      "ours_in_blocks": 1619,
+      "block_seconds_avg": 13
+    },
+    {
+      "rate_per_min": 150,
+      "achieved_per_min": 150,
+      "start": "2026-10-15T02:01:40.266Z",
+      "end": "2026-10-15T02:07:40.266Z",
+      "sent": 900,
+      "accepted": 900,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 45,
+        "p95": 4193,
+        "max": 18271
+      },
+      "mempool": {
+        "avg": 201,
+        "max": 479
+      },
+      "blocks": 23,
+      "txs_per_block": {
+        "avg": 82.7,
+        "max": 327
+      },
+      "ours_in_blocks": 759,
+      "block_seconds_avg": 15
+    },
+    {
+      "rate_per_min": 300,
+      "achieved_per_min": 297,
+      "start": "2026-10-15T02:07:40.281Z",
+      "end": "2026-10-15T02:13:43.511Z",
+      "sent": 1796,
+      "accepted": 1796,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 103,
+        "p95": 6690,
+        "max": 19001
+      },
+      "mempool": {
+        "avg": 319,
+        "max": 710
+      },
+      "blocks": 66,
+      "txs_per_block": {
+        "avg": 53.7,
+        "max": 402
+      },
+      "ours_in_blocks": 1603,
+      "block_seconds_avg": 6
+    },
+    {
+      "rate_per_min": 300,
+      "achieved_per_min": 300,
+      "start": "2026-10-15T02:13:43.539Z",
+      "end": "2026-10-15T02:19:43.540Z",
+      "sent": 1800,
+      "accepted": 1800,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 36,
+        "p95": 3605,
+        "max": 10345
+      },
+      "mempool": {
+        "avg": 240,
+        "max": 551
+      },
+      "blocks": 53,
+      "txs_per_block": {
+        "avg": 68.4,
+        "max": 362
+      },
+      "ours_in_blocks": 1591,
+      "block_seconds_avg": 7
+    },
+    {
+      "rate_per_min": 750,
+      "achieved_per_min": 387,
+      "start": "2026-10-15T02:19:43.560Z",
+      "end": "2026-10-15T02:25:47.457Z",
+      "sent": 2346,
+      "accepted": 2346,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 3412,
+        "p95": 8366,
+        "max": 15348
+      },
+      "mempool": {
+        "avg": 448,
+        "max": 1006
+      },
+      "blocks": 18,
+      "txs_per_block": {
+        "avg": 278.5,
+        "max": 580
+      },
+      "ours_in_blocks": 2147,
+      "block_seconds_avg": 21
+    },
+    {
+      "rate_per_min": 750,
+      "achieved_per_min": 509,
+      "start": "2026-10-15T02:25:47.483Z",
+      "end": "2026-10-15T02:31:49.697Z",
+      "sent": 3074,
+      "accepted": 3074,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2711,
+        "p95": 4906,
+        "max": 6818
+      },
+      "mempool": {
+        "avg": 292,
+        "max": 413
+      },
+      "blocks": 32,
+      "txs_per_block": {
+        "avg": 202.2,
+        "max": 298
+      },
+      "ours_in_blocks": 2917,
+      "block_seconds_avg": 11
+    },
+    {
+      "rate_per_min": 3000,
+      "achieved_per_min": 541,
+      "start": "2026-10-15T02:31:49.726Z",
+      "end": "2026-10-15T02:37:51.907Z",
+      "sent": 3267,
+      "accepted": 3267,
+      "refused": 0,
+      "errors": {},
+      "publish_ms": {
+        "median": 2958,
+        "p95": 4760,
+        "max": 5912
+      },
+      "mempool": {
+        "avg": 272,
+        "max": 407
+      },
+      "blocks": 38,
+      "txs_per_block": {
+        "avg": 183.2,
+        "max": 252
+      },
+      "ours_in_blocks": 3267,
+      "block_seconds_avg": 10
+    }
+  ]
+}
