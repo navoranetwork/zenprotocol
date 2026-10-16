@@ -28,6 +28,8 @@ const BUILTIN_NAMES = typeof __ASSET_NAMES__ === 'object' && __ASSET_NAMES__ ? _
 // zUSDC has 6 decimals; an Up or Down token counts units of its market's collateral, so it has the collateral's
 const decimalsOf = asset => S.betDec?.[asset] ?? (asset !== '00' && /^zUSDC\b/.test(S.assetNames[asset] || '') ? 6 : 8);
 const unitOf = asset => asset === '00' ? 'ZP' : (S.assetNames[asset] || 'Token ' + String(asset).slice(8, 16) + '…');
+// activity amounts: ZP with two decimals, cut (the exact amount on hover); below 0.01 ZP (a vote's 1 kalapa fee) in full
+const actAmount = (asset, units) => asset === '00' && BigInt(units) >= 1000000n ? balShort(units) + ' ZP' : withUnit(asset, units);
 function fmtUnits(units, dec) {
   const v = BigInt(units), neg = v < 0n, a = neg ? -v : v, d = 10n ** BigInt(dec), whole = (a / d).toLocaleString('en-US');
   let frac = (a % d).toString().padStart(dec, '0').replace(/0+$/, ''); if (dec === 6 && frac.length < 2) frac = frac.padEnd(2, '0');
@@ -1280,7 +1282,7 @@ function activityRow(h, w) {
   return `<div class="item act"><div class="act-main"><div>${what}${who ? ` <span class="act-who">${who}</span>` : ''}</div>
       <div class="muted small">${h.timestamp ? ago(h.timestamp) : 'pending'} · ${h.confirmations ? esc(h.confirmations.toLocaleString('en-US')) + ' conf.' : 'unconfirmed'}</div>
       ${back ? `<div class="row" data-s="mt4">${back}</div>` : ''}</div>
-    <div class="amt ${inn ? 'in' : ''}">${tokenIcon(h.asset, 16)}${inn ? '+' : '−'}${esc(withUnit(h.asset, inn ? amt : -amt))}</div></div>`;
+    <div class="amt ${inn ? 'in' : ''}" title="${esc((inn ? '+' : '−') + withUnit(h.asset, inn ? amt : -amt))}">${tokenIcon(h.asset, 16)}${inn ? '+' : '−'}${esc(actAmount(h.asset, inn ? amt : -amt))}</div></div>`;
 }
 
 // ---------------------------------------------------------------- CGP ballots

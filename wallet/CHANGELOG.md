@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.36.4 — 2026-10-16
+
+### Changed
+- Activity shows ZP amounts with two decimals (+45.00 ZP), cut, never rounded up; the exact amount is on hover.
+  Amounts below 0.01 ZP, such as a vote's 1 kalapa fee, still show in full.
+
 ## 0.36.3 — 2026-10-16
 
 ### Fixed

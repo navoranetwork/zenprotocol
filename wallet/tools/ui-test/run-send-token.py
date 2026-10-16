@@ -25,6 +25,8 @@ with sync_playwright() as p:
     t = pg.inner_text('main'); ok('zUSDC' in t and '2.00' in t, 'Tokens card: zUSDC by name, 2.00 (6 decimals, names built into the wallet)')
     pg.wait_for_selector('text=the USDC bridge (deposit)', timeout=15000)
     t = pg.inner_text('main'); ok('+2.00 zUSDC' in t and pg.query_selector('.tname img.ticon') is not None and pg.evaluate("[...document.querySelectorAll('img.ticon')].every(i => i.naturalWidth > 0)"), 'activity: the deposit is named, +2.00 zUSDC, the icon loads (inside app.js)')
+    amts = [e.inner_text() for e in pg.query_selector_all('.item.act .amt')]
+    ok(all(not ('ZP' in a and '.' in a and len(a.split('.')[1].split(' ')[0]) > 2) for a in amts if 'ZP' in a and '0.0000' not in a), f'activity: ZP amounts with two decimals ({amts})')
     pg.screenshot(path=f'{OUT}/st0-home.png')
     # Activity filters
     def shown(k):
