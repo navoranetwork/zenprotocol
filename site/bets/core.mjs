@@ -51,6 +51,60 @@ export function stateOf(m, held, nowMs, graceMs = 86400000) {
   return { status: nowMs > m.close + graceMs ? 'voidable' : 'closing', result: null };
 }
 
+// the lines of a ticker for one close: the value moved by each offset (0, ±1 %, ±3 %), rounded to 3 digits, without repeats
+export const linesOf = (value, offsets) => [...new Set(offsets.map(o => lineOf(value * (1 + o))).filter(Boolean))].sort((a, b) => a - b);
+
+// ---- quoting (the market service's market making) ----
+const YEAR = 365.25 * 86400000;
+// the standard normal distribution function (Abramowitz and Stegun 26.2.17, error below 1e-7)
+export function normCdf(x) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989422804014327 * Math.exp(-x * x / 2);
+  const p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return x > 0 ? 1 - p : p;
+}
+// the fair price of Up: the chance that the price is at or above the line at the close, N(d2) with no interest rate,
+// from the latest price, the time left and an annual volatility
+export function fairUp(spot, line, msLeft, vol) {
+  if (!(spot > 0 && line > 0)) return null;
+  if (msLeft <= 0 || !(vol > 0)) return spot >= line ? 1 : 0;
+  const s = vol * Math.sqrt(msLeft / YEAR);
+  return normCdf((Math.log(spot / line) - s * s / 2) / s);
+}
+// the four quotes of a market around the fair price of Up: Up bid and ask around p, Down's around 1 - p; a spread wide,
+// on a tick of 0.01, asks at most 0.99, no bid below 0.01
+export function quotesFor(pUp, { spread = 0.06, tick = 0.01, min = 0.01, max = 0.99 } = {}) {
+  const fix = x => Number(x.toFixed(6));
+  const two = p => {
+    const ask = Math.min(max, fix(Math.ceil((p + spread / 2) / tick - 1e-9) * tick));
+    const bid = fix(Math.floor((p - spread / 2) / tick + 1e-9) * tick);
+    return { bid: bid >= min && bid < ask ? bid : null, ask };
+  };
+  return { up: two(pUp), down: two(1 - pUp) };
+}
+// the price of one of our Dex orders on a position token: an ask sells the token for the collateral, a bid buys it
+export const orderPrice = (o, side) => side === 'ask' ? Number(o.pair_total) / Number(o.under_amount) : Number(o.under_amount) / Number(o.pair_total);
+// what to cancel and what to make for one market. want: quotesFor(...) or null (stop quoting); mine: our open orders on
+// its tokens (the explorer's /dex/orders?pending=1 rows). An order within `move` of its target stays; one in the mempool
+// or with a Take or Cancel on its way is left alone this time (its slot waits). An order with less than minSize tokens
+// left (taken in part, or an old small one) is made again in full.
+export const orderSize = (o, side) => Number(side === 'ask' ? o.under_amount : o.pair_total);
+export function planQuotes(want, mine, { bull, bear, collateral, move = 0.03, minSize = 0 }) {
+  const cancels = [], makes = [];
+  for (const [name, side, token] of [['up', 'ask', bull], ['up', 'bid', bull], ['down', 'ask', bear], ['down', 'bid', bear]]) {
+    const target = want ? want[name][side] : null;
+    const here = mine.filter(o => side === 'ask' ? o.under_asset === token && o.pair_asset === collateral : o.pair_asset === token && o.under_asset === collateral);
+    let keep = false, busy = false;
+    for (const o of here) {
+      if (o.pendingCancel || o.pendingTake) { busy = true; continue; }
+      if (!keep && target != null && Math.abs(orderPrice(o, side) - target) < move - 1e-9 && orderSize(o, side) >= minSize) { keep = true; continue; }
+      if (o.pending) { busy = true; continue; }
+      cancels.push({ ...o, name, side });
+    }
+    if (target != null && !keep && !busy) makes.push({ name, side, token, price: target });
+  }
+  return { cancels, makes };
+}
+
 // the winner by the close round's value (x 1000): Bull if Price <= Value
 export const winnerOf = (price, valueScaled) => (BigInt(price) <= BigInt(valueScaled) ? 'Bull' : 'Bear');
 

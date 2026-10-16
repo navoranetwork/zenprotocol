@@ -1,35 +1,53 @@
 // The market service for FixedPayout V1 (docs/BETS.md), next to the oracle. Each minute it:
-//   1. opens markets: one per ticker for the next close (BETS_CLOSE_UTC, default 22:00 UTC, at least 12 h ahead; stocks
-//      and gold only on weekdays), the line at the oracle's latest value rounded to 3 digits;
-//   2. seeds each new market: Issue BETS_SEED of the collateral (N Up + N Down to the seeding key), then offers both
-//      sides on the Dex at BETS_ODDS each (0.55 by default: the two sum to 1.10);
+//   1. opens markets: for each ticker and the next close (BETS_CLOSE_UTC, default 22:00 UTC, at least 12 h ahead;
+//      stocks, gold and FX only on weekdays), one market per line: the oracle's latest value moved by each of
+//      BETS_OFFSETS (0, ±1 %, ±3 %), rounded to 3 digits. The lines of a ticker and close are set once;
+//   2. quotes every open market on the Dex: Up and Down, a bid and an ask each, around the fair price of Up
+//      (N(d2) from the latest round, the line, the time to the close and BETS_VOL of the ticker), BETS_SPREAD wide.
+//      An order more than BETS_MOVE from its target, or with less than a quarter of BETS_QUOTE left, is cancelled and
+//      made again; a taken one is made again. It stops
+//      quoting (cancels its orders) BETS_STOP_MIN before the close, or when the latest round is older than
+//      BETS_STALE_MIN. Tokens for the asks come from Issue (BETS_QUOTE at a time, at most BETS_MAX_ISSUE per market);
+//      the bids together lock at most BETS_BID_BUDGET of the collateral;
 //   3. settles each closed market: the oracle's round stamped with the close -> the Oracle's Attest to the contract ->
 //      once the attestation token is in the contract's wallet, Settle with the winner;
-//   4. voids a market with no Settle 24 hours after its close.
-// A market's state is read from the chain (the markers the contract holds), so a restart loses nothing; markets.json
-// keeps the list and what was sent. GET /markets (BETS_LISTEN, 127.0.0.1:8097) lists them for the explorer API.
+//   4. voids a market with no Settle 24 hours after its close;
+//   5. redeems the tokens it holds of a settled market's winner (both sides of a void one).
+// A market's state is read from the chain (the markers the contract holds, our orders from the explorer), so a restart
+// loses nothing; markets.json keeps the list and what was sent. GET /markets (BETS_LISTEN, 127.0.0.1:8097) lists them.
 //
 // Environment:
-//   BETS_NODE (http://127.0.0.1:31567)  BETS_PASSWORD  BETS_SIGN (the key that issues and offers; not the bridge's
+//   BETS_NODE (http://127.0.0.1:31567)  BETS_PASSWORD  BETS_SIGN (the key that issues and quotes; not the bridge's
 //               m/44'/258'/0'/0/0)   BETS_CONTRACT (FixedPayout address ctzn1…)  BETS_ID (its contract id, 72 hex)
 //   BETS_ORACLE (http://127.0.0.1:8085)  BETS_ORACLE_ADDRESS (the V1 Oracle contract ctzn1…)  BETS_ORACLE_ID (72 hex)
 //   BETS_ORACLE_KEY (the oracle's compressed public key)  BETS_COLLATERAL (the zUSDC asset id)  BETS_DEX (the Dex ctzn1…)
+//   BETS_EXPLORER (http://127.0.0.1:11581/explorer/api: our open Dex orders, with the newest blocks and the mempool)
 //   BETS_TICKERS (BTC,ETH,EUR,XAU)  BETS_DAILY (SPY,AAPL,MSFT,XAU: weekdays only)  BETS_CLOSE_UTC (22)
-//   BETS_SEED (2000000 = 2 zUSDC per market)  BETS_ODDS (0.55)  BETS_DATA (./data)  BETS_LISTEN (127.0.0.1:8097)
-//   BETS_INTERVAL (60 s)  BETS_DRY=1 (only print what it would send)
+//   BETS_OFFSETS (0,-0.01,0.01,-0.03,0.03)  BETS_VOL (annual volatility per ticker, TICKER:0.5,…; defaults below)
+//   BETS_SPREAD (0.06: bid to ask)  BETS_MOVE (0.03: requote when an order is this far from its target)
+//   BETS_QUOTE (10000000 = 10 tokens per order)  BETS_MAX_ISSUE (30000000 per market)  BETS_BID_BUDGET (30000000)
+//   BETS_STOP_MIN (20)  BETS_STALE_MIN (150)  BETS_MAX_TX (8 per cycle)  BETS_TX_PAUSE (2 s)
+//   BETS_DATA (./data)  BETS_LISTEN (127.0.0.1:8097)  BETS_INTERVAL (60 s)  BETS_DRY=1 (only print what it would send)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { tokens, lineOf, priceOf, nextCloses, isWeekday, stateOf, winnerOf, attestSubtype, bodies } from './core.mjs';
+import { tokens, linesOf, priceOf, nextCloses, isWeekday, stateOf, winnerOf, attestSubtype, bodies, fairUp, quotesFor, planQuotes } from './core.mjs';
 
 const env = (k, d) => process.env[k] ?? d;
 const NODE = env('BETS_NODE', 'http://127.0.0.1:31567'), PW = env('BETS_PASSWORD', 'testnet'), SIGN = env('BETS_SIGN', '');
 const CONTRACT = env('BETS_CONTRACT', ''), ID = env('BETS_ID', ''), DEX = env('BETS_DEX', '');
 const ORACLE = env('BETS_ORACLE', 'http://127.0.0.1:8085').replace(/\/$/, ''), ORACLE_ADDRESS = env('BETS_ORACLE_ADDRESS', ''), ORACLE_ID = env('BETS_ORACLE_ID', '');
 const ORACLE_KEY = env('BETS_ORACLE_KEY', ''), COLLATERAL = env('BETS_COLLATERAL', '');
-const TICKERS = env('BETS_TICKERS', 'BTC,ETH,EUR,XAU').split(',').map(s => s.trim()).filter(Boolean);
-const DAILY = new Set(env('BETS_DAILY', 'SPY,AAPL,MSFT,XAU').split(',').map(s => s.trim()));
-const CLOSE_UTC = Number(env('BETS_CLOSE_UTC', '22')), SEED = Number(env('BETS_SEED', '2000000')), ODDS = Number(env('BETS_ODDS', '0.55'));
+const EXPLORER = env('BETS_EXPLORER', 'http://127.0.0.1:11581/explorer/api').replace(/\/$/, '');
+const list = s => s.split(',').map(x => x.trim()).filter(Boolean);
+const TICKERS = list(env('BETS_TICKERS', 'BTC,ETH,EUR,XAU')), DAILY = new Set(list(env('BETS_DAILY', 'SPY,AAPL,MSFT,XAU')));
+const CLOSE_UTC = Number(env('BETS_CLOSE_UTC', '22')), OFFSETS = list(env('BETS_OFFSETS', '0,-0.01,0.01,-0.03,0.03')).map(Number);
+const VOL = { BTC: 0.55, ETH: 0.75, EUR: 0.08, GBP: 0.09, JPY: 0.1, CHF: 0.08, AUD: 0.1, XAU: 0.16, SPY: 0.18, AAPL: 0.28, MSFT: 0.25,
+  ...Object.fromEntries(list(env('BETS_VOL', '')).map(s => s.split(':')).map(([t, v]) => [t, Number(v)])) };
+const SPREAD = Number(env('BETS_SPREAD', '0.06')), MOVE = Number(env('BETS_MOVE', '0.03'));
+const QUOTE = Number(env('BETS_QUOTE', '10000000')), MAX_ISSUE = Number(env('BETS_MAX_ISSUE', '30000000')), BID_BUDGET = Number(env('BETS_BID_BUDGET', '30000000'));
+const STOP = Number(env('BETS_STOP_MIN', '20')) * 60000, STALE = Number(env('BETS_STALE_MIN', '150')) * 60000;
+const MAX_TX = Number(env('BETS_MAX_TX', '8')), PAUSE = Number(env('BETS_TX_PAUSE', '2')) * 1000;
 const DATA = env('BETS_DATA', './data'), [HOST, PORT] = env('BETS_LISTEN', '127.0.0.1:8097').split(':');
 const EVERY = Number(env('BETS_INTERVAL', '60')) * 1000, DRY = env('BETS_DRY', '') === '1', GRACE = 86400000;
 const log = (...a) => console.log(new Date().toISOString().slice(0, 19), ...a);
@@ -47,51 +65,103 @@ async function node(p, body) {
   const r = await fetch(NODE + p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(900000) });
   const t = await r.text(); try { return JSON.parse(t); } catch { return t; }
 }
+let sent = 0;
 async function execute(address, command, messageBody, spends = [], sign = null) {
-  if (DRY) { log('DRY', command, address.slice(0, 16), messageBody.slice(0, 40) + '…'); return 'dry'; }
+  if (sent++) await new Promise(r => setTimeout(r, PAUSE));
+  if (DRY) { log('DRY', command, address.slice(0, 16), messageBody.slice(0, 40) + '…', JSON.stringify(spends)); return 'dry'; }
   const r = await node('/wallet/contract/execute', { address, command, messageBody, options: { returnAddress: false, ...(sign ? { sign } : {}) }, spends, password: PW });
   if (typeof r !== 'string' || !/^"?[0-9a-f]{64}"?$/.test(r.trim())) throw new Error(`${command}: ${JSON.stringify(r).slice(0, 300)}`);
   return r.replace(/"/g, '').trim();
 }
 const held = async address => new Set((await node('/addressdb/balance', { addresses: [address] }) || []).filter(x => Number(x.balance) > 0).map(x => x.asset));
-const walletHas = async (asset, amount) => (await node('/wallet/balance') || []).filter(b => b.asset === asset).reduce((s, b) => s + Number(b.balance), 0) >= amount;
-const latestValues = async () => { const r = await (await fetch(ORACLE + '/rounds/latest')).json(); const T = r.tickers ?? r.Tickers, V = r.values ?? r.Values; return Object.fromEntries(T.map((t, i) => [t, Number(V[i])])); };
-const keyOf = m => `${m.ticker}-${m.close}`;
+const walletBalances = async () => { const b = new Map(); for (const x of (await node('/wallet/balance')) || []) b.set(x.asset, (b.get(x.asset) || 0) + Number(x.balance)); return b; };
+const latestRound = async () => { const r = await (await fetch(ORACLE + '/rounds/latest')).json(); const T = r.tickers ?? r.Tickers, V = r.values ?? r.Values;
+  return { ts: Number(r.timestamp ?? r.Timestamp), values: Object.fromEntries(T.map((t, i) => [t, Number(V[i])])) }; };
+const keyOf = m => `${m.ticker}-${m.close}-${m.price}`;
+const fmt = n => (n / 1e6).toFixed(2);
 
-// 1 + 2: open and seed
-async function open(now, makerKey) {
-  const values = await latestValues();
+// 1: open the lines of each ticker for the next close, once
+async function open(now) {
+  const { values } = await latestRound();
   for (const close of nextCloses(now, CLOSE_UTC, 1)) for (const ticker of TICKERS) {
     if (DAILY.has(ticker) && !isWeekday(close)) continue;
-    const line = lineOf(values[ticker]); if (!line) continue;
-    const m = { ticker, line, price: priceOf(line), close, oraclePubKey: ORACLE_KEY, oracleId: ORACLE_ID, collateral: COLLATERAL };
-    if (markets.some(x => keyOf(x) === keyOf(m))) continue;
-    m.tokens = tokens(ID, m);
-    m.opened = now;
-    markets.push(m); save();
-    log(`open ${ticker} >= ${line} at ${new Date(close).toISOString()}`);
-  }
-  for (const m of markets.filter(m => !m.issueTx && m.close > now)) {
-    if (!(await walletHas(COLLATERAL, SEED))) { log(`not enough collateral to seed ${keyOf(m)}`); continue; }
-    m.issueTx = await execute(CONTRACT, 'Issue', bodies.issue(m), [{ asset: COLLATERAL, amount: SEED }], SIGN); save();
-    log(`seed ${keyOf(m)}: Issue ${SEED} -> ${m.issueTx}`);
-  }
-  for (const m of markets.filter(m => m.issueTx && !m.offerTx && m.close > now)) {
-    if (!(await walletHas(m.tokens.bull, SEED)) || !(await walletHas(m.tokens.bear, SEED))) continue;   // the Issue is not in a block yet
-    const total = Math.round(SEED * ODDS);
-    const a = await execute(DEX, 'Make', bodies.make(m.tokens.bull, SEED, COLLATERAL, total, makerKey), [{ asset: m.tokens.bull, amount: SEED }], SIGN);
-    const b = await execute(DEX, 'Make', bodies.make(m.tokens.bear, SEED, COLLATERAL, total, makerKey), [{ asset: m.tokens.bear, amount: SEED }], SIGN);
-    m.offerTx = [a, b]; save();
-    log(`offer ${keyOf(m)}: Up and Down at ${ODDS} -> ${a}, ${b}`);
+    if (!(values[ticker] > 0) || markets.some(x => x.ticker === ticker && x.close === close && x.lineSet)) continue;
+    for (const line of linesOf(values[ticker], OFFSETS)) {
+      const m = { ticker, line, price: priceOf(line), close, oraclePubKey: ORACLE_KEY, oracleId: ORACLE_ID, collateral: COLLATERAL, lineSet: true, issued: 0 };
+      if (markets.some(x => keyOf(x) === keyOf(m))) { markets.find(x => keyOf(x) === keyOf(m)).lineSet = true; continue; }
+      m.tokens = tokens(ID, m); m.opened = now;
+      markets.push(m);
+      log(`open ${ticker} >= ${line} at ${new Date(close).toISOString()}`);
+    }
+    save();
   }
 }
 
-// 3 + 4: settle and void, from what the contract holds
+// 2: quote every open market around its fair price
+async function quote(now, makerKey) {
+  const { ts, values } = await latestRound();
+  const mineAll = ((await (await fetch(EXPLORER + '/dex/orders?pending=1')).json()).orders || []).filter(o => (o.maker || '').toLowerCase() === makerKey);
+  const bal = await walletBalances();
+  const has = a => bal.get(a) || 0, take = (a, n) => bal.set(a, has(a) - n), give = (a, n) => bal.set(a, has(a) + n);
+  let bidLocked = mineAll.filter(o => o.under_asset === COLLATERAL).reduce((s, o) => s + Number(o.under_amount), 0);
+  const short = new Set();
+  for (const m of markets) {
+    const t = m.tokens, mine = mineAll.filter(o => [o.under_asset, o.pair_asset].some(a => a === t.bull || a === t.bear));
+    const live = now < m.close - STOP && now - ts < STALE && values[m.ticker] > 0 && !m.result;
+    m.fair = live ? fairUp(values[m.ticker], m.line, m.close - now, VOL[m.ticker] ?? 0.3) : null;
+    m.quoting = live;
+    if (!live && !mine.length) continue;
+    const plan = planQuotes(live ? quotesFor(m.fair, { spread: SPREAD }) : null, mine, { bull: t.bull, bear: t.bear, collateral: COLLATERAL, move: MOVE, minSize: QUOTE / 4 });
+    for (const o of plan.cancels) {
+      if (sent >= MAX_TX) return;
+      const tx = await execute(DEX, 'Cancel', bodies.make(o.under_asset, o.under_amount, o.pair_asset, o.pair_total, o.maker), [], SIGN);
+      log(`cancel ${keyOf(m)} ${o.name} ${o.side} at ${o.side === 'ask' ? (o.pair_total / o.under_amount).toFixed(2) : (o.under_amount / o.pair_total).toFixed(2)} -> ${tx}`);
+    }
+    for (const k of plan.makes) {
+      if (sent >= MAX_TX) return;
+      if (k.side === 'ask') {
+        if (has(k.token) < QUOTE) {                                        // mint a pair: QUOTE more Up and Down
+          if ((m.issued ?? 0) + QUOTE > MAX_ISSUE || has(COLLATERAL) < QUOTE) { if (has(k.token) < QUOTE / 10) { short.add(`tokens for ${keyOf(m)}`); continue; } }
+          else {
+            m.issueTx = await execute(CONTRACT, 'Issue', bodies.issue(m), [{ asset: COLLATERAL, amount: QUOTE }], SIGN);
+            m.issued = (m.issued ?? 0) + QUOTE; take(COLLATERAL, QUOTE); give(t.bull, QUOTE); give(t.bear, QUOTE); save();
+            log(`issue ${keyOf(m)}: ${fmt(QUOTE)} pairs -> ${m.issueTx}`);
+            if (sent >= MAX_TX) return;
+          }
+        }
+        const size = Math.min(QUOTE, has(k.token)), total = Math.round(size * k.price);
+        const tx = await execute(DEX, 'Make', bodies.make(k.token, size, COLLATERAL, total, makerKey), [{ asset: k.token, amount: size }], SIGN);
+        take(k.token, size);
+        log(`ask ${keyOf(m)} ${k.name}: ${fmt(size)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
+      } else {
+        const cost = Math.round(QUOTE * k.price);
+        if (bidLocked + cost > BID_BUDGET || has(COLLATERAL) < cost) { short.add('collateral for bids'); continue; }
+        const tx = await execute(DEX, 'Make', bodies.make(COLLATERAL, cost, k.token, QUOTE, makerKey), [{ asset: COLLATERAL, amount: cost }], SIGN);
+        take(COLLATERAL, cost); bidLocked += cost;
+        log(`bid ${keyOf(m)} ${k.name}: ${fmt(QUOTE)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
+      }
+    }
+  }
+  for (const s of short) log(`short of ${s}`);
+}
+
+// 3 + 4 + 5: settle, void and redeem, from what the contract holds
 async function settle(now) {
   const inContract = await held(CONTRACT);
+  const bal = await walletBalances();
   for (const m of markets) {
     const st = stateOf(m, inContract, now, GRACE);
     m.status = st.status; m.result = st.result;
+    if (st.status === 'settled' || st.status === 'void') {
+      const sides = st.status === 'void' ? [['Bull', m.tokens.bull], ['Bear', m.tokens.bear]] : st.result === 'bull' ? [['Bull', m.tokens.bull]] : [['Bear', m.tokens.bear]];
+      for (const [pos, a] of sides) {
+        const n = bal.get(a) || 0;
+        if (!n || now - (m.redeemAt?.[pos] ?? 0) < 600000 || sent >= MAX_TX) continue;
+        const tx = await execute(CONTRACT, 'Redeem', bodies.redeem(m, pos), [{ asset: a, amount: n }], SIGN);
+        m.redeemAt = { ...(m.redeemAt || {}), [pos]: now }; log(`redeem ${keyOf(m)} ${pos} ${fmt(n)} -> ${tx}`);
+      }
+      continue;
+    }
     if (st.status === 'voidable' && !m.voidTx) { m.voidTx = await execute(CONTRACT, 'Void', bodies.void(m)); log(`void ${keyOf(m)} -> ${m.voidTx}`); continue; }
     if (st.status !== 'closing' || m.settleTx) continue;
     const p = await (await fetch(`${ORACLE}/auditpath?ticker=${encodeURIComponent(m.ticker)}&timestamp=${m.close}`)).json().catch(() => null);
@@ -99,7 +169,10 @@ async function settle(now) {
     m.settlePrice = Number(p.value); m.settleValue = String(p.valueScaled);
     const att = ORACLE_ID + attestSubtype(p.root, m.close, ORACLE_KEY);
     if (!inContract.has(att)) {
-      if (!m.attestTx) { m.attestTx = await execute(ORACLE_ADDRESS, 'Attest', bodies.attest(p.root, m.close, ORACLE_KEY, ID)); log(`attest ${keyOf(m)} -> ${m.attestTx}`); }
+      if (!m.attestTx) {
+        const tx = await execute(ORACLE_ADDRESS, 'Attest', bodies.attest(p.root, m.close, ORACLE_KEY, ID)); log(`attest ${m.close} (${keyOf(m)}) -> ${tx}`);
+        for (const x of markets) if (x.close === m.close) x.attestTx = tx;  // one attestation serves every market of this close
+      }
       continue;                                                         // wait for the attestation token's block
     }
     const winner = winnerOf(m.price, p.valueScaled);
@@ -114,18 +187,20 @@ const server = http.createServer((req, res) => {
   if (req.url.split('?')[0] !== '/markets') { res.statusCode = 404; return res.end('{"error":"unknown path"}'); }
   res.end(JSON.stringify({ contract: CONTRACT, contractId: ID, collateral: COLLATERAL, oracleId: ORACLE_ID, oraclePubKey: ORACLE_KEY, graceMs: GRACE,
     markets: markets.map(m => ({ ticker: m.ticker, line: m.line, price: m.price, close: m.close, status: m.status || 'open', result: m.result || null,
-      settlePrice: m.settlePrice ?? null, bull: m.tokens.bull, bear: m.tokens.bear,
+      settlePrice: m.settlePrice ?? null, fair: m.fair == null ? null : Number(m.fair.toFixed(4)), quoting: !!m.quoting, bull: m.tokens.bull, bear: m.tokens.bear,
       event: { OraclePubKey: m.oraclePubKey, OracleContractId: m.oracleId, Ticker: m.ticker, Price: m.price, Start: m.close, Expiry: m.close, Collateral: m.collateral } })) }));
 });
 // listen first: if the port is taken (another bets, e.g. a dry run left behind), stop before sending anything
 await new Promise((ok, fail) => server.once('error', fail).listen(Number(PORT), HOST, ok)).catch(e => { console.error(`cannot listen on ${HOST}:${PORT}: ${e.code}; is another bets running (docker ps)?`); process.exit(1); });
 log(`bets on ${HOST}:${PORT}`);
 
-const makerKey = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '');
-log(`markets for ${CONTRACT} (${TICKERS.join(', ')}), close ${CLOSE_UTC}:00 UTC, seed ${SEED}, odds ${ODDS}, key ${makerKey.slice(0, 12)}…${DRY ? ', DRY' : ''}`);
+const makerKey = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '').toLowerCase();
+log(`markets for ${CONTRACT} (${TICKERS.join(', ')}; lines ${OFFSETS.join(' ')}), close ${CLOSE_UTC}:00 UTC, quote ${fmt(QUOTE)} spread ${SPREAD} move ${MOVE}, key ${makerKey.slice(0, 12)}…${DRY ? ', DRY' : ''}`);
 for (;;) {
-  const now = Date.now();
-  try { await open(now, makerKey); } catch (e) { log('open failed:', e.message); }
+  const now = Date.now(); sent = 0;
+  try { await open(now); } catch (e) { log('open failed:', e.message); }
   try { await settle(now); } catch (e) { log('settle failed:', e.message); }
+  try { await quote(now, makerKey); } catch (e) { log('quote failed:', e.message); }
+  save();
   await new Promise(r => setTimeout(r, EVERY));
 }

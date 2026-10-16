@@ -59,3 +59,51 @@ test('a contract lock in a body reads back as the wallet serializer writes it', 
   const body = Data.read(new Reader(Buffer.from(bodies.attest('aa'.repeat(32), 1, tryMarket.oraclePubKey, id), 'hex')));
   assert.equal(body.t, 'Dict'); assert.deepEqual(body.v.map(([k]) => k).sort(), ['Commit', 'Recipient', 'OraclePubKey'].sort());
 });
+
+import { linesOf, normCdf, fairUp, quotesFor, planQuotes, orderPrice } from '../bets/core.mjs';
+
+test('lines: the value and ±1 %, ±3 %, to 3 digits, no repeats', () => {
+  assert.deepEqual(linesOf(81981, [0, -0.01, 0.01, -0.03, 0.03]), [79500, 81200, 82000, 82800, 84400]);
+  assert.deepEqual(linesOf(1.1702, [0, -0.01, 0.01, -0.03, 0.03]), [1.14, 1.16, 1.17, 1.18, 1.21]);
+  assert.deepEqual(linesOf(100, [0, 0.001]), [100]);
+});
+
+test('fair price of Up: N(d2)', () => {
+  assert.ok(Math.abs(normCdf(0) - 0.5) < 1e-7 && Math.abs(normCdf(1.96) - 0.9750021) < 1e-6 && Math.abs(normCdf(-1) - 0.1586553) < 1e-6);
+  const day = 86400000;
+  const atLine = fairUp(82000, 82000, day, 0.55);                   // slightly below 0.5 (the -s^2/2 term)
+  assert.ok(atLine < 0.5 && atLine > 0.49);
+  const above = fairUp(84000, 82000, day, 0.55);                   // 2.4 % above, a day's sd 2.9 %: about 0.79
+  assert.ok(above > 0.78 && above < 0.80);
+  assert.ok(fairUp(84000, 82000, 600000, 0.55) > 0.999);            // the same with 10 minutes left: almost sure
+  assert.equal(fairUp(81000, 82000, 0, 0.55), 0);
+  assert.equal(fairUp(82000, 82000, 0, 0.55), 1);                   // Up wins at the line
+});
+
+test('quotes: a spread around p, on cents, asks at most 0.99, no bid below 0.01', () => {
+  assert.deepEqual(quotesFor(0.5), { up: { bid: 0.47, ask: 0.53 }, down: { bid: 0.47, ask: 0.53 } });
+  assert.deepEqual(quotesFor(0.84), { up: { bid: 0.81, ask: 0.87 }, down: { bid: 0.13, ask: 0.19 } });
+  assert.deepEqual(quotesFor(0.999), { up: { bid: 0.96, ask: 0.99 }, down: { bid: null, ask: 0.04 } });
+  assert.deepEqual(quotesFor(0.5, { spread: 0.1 }).up, { bid: 0.45, ask: 0.55 });
+});
+
+test('plan: keep what is near its target, cancel the rest, make the missing slots, leave pending ones', () => {
+  const C = 'cc', bull = 'bu', bear = 'be', o = (under, ua, pair, pt, extra = {}) => ({ under_asset: under, under_amount: String(ua), pair_asset: pair, pair_total: String(pt), maker: 'k', ...extra });
+  const want = quotesFor(0.84);                                      // Up 0.81/0.87, Down 0.13/0.19
+  const mine = [
+    o(bull, 2000000, C, 1100000),                                    // the old static Up ask at 0.55: far, cancel
+    o(bear, 2000000, C, 1100000),                                    // Down ask at 0.55: far, cancel
+    o(C, 8100000, bull, 10000000),                                   // Up bid at 0.81: keep
+    o(C, 1500000, bear, 10000000, { pending: true }),                // Down bid at 0.15, in the mempool: leave, slot waits
+  ];
+  assert.equal(orderPrice(mine[0], 'ask'), 0.55); assert.equal(orderPrice(mine[2], 'bid'), 0.81);
+  const p = planQuotes(want, mine, { bull, bear, collateral: C, move: 0.03 });
+  assert.deepEqual(p.cancels.map(c => `${c.name} ${c.side}`), ['up ask', 'down ask']);
+  assert.deepEqual(p.makes.map(k => `${k.name} ${k.side} ${k.price}`), ['up ask 0.87', 'down ask 0.19']);
+  const small = planQuotes(want, mine, { bull, bear, collateral: C, move: 0.03, minSize: 2500000 });   // the 0.81 bid has 10 left: kept
+  assert.deepEqual(small.cancels.length, 2);
+  const tiny = planQuotes(quotesFor(0.5), [o(bull, 2000000, C, 1100000)], { bull, bear, collateral: C, minSize: 2500000 });   // 2 left at 0.55, near 0.53: made again in full
+  assert.deepEqual([tiny.cancels.length, tiny.makes.length], [1, 4]);
+  const stop = planQuotes(null, mine, { bull, bear, collateral: C });   // stop quoting: cancel all that can be cancelled
+  assert.deepEqual(stop.cancels.length, 3); assert.deepEqual(stop.makes, []);
+});

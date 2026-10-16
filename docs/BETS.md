@@ -35,6 +35,9 @@ run of `scripts/v1/fixedpayout-try.mjs`, zenprotocol 94793406): the node's check
     100 × its size: about 12–13M for an Issue, against a block limit of 8,000M (zp-pow testnet-v1, `Consensus/Weight.fs`).
   - The template builder adds a call that spends an earlier call's outputs in a later pass
     (`BlockTemplateBuilder.foldUntilUnchanged`).
+- 2026-10-16 evening: the wallet session's feedback (static 0.55 offers get picked off; one line per ticker; 2 tokens
+  of liquidity): the service now quotes at fair value with bids, opens 5 lines per ticker and quotes 10 tokens per
+  order (above, "The market service").
 - 14:08 UTC: `/explorer/api/bets/markets` showed ask 0.55 on Up and Down for both markets. The ZP Wallet (Markets →
   Oracle, "Up or down?") shows them with the close in local time and the 0.50 void rule.
 
@@ -115,20 +118,51 @@ no fee per gas; the cost counts toward the block's weight.
 ## The market service and the API (written 2026-10-16, tested without the chain)
 
 - **`site/bets/bets.mjs`** (the `bets` service of the testnet stack, profile `bets`, 127.0.0.1:8097). Each minute:
-  1. Opens one market per ticker for the next close: `BETS_CLOSE_UTC`, 22:00 UTC by default, at least 12 h ahead.
-     Stocks and gold open only on weekdays. The line is the oracle's latest value to 3 digits (BTC 82,396 → 82,400).
-  2. Seeds each market: Issue `BETS_SEED` (2 zUSDC), then offers Up and Down on the Dex at `BETS_ODDS` (0.55 each).
-  3. After the close: takes the oracle's round stamped with the close and runs Attest to the contract. Once the token is
-     in the contract's wallet, it sends Settle with the winner.
-  4. Sends Void for a market with no Settle 24 h after its close.
-  A market's state comes from the markers the contract holds, so a restart loses nothing. `markets.json` in its data
-  directory keeps the list and the transactions sent.
-- **`site/bets/core.mjs`**: token ids, lines, closes, state, message bodies. `site/test/bets.test.mjs`: 7 tests. The
+  1. **Opens the lines.** For each ticker and the next close (`BETS_CLOSE_UTC`, 22:00 UTC by default, at least 12 h
+     ahead) it opens one market per offset in `BETS_OFFSETS` (0, ±1 %, ±3 %): the oracle's latest value moved by the
+     offset, to 3 digits (BTC 81,981 → 79,500 / 81,200 / 82,000 / 82,800 / 84,400). The lines of a ticker and close
+     are set once. Stocks, gold and FX (`BETS_DAILY`) open only on weekdays.
+  2. **Quotes every open market on the Dex** (since 2026-10-16, after the first static 0.55 offers were easy to pick
+     off):
+     - The fair price of Up is p = N(d2) = N((ln(S/K) − σ²T/2) / (σ√T)), where:
+       - S is the latest round's value;
+       - K is the line;
+       - T is the time to the close in years;
+       - σ is `BETS_VOL` of the ticker (annual: BTC 0.55, ETH 0.75, EUR 0.08, XAU 0.16, SPY 0.18, AAPL 0.28,
+         MSFT 0.25).
+     - It posts four orders per market: Up bid and ask around p, Down bid and ask around 1 − p. They are `BETS_SPREAD`
+       (0.06) wide, on cents, with asks at most 0.99 and no bid below 0.01. Each order is `BETS_QUOTE` (10) tokens.
+     - It cancels and makes an order again when it is more than `BETS_MOVE` (0.03) from its target, or has less than a
+       quarter of its size left. A taken order is made again.
+     - Before an order goes out, its slot waits while that order is in the mempool, or while a Take or Cancel on it
+       is. The orders come from the explorer's `/dex/orders?pending=1`, which includes the newest blocks and the
+       mempool.
+     - It stops quoting and cancels its orders `BETS_STOP_MIN` (20) minutes before the close. It does the same when
+       the latest round is older than `BETS_STALE_MIN` (150).
+     - Ask tokens come from Issue, `BETS_QUOTE` at a time, up to `BETS_MAX_ISSUE` (30) per market. The bids together
+       lock at most `BETS_BID_BUDGET` (30 zUSDC).
+     - At most `BETS_MAX_TX` (8) transactions per minute.
+     - The price comes from the hourly rounds, so a move within the hour shows up only at the next round; the spread
+       covers that.
+  3. **Settles after the close.** It takes the oracle's round stamped with the close and runs one Attest to the
+     contract, which serves every market of that close. Once the token is in the contract's wallet, it sends Settle
+     for each market with its winner.
+  4. **Voids** a market with no Settle 24 h after its close.
+  5. **Redeems** the winning tokens it holds once a market is settled (both sides of a void one), so its collateral
+     comes back.
+
+  A market's state comes from the markers the contract holds and from our orders on the Dex, so a restart loses
+  nothing. `markets.json` in its data directory keeps the list and the transactions sent.
+  - **zUSDC needed:** at most 30 per market for asks, plus the 30 bid budget.
+  - **On a weekend:** 2 tickers × 5 lines start with 10 each: about 130 zUSDC.
+  - **With less:** it quotes what it can and logs `short of …`.
+- **`site/bets/core.mjs`**: token ids, lines, closes, state, message bodies. `site/test/bets.test.mjs`: 11 tests (lines, N(d2), quotes, the requote plan). The
   token subtypes match the engine's try on dab00f8 byte for byte.
 - **Explorer API:**
   - `GET /explorer/api/bets/markets`: the service's list. Each market has `bull` and `bear` (asset ids), `event` (the
-    body fields), `status` (open, closing, settled, void, voidable), `result`, `settlePrice`, and `book.up` /
-    `book.down` with the best ask and bid in zUSDC (0 to 1).
+    body fields), `status` (open, closing, settled, void, voidable), `result`, `settlePrice`, `fair` (the service's
+    fair price of Up, null when not quoting), `quoting`, and `book.up` / `book.down` with the best ask and bid in zUSDC
+    (0 to 1).
   - `GET /explorer/api/bets/positions?address=`: the address's Up and Down tokens per market. Each has `pays` (once
     settled or void), `redeemable` and `valueNow` (at the best bid).
 - **Activation:** `scripts/v1/testnet-v1-bets.mjs` prints `BETS_CONTRACT` and `BETS_ID`. In `testnet-stack.env` also set:
