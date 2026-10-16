@@ -18,6 +18,10 @@ open Environment
 [<Literal>]
 let THRESHOLD_DURATION = 10000UL
 
+/// GET /blockchain/blocks walks back from the tip when skip + take is at most this many blocks.
+[<Literal>]
+let RecentBlocksWalk = 20000
+
 let getUnionCaseName (x:'a) =
     match Microsoft.FSharp.Reflection.FSharpValue.GetUnionFields(x, typeof<'a>) with
     | case, _ -> case.Name
@@ -253,7 +257,12 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
         | None -> requestId.reply<Types.BlockHeader option> None
     | GetBlocks (blockNumber, take) ->
         /// TODO: return Block instead of byte array
-        BlockRepository.getMainHeaderPaginate session blockNumber take
+        // Recent blocks (the usual request): walk back from the tip. Deep requests keep the full scan, which is
+        // faster than a million single reads when the blocks wanted are far from the tip.
+        (if blockNumber >= 0 && take >= 0 && blockNumber + take <= RecentBlocksWalk then
+            BlockRepository.getMainHeadersFromTip session state.tipState.tip blockNumber take
+         else
+            BlockRepository.getMainHeaderPaginate session blockNumber take)
         |> List.map (fun header -> header.header.blockNumber, (Serialization.Block.serialize (BlockRepository.getFullBlock session header)))
         |> requestId.reply<List<uint32 * byte array>>
     | GetMainBlocks (from, take) ->

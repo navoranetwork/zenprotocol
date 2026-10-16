@@ -83,4 +83,20 @@ let ``Show get block 10 and 9 from blockchain/blocks``() =
     |> parseData
     |> Array.mapi (fun i (x,_) -> printfn "%A" x; should equal (sprintf "%A" (10 - i)) x )
     |> i
+
+    // the walk from the tip stops at genesis: blocks 3, 2, 1 although 5 were asked for
+    get "blockchain/blocks?blockNumber=3&take=5"
+    |> JsonValue.Parse
+    |> JsonExtensions.AsArray
+    |> parseData
+    |> Array.map fst
+    |> should equal [| "3"; "2"; "1" |]
+
+    // a window in the middle of the chain: 8, 7, 6, 5
+    get "blockchain/blocks?blockNumber=8&take=4"
+    |> JsonValue.Parse
+    |> JsonExtensions.AsArray
+    |> parseData
+    |> Array.map fst
+    |> should equal [| "8"; "7"; "6"; "5" |]
     ()

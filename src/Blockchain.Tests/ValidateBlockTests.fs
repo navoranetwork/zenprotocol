@@ -1157,3 +1157,25 @@ let ``Remembered signatures are used only for our template, and only for the sam
     // block validation (Plain) always verifies
     Crypto.verify publicKey signature msg |> should equal Crypto.Valid
     Crypto.VerifiedSignatures.hits |> should equal (hits + 1L)
+
+[<Test>]
+let ``walking back from the tip gives the same blocks as the full scan, after a reorg``() =
+    use databaseContext = DatabaseContext.createEmpty (tempDir())
+    use session = DatabaseContext.createSession databaseContext
+    let state = getGenesisState session
+
+    // a side chain first, then a longer chain that replaces it: the database holds blocks of both
+    let mainChain, _ = createChainFromGenesis 5 0
+    let sideChain, _ = createChainFromGenesis 3 1
+    let _, state = validateChain session sideChain state
+    let _, state = validateChain session (List.rev mainChain) state
+
+    let numbers = List.map (fun (h: ExtendedBlockHeader.T) -> h.header.blockNumber)
+    for skip in 0 .. 8 do
+        for take in 0 .. 8 do
+            BlockRepository.getMainHeadersFromTip session state.tipState.tip skip take |> numbers
+            |> should equal (BlockRepository.getMainHeaderPaginate session skip take |> numbers)
+    // the main chain is genesis and five blocks: newest first
+    BlockRepository.getMainHeadersFromTip session state.tipState.tip 0 10 |> numbers |> should equal [ 6ul; 5ul; 4ul; 3ul; 2ul; 1ul ]
+    BlockRepository.getMainHeadersFromTip session state.tipState.tip 2 3 |> numbers |> should equal [ 4ul; 3ul; 2ul ]
+    BlockRepository.getMainHeadersFromTip session ExtendedBlockHeader.empty 0 3 |> should equal []
