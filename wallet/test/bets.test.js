@@ -52,3 +52,16 @@ test('the explorer answer: contractId and collateral at the top, statuses, the b
   assert.equal(ms[1].status, 'voidable'); assert.equal(redeemValue(ms[1], 'up', 4n), null);   // not void yet: nothing to collect
   assert.equal(marketsOf({ ...j, collateral: '00' }).length, 0);                               // rows in another collateral are refused
 });
+
+test('the live testnet BTC market: the wallet Redeem body is byte for byte the market service builder (site/bets/core.mjs)', async () => {
+  const { bodies } = await import('../../site/bets/core.mjs');
+  const ZU = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';
+  const live = { OraclePubKey: '02bee4711911864b76160c865bd29cb8a33c9f4a6d0186dffa02808b0daf122a15', OracleContractId: '00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741',
+    Ticker: 'BTC', Price: 81900000, Start: 1792274400000, Expiry: 1792274400000, Collateral: ZU };
+  const m = marketOf({ event: live, bull: '00000001' + 'aa'.repeat(32) + '01'.repeat(32), bear: '00000001' + 'aa'.repeat(32) + '02'.repeat(32) });
+  const svc = { oraclePubKey: live.OraclePubKey, oracleId: live.OracleContractId, ticker: 'BTC', price: live.Price, close: live.Start, collateral: ZU };
+  for (const [side, pos] of [['up', 'Bull'], ['down', 'Bear']]) {
+    const w = new Writer(); Data.write(w, redeemBody(m.event, side));
+    assert.equal(Buffer.from(w.out()).toString('hex'), bodies.redeem(svc, pos));
+  }
+});
