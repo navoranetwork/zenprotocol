@@ -77,6 +77,11 @@ test('open orders: indexed and newest, held live; mempool makes pending; a mempo
   assert.deepEqual(orders.map(o => o.pending), [false, false, false, true]);
   assert.equal(orders[0].pendingTake, 'ef'.repeat(32));
   assert.ok(!('target' in orders[0]));
+  // the same order asset in the newest rows and the index: once while the Dex holds one unit, twice with two
+  const dup = [{ ...recent[0], block: 2490 }];
+  assert.equal(openOrders({ indexed: dup, recent, mempool: [], held: new Map([[orderAsset(1), 1]]), tip: 2509 }).filter(o => o.order_asset === orderAsset(1)).length, 1);
+  const copy = [{ ...recent[0], tx: 'copy', block: 2490 }];
+  assert.equal(openOrders({ indexed: copy, recent, mempool: [], held: new Map([[orderAsset(1), 2]]), tip: 2509 }).filter(o => o.order_asset === orderAsset(1)).length, 2);
 });
 
 test('fills: Takes only, with the taker side, price and size', () => {

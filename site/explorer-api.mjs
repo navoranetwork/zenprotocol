@@ -198,6 +198,8 @@ async function address(addr, query) {
 const NET = arg('net', process.env.ZEN_NET || 'main');
 const MARKET_ASSET = /^(00|[0-9a-f]{72}([0-9a-f]{64})?)$/;
 let recentCache = { tip: -1, indexed: -1, rows: [] }, mempoolCache = { at: 0, rows: [] };
+// the Dex's balance -> asset -> units held (an order asset held twice is two identical open orders)
+const heldUnits = list => { const m = new Map(); for (const x of Array.isArray(list) ? list : []) m.set(x.asset, (m.get(x.asset) || 0) + Number(x.balance)); return m; };
 async function dexFresh(t, indexed) {
   if (recentCache.tip !== t || recentCache.indexed !== indexed) {
     const take = Math.max(0, Math.min(50, t - indexed));
@@ -293,7 +295,7 @@ async function handle(p, query) {
       return { tip: t, indexedTo: indexed, base, quote, trades: fills([...newer, ...rows], { base, quote, qdec, tip: t }).slice(0, limit) };
     }
     // an order is open while its 1-unit order asset is still held by the contract (live from the node)
-    const held = new Set((await nodePost('/addressdb/balance', { addresses: [dexAddress()] })).map(x => x.asset));
+    const held = heldUnits(await nodePost('/addressdb/balance', { addresses: [dexAddress()] }));
     const rows = db.prepare("SELECT * FROM dex WHERE order_asset IS NOT NULL ORDER BY block DESC").all();
     const orders = openOrders({ indexed: rows, recent: fresh.recent, mempool: fresh.mempool, held, tip: t });
     // orders still in the mempool only on request (?pending=1): a client that takes orders from this list must not take one not yet mined
@@ -311,7 +313,7 @@ async function handle(p, query) {
     let orders = [];
     if (DEX && open()) {
       const fresh = await dexFresh(t, indexed);
-      const held = new Set((await nodePost('/addressdb/balance', { addresses: [dexAddress()] })).map(x => x.asset));
+      const held = heldUnits(await nodePost('/addressdb/balance', { addresses: [dexAddress()] }));
       orders = openOrders({ indexed: db.prepare("SELECT * FROM dex WHERE order_asset IS NOT NULL ORDER BY block DESC").all(), recent: fresh.recent, mempool: fresh.mempool, held, tip: t });
     }
     const side = asset => {

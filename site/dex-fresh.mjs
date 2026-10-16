@@ -79,15 +79,19 @@ const sameOrder = (row, t) => row.under_asset === t.under_asset && row.under_amo
 export function openOrders({ indexed, recent, mempool, held, tip }) {
   const confs = r => r.block == null ? 0 : tip - r.block + 1;
   const strip = ({ target, ...r }) => r;
-  const out = [];
-  const seen = new Set();
+  // held: the Dex's order assets, as a Map asset -> units (or a Set: one unit each). An order asset is listed at most
+  // as many times as the Dex holds it: identical orders share one asset, and a row can be both newest and indexed
+  const units = a => held instanceof Map ? Number(held.get(a) || 0) : held.has(a) ? 1 : 0;
+  const out = [], used = new Map();
   for (const r of [...recent].sort((a, b) => b.block - a.block).concat(indexed)) {
-    if (!r.order_asset || !held.has(r.order_asset)) continue;
+    if (!r.order_asset) continue;
+    const n = used.get(r.order_asset) || 0;
+    if (n >= units(r.order_asset) || (n && out.some(o => o.order_asset === r.order_asset && o.tx === r.tx))) continue;
+    used.set(r.order_asset, n + 1);
     out.push({ ...strip(r), open: true, pending: false, confirmations: confs(r) });
-    seen.add(r.order_asset);
   }
   for (const r of mempool) {
-    if (!r.order_asset || seen.has(r.order_asset) || held.has(r.order_asset)) continue;
+    if (!r.order_asset || used.has(r.order_asset) || units(r.order_asset)) continue;
     out.push({ ...strip(r), open: true, pending: true, confirmations: 0 });
   }
   for (const m of mempool) if (m.command !== 'Make') for (const o of out) if (!o.pending && sameOrder(o, m.target)) o[m.command === 'Take' ? 'pendingTake' : 'pendingCancel'] = m.tx;
