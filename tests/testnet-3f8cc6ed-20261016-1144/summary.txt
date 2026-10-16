@@ -1,0 +1,1 @@
+[2026-10-16 11:44] lab testnet on 3f8cc6ed lab-testnet-v1.sh: let A's wallet finish the reorg before restarting A (a node stopped mid-undo does not start: Wallet.Account.sync KeyNotFoundException)
