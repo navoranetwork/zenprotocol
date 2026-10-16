@@ -356,13 +356,27 @@ if (meta('extmig', '') !== 'done') {
 // ---- index new blocks ------------------------------------------------------------------------
 const tip = (await api('/blockchain/info')).blocks;
 lap('node answered /blockchain/info');
+// No new block since the last full run: nothing can have changed, so the node is left alone. GET /blockchain/blocks
+// holds the node for seconds on mainnet (it reads every block header), and wallets wait behind it.
+const settled = migrated && meta('repomig2', '') === 'done' && meta('extmig', '') === 'done';
+if (settled && tip === Number(meta('runTip', '-1')) && !process.argv.includes('--force')) {
+  console.log(`chain-index: no new block since the last run (tip ${tip}), nothing to do`);
+  process.exit(0);
+}
 let last = Number(meta('last', '0'));
 const target = tip - CONFIRM, start = Date.now(), from = last;
+// Close to the tip (the usual run): one request for everything after the index, used both to index the blocks that are
+// deep enough and for the ballots and payouts of the last CONFIRM blocks below. Saves a second request each run.
+let recent = null;
+if (migrated && tip > last && tip - last <= 300) {
+  try { recent = (await api(`/blockchain/blocks?blockNumber=${tip}&take=${tip - last}`, undefined, 60000, 1)).filter(b => b.blockNumber > last); }
+  catch (e) { console.log(`chain-index: node did not return blocks ${last + 1}-${tip}: ${e.message} (next run retries)`); recent = []; }
+}
 while (migrated && last < target && Date.now() - start < BUDGET) {
   const upto = Math.min(target, last + TAKE);
   let blocks;
   try {
-    blocks = await api(`/blockchain/blocks?blockNumber=${upto}&take=${upto - last}`);
+    blocks = recent ? recent.filter(b => b.blockNumber <= upto) : await api(`/blockchain/blocks?blockNumber=${upto}&take=${upto - last}`);
   } catch (e) { console.log(`chain-index: node did not return blocks ${last + 1}-${upto}: ${e.message} (next run retries)`); break; }
   blocks = blocks.filter(b => b.blockNumber > last && b.blockNumber <= upto).sort((x, y) => x.blockNumber - y.blockNumber);
   if (!SPARSE && (blocks.length !== upto - last || blocks.some((b, i) => b.blockNumber !== last + 1 + i))) {
@@ -424,7 +438,7 @@ const tailPayouts = [];
 if (complete && tip > last) {
   try {
     const take = Math.min(tip - last, 300);
-    const got = await api(`/blockchain/blocks?blockNumber=${tip}&take=${take}`, undefined, 60000, 1);
+    const got = recent || await api(`/blockchain/blocks?blockNumber=${tip}&take=${take}`, undefined, 60000, 1);
     for (const b of (Array.isArray(got) ? got : []).filter(x => x.blockNumber > last).sort((x, y) => x.blockNumber - y.blockNumber)) {
       const blk = deserializeBlock(unhex(b.rawBlock), { lenient: true }), n = b.blockNumber;
       const ts = Number(new DataView(blk.header.buffer, blk.header.byteOffset).getBigUint64(72));
@@ -594,3 +608,5 @@ writeJson('assets.json', { updated: Date.now(), indexedTo: last, tip, complete, 
   q.setMeta.run('assets_at', String(Date.now()));
 }
 
+// remembered so that the next run can skip when no block came in (see the start of 'index new blocks')
+if (complete && !process.exitCode) q.setMeta.run('runTip', String(tip));

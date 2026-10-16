@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.31.3 — 2026-10-16
+
+### Fixed
+- A busy node no longer shows "Node did not answer in time" at once: a read that gets no answer in 30 seconds is
+  asked once more, and the header says "Node busy, retrying…" meanwhile. Sending is never repeated.
+
 ## 0.31.2 — 2026-10-16
 
 ### Changed

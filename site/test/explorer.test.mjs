@@ -17,7 +17,7 @@ const fixture = JSON.parse(fs.readFileSync(path.join(here, '../../wallet/test/fi
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'explorer-test-'));
 const DB = path.join(dir, 'db.sqlite');
 const PORT = 11590;
-let mock, api;
+let mock, api, blockRequests = 0;
 
 // the mock node lives in this process, so the indexer must run without blocking the event loop
 const run = async args => (await promisify(execFile)('node', ['--no-warnings', path.join(here, '../chain-index.mjs'), '--api', `http://127.0.0.1:${mock.address().port}`, '--web', dir, '--db', DB, '--test-sparse', '--budget', '60', ...args])).stdout;
@@ -28,7 +28,7 @@ before(async () => {
     res.setHeader('Content-Type', 'application/json');
     if (req.method === 'POST') { req.resume(); return res.end(JSON.stringify([{ asset: '00', balance: 12345678900 }])); }
     if (req.url.startsWith('/blockchain/info')) return res.end(JSON.stringify({ blocks: fixture.tip }));
-    if (req.url.startsWith('/blockchain/blocks')) return res.end(JSON.stringify(fixture.blocks));
+    if (req.url.startsWith('/blockchain/blocks')) return blockRequests++, res.end(JSON.stringify(fixture.blocks));
     res.statusCode = 404; res.end('{}');
   });
   await new Promise(r => mock.listen(0, '127.0.0.1', r));
@@ -73,6 +73,13 @@ test('the Repo vote backfill runs, and community-votes.json is written', async (
   assert.ok(h.days.length >= 1 && h.days.every(x => x.blocks > 0 && x.difficulty > 0), 'history.json has one row per day');
   assert.equal(h.days.reduce((a, x) => a + x.blocks, 0), fixture.blocks.length, 'every indexed block is in a day');
   const d = new DatabaseSync(DB); d.exec(`DELETE FROM txs WHERE hash = '${'ab'.repeat(32)}'`); d.close();
+});
+
+test('a run with no new block leaves the node alone', async () => {
+  blockRequests = 0;
+  assert.match(await run([]), /no new block since the last run/);
+  assert.equal(blockRequests, 0);
+  assert.doesNotMatch(await run(['--force']), /no new block/);   // --force runs anyway
 });
 
 test('start the API', async () => {

@@ -5,14 +5,35 @@ export class NodeError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }
 
+// Reads that may be asked again when the node is busy. Sending and contract execution are never repeated here.
+const RETRYABLE = /^\/(blockchain\/(info|cgp|candidates)|addressdb\/|contract\/active)/;
+
 export class NodeClient {
-  constructor(baseUrl, { timeoutMs = 30000, fetchFn } = {}) {
+  // retries: how many more times a read is asked when the node did not answer in time or the proxy gave up on it
+  // (502/503/504). onRetry is called before each repeat, so the page can say the node is busy; onRecover when a repeat answered.
+  constructor(baseUrl, { timeoutMs = 30000, fetchFn, retries = 1, retryDelayMs = 2000, onRetry, onRecover } = {}) {
     this.base = baseUrl.replace(/\/+$/, '');
     this.timeoutMs = timeoutMs;
+    this.retries = retries; this.retryDelayMs = retryDelayMs; this.onRetry = onRetry; this.onRecover = onRecover;
     this.fetch = fetchFn || ((...a) => globalThis.fetch(...a));   // unbound window.fetch throws "Illegal invocation"
   }
 
   async request(path, body) {
+    for (let attempt = 0; ; attempt++) {
+      try { const r = await this.once(path, body); if (attempt) this.onRecover?.(path); return r; }
+      catch (e) {
+        const busy = e instanceof NodeError && (e.busy || [502, 503, 504].includes(e.status));
+        if (!busy || attempt >= this.retries || !RETRYABLE.test(path)) {
+          if (busy && e.busy) e.message = 'The node is busy and did not answer in time. Try again in a minute.';
+          throw e;
+        }
+        this.onRetry?.(path, attempt + 1);
+        await new Promise(r => setTimeout(r, this.retryDelayMs));
+      }
+    }
+  }
+
+  async once(path, body) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
     let res;
@@ -21,7 +42,7 @@ export class NodeClient {
         ? { signal: ctrl.signal }
         : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
     } catch (e) {
-      throw new NodeError(e.name === 'AbortError' ? 'Node did not answer in time' : 'Node unreachable', 0);
+      throw e.name === 'AbortError' ? Object.assign(new NodeError('Node did not answer in time', 0), { busy: true }) : new NodeError('Node unreachable', 0);
     } finally { clearTimeout(timer); }
     const text = await res.text();
     if (!res.ok) throw new NodeError(text.replace(/<[^>]*>/g, ' ').trim().slice(0, 200) || `HTTP ${res.status}`, res.status);

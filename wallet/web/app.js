@@ -210,7 +210,10 @@ function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringif
 const net = () => S.settings.network;
 // a site that hosts this wallet next to its own node can name it in config.json ({ "testNode": "http://host/node" }), so its testnet works at once
 const defaultNode = n => DEFAULT_NODES[n][0] || S.siteDefaults?.[n] || '';
-const node = () => S.settings.nodes[net()] ? new NodeClient(S.settings.nodes[net()]) : null;
+// A busy node (one slow request holds all the others) gets a second chance; meanwhile the header says so.
+const busyNow = () => S.nodeBusyAt && Date.now() - S.nodeBusyAt < 35000;
+const nodeBusy = () => { S.nodeBusyAt = Date.now(); render(); };
+const node = () => S.settings.nodes[net()] ? new NodeClient(S.settings.nodes[net()], { onRetry: nodeBusy, onRecover: () => { S.nodeBusyAt = 0; render(); } }) : null;
 const walletsHere = () => (S.vault?.wallets || []).filter(w => w.network === net());
 const active = () => { const ws = walletsHere(); return ws.find(w => w.id === S.settings.active) || ws[0] || null; };
 
@@ -838,7 +841,7 @@ function fail(e) {
 // ---------------------------------------------------------------- views
 const top = () => `<div class="top"><span class="brand">ZP Wallet</span>
   <span class="row" data-s="fixed gap6">${net() === 'test' ? '<span class="pill test">TESTNET</span>' : ''}
-  <span class="pill" title="${esc(S.settings.nodes[net()])}"><span class="dot ${S.nodeOk === true ? 'ok' : S.nodeOk === false ? 'bad' : ''}"></span>${S.nodeOk === false ? 'Node offline' : S.tip ? 'Block ' + esc(S.tip.toLocaleString('en-US')) : 'Connecting…'}</span></span></div>`;
+  <span class="pill" title="${esc(S.settings.nodes[net()])}"><span class="dot ${S.nodeOk === false ? 'bad' : busyNow() ? '' : S.nodeOk === true ? 'ok' : ''}"></span>${S.nodeOk === false ? 'Node offline' : busyNow() ? 'Node busy, retrying…' : S.tip ? 'Block ' + esc(S.tip.toLocaleString('en-US')) : 'Connecting…'}</span></span></div>`;
 const backBar = (title, to = 'home') => `<div class="back"><button class="iconbtn" data-go="${to}" aria-label="Back">${I.back}</button><h1>${esc(title)}</h1></div>`;
 // an error is a box that cannot be missed: an icon, its first part in bold ("Use a new Bitcoin address for each line"),
 // the details under it; the field it is about is marked too (S.errField, from an Error's .field)

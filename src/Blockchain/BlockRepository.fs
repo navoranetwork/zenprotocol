@@ -32,6 +32,20 @@ let getMainHeaderPaginate session blockNumber take =
     |> fun xs -> if List.length xs <= blockNumber then [] else List.skip blockNumber xs
     |> List.truncate take
 
+/// The main-chain headers from `tip` back, newest first: skip `skip` of them, then up to `take`.
+/// Walks parent links, so it reads skip + take headers instead of every header in the database
+/// (getMainHeaderPaginate reads and sorts all of them, which takes seconds on mainnet).
+let getMainHeadersFromTip session (tip : ExtendedBlockHeader.T) (skip : int) (take : int) =
+    let rec walk (header : ExtendedBlockHeader.T) skipLeft acc n =
+        let acc, n, skipLeft = if skipLeft > 0 then acc, n, skipLeft - 1 else header :: acc, n + 1, 0
+        if n >= take || header.header.blockNumber <= 1ul then
+            List.rev acc
+        else
+            match tryGetHeader session header.header.parent with
+            | Some parent -> walk parent skipLeft acc n
+            | None -> List.rev acc
+    if take <= 0 || skip < 0 || tip = ExtendedBlockHeader.empty then [] else walk tip skip [] 0
+
 let saveHeader session (block:ExtendedBlockHeader.T) =
     Collection.put session.context.blocks session.session block.hash block
 

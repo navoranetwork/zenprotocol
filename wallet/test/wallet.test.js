@@ -103,3 +103,18 @@ test('send a token: only that token is spent, change in the same token, the asse
   assert.throws(() => prepareSend(w, st, encodeAddress(deriveKey(acct, 0, 5).pkHash, 'test'), 3_000_000n, ZUSDC), /Not enough funds/);
   assert.throws(() => prepareSend(w, st, OTHER.replace('zen1', 'tzn1'), 1n, 'zz'), /Not an asset id|valid/);
 });
+
+test('a busy node: a read is asked once more, sending never is', async () => {
+  const { NodeClient } = await import('../src/node.js');
+  let calls = 0, retried = 0, recovered = 0;
+  const slow = (n) => async (url, opts) => { calls++; if (calls <= n) return new Promise((_, rej) => opts.signal.addEventListener('abort', () => rej(Object.assign(new Error('aborted'), { name: 'AbortError' })))); return { ok: true, text: async () => '[]' }; };
+  const c = new NodeClient('http://n', { timeoutMs: 20, retryDelayMs: 1, fetchFn: slow(1), onRetry: () => retried++, onRecover: () => recovered++ });
+  assert.deepEqual(await c.balance(['a']), []);
+  assert.deepEqual([calls, retried, recovered], [2, 1, 1]);
+  calls = 0; const c2 = new NodeClient('http://n', { timeoutMs: 20, retryDelayMs: 1, fetchFn: slow(5) });
+  await assert.rejects(c2.balance(['a']), /busy and did not answer in time/); assert.equal(calls, 2);
+  calls = 0; const c3 = new NodeClient('http://n', { timeoutMs: 20, retryDelayMs: 1, fetchFn: slow(5) });
+  await assert.rejects(c3.publish('00'), /did not answer in time/); assert.equal(calls, 1);
+  let n504 = 0; const c4 = new NodeClient('http://n', { retryDelayMs: 1, fetchFn: async () => (++n504 === 1 ? { ok: false, status: 504, text: async () => 'Gateway Time-out' } : { ok: true, text: async () => '{"blocks":5}' }) });
+  assert.deepEqual(await c4.info(), { blocks: 5 }); assert.equal(n504, 2);
+});
