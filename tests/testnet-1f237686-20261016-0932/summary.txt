@@ -1,0 +1,1 @@
+[2026-10-16 09:32] lab testnet on 1f237686 rehearsal: sed instead of head (no early pipe close)
