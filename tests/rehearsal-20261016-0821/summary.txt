@@ -1,0 +1,4 @@
+[2026-10-16 08:21] rehearsal of testnet-v1 ff613c47 Next testnet image: toolchain dab00f8 (Zen.MerkleTree.verify, Zen.Integ
+  Chain.fs:142:        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
+  Chain.fs:189:        v1ContractsHeight=2050ul
+  Chain.fs:217:        v1ContractsHeight=localV1Height
