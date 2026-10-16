@@ -320,3 +320,7 @@ h3 { font-size: 14px; margin: 10px 0 2px; }
 .odd.buy:hover { background: rgba(63, 193, 160, .1); }
 .odd.sell:hover { background: rgba(240, 138, 138, .1); }
 .odd.off { opacity: .45; cursor: default; }
+details.card.fold > summary { cursor: pointer; list-style: none; }
+details.card.fold > summary::-webkit-details-marker { display: none; }
+details.card.fold > summary::before { content: '▸ '; color: var(--muted); }
+details.card.fold[open] > summary::before { content: '▾ '; }

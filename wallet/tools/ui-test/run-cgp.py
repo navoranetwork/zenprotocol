@@ -27,7 +27,7 @@ with sync_playwright() as p:
     ok('55.5% · 500 ZP' in t and '33.3% · 300 ZP' in t, 'results: each value with its share of the weight')
     ok('Payout if voting ended now' in t and '1,000 ZP' in t, 'results: the leading payout')
     pg.wait_for_timeout(1500); t = pg.inner_text('main')
-    ok('Vote weight: ZP at the snapshot (block 2,970)' in t and '4,000.50 ZP' in t and '5,000.00 ZP' not in t, 'after the snapshot: the weight is the balance at block 2,970 (4,000.50), not now (5,000), with two decimals')
+    ok('ZP at the snapshot (block 2,970)' in t and '4,000.50 ZP' in t and '5,000.00 ZP' not in t, 'after the snapshot: the weight is the balance at block 2,970 (4,000.50), not now (5,000), with two decimals')
     props = pg.query_selector_all('.prop')
     ok(len(props) == 2 and '✓ a candidate' in props[0].inner_text() and '● leading' in props[0].inner_text(), 'proposals: the 1,000 ZP request is a candidate and leads')
     ok('16.6% of the 3% needed' in props[1].inner_text() and props[1].query_selector('button') is None, 'proposals: the 50 ZP request is short of 3% (100 of 600 ZP) and cannot be voted for')

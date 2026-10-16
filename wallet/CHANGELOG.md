@@ -11,6 +11,18 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.38.0 — 2026-10-16
+
+### Changed
+- Activity shows the latest 5 transactions; Show older adds 10 at a time (and asks the node for more when needed).
+- A shorter CGP screen:
+  - Order: the interval card, your vote weight, the ballots, your ballots, then the results and proposals.
+  - Your vote weight is one line with one wallet; the list to choose from shows only with several.
+  - A ballot that cannot be cast now (closed, or already sent) folds into one line, such as "Allocation vote · ✓ sent:
+    CGP 10%" or "Payout nomination · closed · next: blocks 3,071–3,080"; tap it to open.
+  - The snapshot block row is gone (it is on the timeline), and the inactive protocol upgrade vote is one line at the
+    end.
+
 ## 0.37.2 — 2026-10-16
 
 ### Added

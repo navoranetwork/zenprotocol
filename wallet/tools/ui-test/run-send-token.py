@@ -32,6 +32,14 @@ with sync_playwright() as p:
     def shown(k):
         pg.click(f'button[data-act=afilter][data-v={k}]'); pg.wait_for_timeout(250)
         return [e.inner_text().split('\n')[0] for e in pg.query_selector_all('.item.act .act-main')]
+    mock(histextra=12); pg.click('button[data-act=refresh]'); pg.wait_for_timeout(2500); shown('all')
+    ok(len(shown('all')) == 5, 'Activity shows the latest 5 first')
+    pg.click('button[data-act=hist-more]'); pg.wait_for_timeout(400)
+    ok(len(pg.query_selector_all('.item.act')) == 15, 'Show older adds 10 more')
+    ok('+45.00 ZP' in pg.inner_text('main'), 'older mining rewards with two decimals')
+    pg.click('button[data-act=hist-more]'); pg.wait_for_timeout(400)
+    ok(len(pg.query_selector_all('.item.act')) == 17 and pg.query_selector('button[data-act=hist-more]') is None, 'all 17 shown, Show older gone')
+    mock(histextra=0); pg.click('button[data-act=refresh]'); pg.wait_for_timeout(2500); pg.evaluate('0')
     ok(len(shown('all')) == 5 and any('Moved within this wallet' in x for x in shown('all')), 'All: every row, the move within the wallet too')
     ok(shown('mining') == ['Mining reward'], 'Mining: the mining reward only')
     ok(len(shown('received')) == 1 and len(shown('sent')) == 1, 'Received and Sent: one each, the move within the wallet in neither')

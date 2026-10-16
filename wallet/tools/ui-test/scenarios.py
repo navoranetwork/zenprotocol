@@ -21,7 +21,7 @@ def run(browser, g):
     t = text(page)
     check('CGP vote' in t, 'screen title says CGP vote')
     check('Before snapshot' in t and 'Balance snapshot in 40 blocks' in t, 'testnet tip 50: before snapshot, 40 blocks left (got: %s)' % re.findall(r'Balance snapshot in [^\n]*', t))
-    check('Snapshot block\n90' in t, 'testnet snapshot block 90 shown (got %s)' % re.findall(r'Snapshot block\n[^\n]*', t))
+    check('1–90' in t, 'testnet snapshot block 90 shown on the timeline (blocks 1–90 before it)')
     check('Ballots open after the snapshot block (90)' in t, 'ballots card before snapshot names block 90')
 
     # phase table: tip -> (phase text, forms enabled)
@@ -195,7 +195,7 @@ console.log(encodeAddress(unhex('00000000cdaa2a511cd2e1d07555b00314d1be40a649d3b
     ctl('main', tip=2459600, allocation=90, funded=True, reset=True)
     m = new_page(browser, 1200, 'main', logs); make_wallet(m); open_vote(m); shot(m, '17-main-vote'); t = text(m)
     check('valid votes are 89% to 90%' in t and 'INTERVAL' in t, 'mainnet allocation range 89-90 (%s)' % t[:700].replace('\n',' | '))
-    check('Voting' in t and 'Snapshot block\n2,459,000' in t, 'mainnet interval 246: snapshot 2,459,000, voting (%s)' % re.findall(r'Snapshot block\n[^\n]*', t))
+    check('Voting' in t and '2,450,001–2,459,000' in t, 'mainnet interval 246: snapshot 2,459,000 on the timeline, voting')
     for tip, ph_ in [(2459000, 'Nomination'), (2459500, 'Voting'), (2458999, 'Before snapshot'), (2460000, 'Before snapshot')]:
         ctl('main', tip=tip); reload_vote(m); check(ph_ in text(m), 'mainnet tip %d -> %s' % (tip, ph_))
     ctl('main', tip=2459600); reload_vote(m)

@@ -1108,19 +1108,10 @@ const views = {
         ${timelineHtml(c)}
         <div class="kv" data-s="mt6"><span class="muted">Each block reward</span><span>${zpStr(c.reward - c.cgpPerBlock)} ZP to the miner · ${zpStr(c.cgpPerBlock)} ZP to the fund</span></div>
         <div class="kv"><span class="muted">Split in force</span><span>miners ${100 - alloc()}% · CGP fund ${alloc()}%</span></div>
-        <div class="kv"><span class="muted">CGP fund</span><span title="${esc(S.stats?.cgp?.balance ? 'at block ' + S.stats.cgp.balance.block : '')}">${cgpBalance()}</span></div>
-        <div class="kv"><span class="muted">Snapshot block</span><span>${c.snapshot.toLocaleString('en-US')}</span></div></div>` : S.nodeOk === false ? `<div class="err" role="alert">Cannot reach the node (${esc(S.nodeError || 'no answer')}). The vote needs a node: check the address in Settings, then try again.</div><button class="btn" data-act="refresh">Try again</button>` : '<p class="muted">Loading…</p>'}
-      <div class="card"><h2>Wallets that vote</h2>
-        <p class="muted small">Choose one wallet or several: their balances at the snapshot block add up to one vote weight.</p>
-        <div class="list">${signers.map(w => `<button class="item" data-act="vote-toggle" data-id="${esc(w.id)}" data-s="plain" aria-pressed="${sel.has(w.id)}">
-          <span class="row"><span class="check ${sel.has(w.id) ? 'on' : ''}" aria-hidden="true">${sel.has(w.id) ? '✓' : ''}</span><span>${esc(w.name)}</span></span>
-          <span class="amt" data-s="fixed">${balShort(weightOf(w.id))} ZP</span></button>`).join('') || '<p class="muted small">Add a wallet with its 24 words or key to vote. Watch-only wallets cannot sign a ballot.</p>'}</div>
-        ${signers.length > 1 ? `<div class="row" data-s="mt10"><button class="btn" data-act="vote-all">All</button><button class="btn" data-act="vote-none">None</button></div>` : ''}
-        ${(() => { const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), after = ph.phase !== 'before', known = after && voters().every(w => snapZp(ph.interval, w.id) !== undefined);
-          return `<div class="kv" data-s="mt10"><span>${after ? `Vote weight: ZP at the snapshot (block ${snapshotBlock(CGP_PARAMS[net()], ph.interval).toLocaleString('en-US')})` : 'Vote weight if the snapshot were now'}</span><span class="amt">${after && !known ? '<span class="spin"></span>' : balShort(weightNow()) + ' ZP'}</span></div>
-          ${after ? '<p class="muted small">What you hold now does not change it: the next interval\'s snapshot counts the new balance.</p>' : ''}`; })()}</div>
-      ${tallyCard(c)}${proposalsCard(c)}${ballotsCard(c)}${sentCard(c)}
-      <div class="card"><h2>Protocol upgrade vote</h2><p class="muted small">Inactive: the Repo voting contract has been inactive since block 233,874.</p></div></div>${nav('vote')}`;
+        <div class="kv"><span class="muted">CGP fund</span><span title="${esc(S.stats?.cgp?.balance ? 'at block ' + S.stats.cgp.balance.block : '')}">${cgpBalance()}</span></div></div>` : S.nodeOk === false ? `<div class="err" role="alert">Cannot reach the node (${esc(S.nodeError || 'no answer')}). The vote needs a node: check the address in Settings, then try again.</div><button class="btn" data-act="refresh">Try again</button>` : '<p class="muted">Loading…</p>'}
+      ${weightCard(signers, sel)}
+      ${ballotsCard(c)}${sentCard(c)}${tallyCard(c)}${proposalsCard(c)}
+      <p class="muted small" data-s="mt10">Protocol upgrade vote: inactive (the Repo voting contract has been inactive since block 233,874).</p></div>${nav('vote')}`;
   },
 
   markets: () => {
@@ -1233,6 +1224,9 @@ async function txInfo(hash, w) {
     return info;
   } catch { return null; }
 }
+// the latest 5 first; Show older adds 10 at a time, and asks the node for more once all read are shown
+const ACT_FIRST = 5, ACT_STEP = 10;
+const actShow = () => S.actShow || ACT_FIRST;
 // the filter chips and the rows they keep; moves within the wallet show under All only
 function actFilter(d) {
   if (!d.history) return '<div class="list"><p class="muted small">Loading…</p></div>';
@@ -1240,9 +1234,9 @@ function actFilter(d) {
   const f = ACT_KINDS.some(([k]) => k === S.settings.afilter) ? S.settings.afilter : 'all', a = active();
   const rows = f === 'all' ? d.history : d.history.filter(h => actKind(h) === f), unknown = f !== 'all' && d.history.some(h => h.txHash && !S.txInfo.get(h.txHash) && BigInt(h.amount) !== 0n);
   return `<div class="afilter" role="tablist" aria-label="Show">${ACT_KINDS.map(([k, l]) => `<button type="button" class="chip mini ${f === k ? 'on' : ''}" role="tab" aria-selected="${f === k}" data-act="afilter" data-v="${k}">${l}</button>`).join('')}</div>
-    <div class="list">${rows.length ? rows.map(h => activityRow(h, a)).join('') : `<p class="muted small">None in the last ${d.history.length} transactions.</p>`}</div>
+    <div class="list">${rows.length ? rows.slice(0, actShow()).map(h => activityRow(h, a)).join('') : `<p class="muted small">None in the last ${d.history.length} transactions.</p>`}</div>
     ${unknown ? '<p class="muted small"><span class="spin"></span> Looking up the transactions…</p>' : ''}
-    ${d.more !== false ? `<button type="button" class="btn small" data-s="mt10" data-act="hist-more" ${S.busy ? 'disabled' : ''}>Show older</button>` : ''}`;
+    ${rows.length > actShow() || d.more !== false ? `<button type="button" class="btn small" data-s="mt10" data-act="hist-more" ${S.busy ? 'disabled' : ''}>Show older</button>` : ''}`;
 }
 let txInfoBusy = false;
 async function loadTxInfo(w, rows) {
@@ -1357,6 +1351,23 @@ async function loadCgpHist() {
   try { const z = await node()?.request('/blockchain/totalzp'); if (Number.isFinite(Number(z))) S.totalZp = Number(z) / 1e8; } catch { /* threshold unknown */ }
 }
 
+// a ballot that cannot be cast now (closed, or already sent) folds into one line; open ones show in full
+const fold = (key, title, line, inner, open) => open ? `<div class="card">${inner}</div>`
+  : `<details class="card fold" data-keep="${key}" ${S.keep?.[key] ? 'open' : ''}><summary><b>${title}</b>${line ? ` <span class="muted small">· ${line}</span>` : ''}</summary><div data-s="mt10">${inner}</div></details>`;
+// the weight the selected wallets vote with; one wallet: one line, several: the list to choose from
+function weightCard(signers, sel) {
+  if (!signers.length) return '<div class="card"><p class="muted small">Add a wallet with its 24 words or key to vote. Watch-only wallets cannot sign a ballot.</p></div>';
+  const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), after = ph.phase !== 'before', known = !after || voters().every(w => snapZp(ph.interval, w.id) !== undefined);
+  const what = after ? `ZP at the snapshot (block ${snapshotBlock(CGP_PARAMS[net()], ph.interval).toLocaleString('en-US')})` : 'ZP now (the snapshot counts it)';
+  const total = `<span class="amt">${known ? balShort(weightNow()) + ' ZP' : '<span class="spin"></span>'}</span>`;
+  if (signers.length === 1) return `<div class="card"><div class="kv"><span><b>Your vote weight</b><br><span class="muted small">${esc(signers[0].name)} · ${what}</span></span>${total}</div></div>`;
+  return `<div class="card"><h2>Your vote weight</h2><p class="muted small">Choose the wallets that vote: their ${what} add up to one weight.</p>
+    <div class="list">${signers.map(w => `<button class="item" data-act="vote-toggle" data-id="${esc(w.id)}" data-s="plain" aria-pressed="${sel.has(w.id)}">
+      <span class="row"><span class="check ${sel.has(w.id) ? 'on' : ''}" aria-hidden="true">${sel.has(w.id) ? '✓' : ''}</span><span>${esc(w.name)}</span></span>
+      <span class="amt" data-s="fixed">${balShort(weightOf(w.id))} ZP</span></button>`).join('')}</div>
+    <div class="row" data-s="mt10"><button class="btn" data-act="vote-all">All</button><button class="btn" data-act="vote-none">None</button></div>
+    <div class="kv" data-s="mt10"><span>Total</span>${total}</div></div>`;
+}
 function ballotsCard(c) {
   if (!c) return '';
   const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), none = !voters().length;
@@ -1405,8 +1416,9 @@ function ballotsCard(c) {
     : `<button class="btn" data-act="load-cands">Show candidates</button>`;
   return `<div class="card"><h2>Casting ballots</h2>
     <p class="muted small">Signed on this device by the selected wallets; each sends one transaction with a 1 kalapa fee. Only the first vote of each key counts in a phase.</p>${note}
-    <div class="card">${allocForm}</div><div class="card">${nom}</div>
-    <div class="card"><h2>Payout vote</h2>${voteStatus}<p class="muted small">Pick a candidate. Counted in the voting phase.</p>${pPay ? votedBox(pPay) : ''}<div class="list">${cands}</div></div>${errBox()}</div>`;
+    ${fold('f-alloc', 'Allocation vote', pAlloc ? `✓ sent: CGP ${esc(pct0)}%` : openVote ? '' : `closed · opens at block ${blk(v0)}`, allocForm, openVote && !pAlloc)}
+    ${fold('f-nom', 'Payout nomination', pNom ? '✓ sent' : openNom ? '' : `closed · next: blocks ${blk(nextSnap + 1)}–${blk(nextSnap + phasesOf(p, ph.interval + 1).nomination)}`, nom, openNom && !pNom)}
+    ${fold('f-pay', 'Payout vote', pPay ? '✓ sent' : openVote ? '' : `closed · opens at block ${blk(v0)}`, `<h2>Payout vote</h2>${voteStatus}<p class="muted small">Pick a candidate. Counted in the voting phase.</p>${pPay ? votedBox(pPay) : ''}<div class="list">${cands}</div>`, openVote && !pPay)}${errBox()}</div>`;
 }
 async function reviewVote(kind, command, ballotHex, label, rows = []) {
   const sel = voters(); if (!sel.length) throw new Error('Select at least one wallet that can sign');
@@ -1899,15 +1911,18 @@ $app.addEventListener('click', async e => {
   }
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.error = ''; return render(); }
   if (t.dataset.mtab) { S.settings.mtab = t.dataset.mtab; saveSettings(); S.error = ''; render(); window.scrollTo(0, 0); return; }
-  if (t.dataset.wallet) { S.settings.active = t.dataset.wallet; saveSettings(); render(); if (!S.data.get(t.dataset.wallet)?.state) { await refreshWallet(t.dataset.wallet); render(); } return; }
+  if (t.dataset.wallet) { S.actShow = 0; S.settings.active = t.dataset.wallet; saveSettings(); render(); if (!S.data.get(t.dataset.wallet)?.state) { await refreshWallet(t.dataset.wallet); render(); } return; }
   if (t.dataset.net) { S.settings.network = t.dataset.net; saveSettings(); S.tip = null; S.nodeOk = null; render(); return refreshAll(); }
   const act = t.dataset.act; if (!act) return;
   try {
     if (act === 'refresh') return refreshAll(true);
     if (act === 'ocat') { S.settings.ocat = t.dataset.v; saveSettings(); return render(); }
-    if (act === 'afilter') { S.settings.afilter = t.dataset.v; saveSettings(); render(); const a = active(); return loadTxInfo(a, S.data.get(a.id)?.history || []); }
+    if (act === 'afilter') { S.settings.afilter = t.dataset.v; S.actShow = 0; saveSettings(); render(); const a = active(); return loadTxInfo(a, S.data.get(a.id)?.history || []); }
     if (act === 'hist-more') {
       const a = active(), d = S.data.get(a.id), w = S.open.get(a.id); if (!d?.history || !w) return;
+      const f = S.settings.afilter || 'all', shown = f === 'all' ? d.history.length : d.history.filter(h => actKind(h) === f).length;
+      S.actShow = actShow() + ACT_STEP;
+      if (S.actShow <= shown || d.more === false) return render();   // enough rows read already
       S.busy = true; render();
       try { const more = await readHistory(w, node(), d.history.length, 50); d.history = [...d.history, ...more]; d.more = more.length === 50; } finally { S.busy = false; }
       render(); return loadTxInfo(a, d.history);
