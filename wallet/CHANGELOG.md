@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.37.0 — 2026-10-16
+
+### Changed
+- Up or down? is one compact table per ticker and close, like an option chain: the oracle's price now, one row per
+  line ("at or above") with its Up and Down prices as buttons, and the line nearest the price now marked. Six BTC lines
+  fit on one screen instead of three.
+
 ## 0.36.4 — 2026-10-16
 
 ### Changed

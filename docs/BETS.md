@@ -173,15 +173,16 @@ no fee per gas; the cost counts toward the block's weight.
   - `BETS_COLLATERAL`: zUSDC.
   Then `docker compose … --profile bets up -d bets`. Never `--remove-orphans`.
 
-## The wallet (ZP Wallet 0.33.0, testnet)
+## The wallet (ZP Wallet 0.37.0, testnet)
 
 Markets → Oracle shows an **Up or down?** card above the prices, filtered by the same chips as the prices (Crypto,
 Forex, Stocks, Commodities). The wallet computes no ids: everything comes from `GET /explorer/api/bets/markets`.
 Code: `wallet/src/bets.js` (pure parts) and `betsCard`, `yourBets`, `betModal`, `betRedeem` in `wallet/web/app.js`.
 
 - **Before the contract is active** (the markets API does not answer), the card is a short note.
-- **Markets.** Every open market whose close is ahead shows "TICKER at or above LINE", its close in local time with
-  the time left, and two buttons, **▲ Up** and **▼ Down**. Each button shows the price of one token in zUSDC: the
+- **Markets** (0.37.0: one table per ticker and close, like an option chain, with the oracle's price now and the line
+  nearest it marked). Every open market whose close is ahead is a row: the line ("at or above"), then its **▲ Up** and
+  **▼ Down** prices as buttons; the close in local time with the time left heads the table. Each button shows the price of one token in zUSDC: the
   cheapest Dex order in `/explorer/api/dex/orders` that sells that token for the collateral, already in a block.
   Pending orders and orders being taken are skipped. A side with no such order is shown greyed out. The rule is
   printed under the list: "If the oracle has no close price within 24 hours, every token pays 0.50."

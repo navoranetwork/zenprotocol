@@ -153,12 +153,21 @@ function betsCard(m, cat) {
   if (!m.bets) return `<div class="card"><h2>Up or down?</h2><p class="muted small">Bets on these prices open when the bet contract is active on this network. You will pick a market, say Up or Down, and get 1 zUSDC for each token if you are right.</p></div>`;
   const orders = betOrders(), spendable = canSpend(S.open.get(active().id));
   const open = m.bets.filter(b => tickerCat(b.ticker) === cat && b.status === 'open' && b.close > Date.now()).sort((x, y) => x.close - y.close || x.ticker.localeCompare(y.ticker) || x.strike - y.strike);
-  const btn = (b, side) => { const o = bestOffer(orders, sideAsset(b, side), b.collateral), p = offerPrice(o);
-    return o && spendable ? `<button type="button" class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn" data-act="bet" data-id="${esc(b.bull)}" data-side="${side}">${side === 'up' ? '▲ Up' : '▼ Down'} <b>${p.toFixed(2)}</b></button>`
-      : `<span class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn off" aria-disabled="true">${side === 'up' ? '▲ Up' : '▼ Down'} <span class="muted">${o ? p.toFixed(2) : '–'}</span></span>`; };
-  const rows = open.map(b => `<div class="bet"><div class="between"><div class="tname">${tickerBadge(b.ticker, 26)}<span><b>${esc(b.ticker)}</b> at or above <b>${esc(strikeText(b))}</b></span></div><div class="muted small">closes ${esc(closeText(b.close))}</div></div><div class="betrow">${btn(b, 'up')}${btn(b, 'down')}</div></div>`).join('');
-  return `<div class="card"><h2>Up or down?</h2><div class="list">${rows || '<p class="muted small">No open bets in this group now.</p>'}</div>
-    <p class="muted small" data-s="mt10">The number is the price of one token in zUSDC. A token pays 1 zUSDC if you are right at the close, nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
+  // one card per ticker and close: a compact table of lines (like an option chain), the oracle's price now, the line nearest it marked
+  const groups = new Map();
+  for (const b of open) { const k = b.ticker + '|' + b.close; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(b); }
+  const nowOf = t => { const i = (m.round?.tickers || []).indexOf(t); return i < 0 ? null : Number(m.round.values[i]); };
+  const odd = (b, side) => { const o = bestOffer(orders, sideAsset(b, side), b.collateral), p = offerPrice(o);
+    return o && spendable ? `<button type="button" class="odd ${side === 'up' ? 'buy' : 'sell'}" data-act="bet" data-id="${esc(b.bull)}" data-side="${side}" aria-label="${side === 'up' ? 'Up' : 'Down'} at ${p.toFixed(2)}">${p.toFixed(2)}</button>`
+      : `<span class="odd off ${side === 'up' ? 'buy' : 'sell'}" aria-disabled="true">${o ? p.toFixed(2) : '–'}</span>`; };
+  const tables = [...groups.values()].map(list => {
+    const b0 = list[0], now = nowOf(b0.ticker), near = now == null ? null : list.reduce((x, y) => Math.abs(y.strike - now) < Math.abs(x.strike - now) ? y : x);
+    const rows = list.map(b => `<div class="chainrow${b === near ? ' near' : ''}"><span class="line">${esc(strikeText(b))}${b === near ? ' <span class="nowmark" title="nearest to the price now">◀</span>' : ''}</span>${odd(b, 'up')}${odd(b, 'down')}</div>`).join('');
+    return `<div class="chain"><div class="chainhead"><div class="tname">${tickerBadge(b0.ticker, 26)}<span><b>${esc(b0.ticker)}</b>${now != null ? ` <span class="muted small">now ${esc(now.toLocaleString('en-US', { maximumFractionDigits: 2 }))}</span>` : ''}</span></div><div class="muted small">closes ${esc(closeText(b0.close))}</div></div>
+      <div class="chainrow chaintop muted small"><span>At or above</span><span>▲ Up</span><span>▼ Down</span></div>${rows}</div>`;
+  }).join('');
+  return `<div class="card"><h2>Up or down?</h2>${tables || '<p class="muted small">No open bets in this group now.</p>'}
+    <p class="muted small" data-s="mt10">Pick a line and a side. The number is the price of one token in zUSDC: it pays 1 zUSDC if the price at the close is at or above the line (Up) or below it (Down), nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
 }
 // how long an order sent from here has waited for its block (a block takes about 4 minutes; Cancel needs it in a block)
 const waitText = at => { const m = Math.floor((Date.now() - at) / 60000);

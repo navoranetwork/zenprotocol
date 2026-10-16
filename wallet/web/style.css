@@ -304,3 +304,19 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 h3 { font-size: 14px; margin: 10px 0 2px; }
 .nw { white-space: nowrap; }
 .phasebox.locked:disabled { opacity: .85; }
+
+/* Up / Down: one table of lines per ticker and close */
+.chain { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+.chainhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.chainrow { display: grid; grid-template-columns: 1fr 72px 72px; gap: 8px; align-items: center; padding: 4px 0; }
+.chainrow.chaintop { padding-bottom: 2px; }
+.chainrow.chaintop span:not(:first-child) { text-align: center; }
+.chainrow .line { font-variant-numeric: tabular-nums; font-weight: 600; }
+.chainrow.near { background: rgba(63, 193, 160, .07); border-radius: 8px; margin: 0 -6px; padding: 4px 6px; }
+.nowmark { color: var(--accent); font-size: 11px; }
+.odd { font: inherit; font-variant-numeric: tabular-nums; font-weight: 700; text-align: center; padding: 7px 0; border-radius: 8px; border: 1px solid; background: transparent; cursor: pointer; }
+.odd.buy { color: var(--accent); border-color: rgba(63, 193, 160, .45); }
+.odd.sell { color: #F08A8A; border-color: rgba(240, 138, 138, .45); }
+.odd.buy:hover { background: rgba(63, 193, 160, .1); }
+.odd.sell:hover { background: rgba(240, 138, 138, .1); }
+.odd.off { opacity: .45; cursor: default; }

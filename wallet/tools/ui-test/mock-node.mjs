@@ -39,6 +39,8 @@ const T0 = Math.floor(Date.now() / 3600e3) * 3600e3, CLOSE_SETTLED = T0 - 7200e3
 const betEvent = (ticker, price, close) => ({ OraclePubKey: '02' + '0a'.repeat(32), OracleContractId: ORACLE_C, Ticker: ticker, Price: price, Start: close, Expiry: close, Collateral: ZUSDC });
 const BETS = () => [
   { event: betEvent('BTC', 105000000, T0 + 3 * 3600e3), bull: BT('1', '1'), bear: BT('1', '2'), status: 'open', result: null },
+  { event: betEvent('BTC', 95000000, T0 + 3 * 3600e3), bull: BT('5', '1'), bear: BT('5', '2'), status: 'open', result: null },
+  { event: betEvent('BTC', 100500000, T0 + 3 * 3600e3), bull: BT('6', '1'), bear: BT('6', '2'), status: 'open', result: null },
   { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null },
   { event: betEvent('BTC', 100000000, CLOSE_SETTLED), bull: BT('3', '1'), bear: BT('3', '2'), status: 'settled', result: 'bull', settlePrice: 101234.5 },
   { event: betEvent('ETH', 3500000, T0 - 30 * 3600e3), bull: BT('4', '1'), bear: BT('4', '2'), status: 'void', result: null }];
@@ -75,6 +77,10 @@ http.createServer((req, res) => {
             ...(st.bets ? [{ tx: 'e1'.repeat(32), block: 2093, under_asset: BT('1', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '6000000', maker: MM_PUB },
               { tx: 'e2'.repeat(32), block: 2093, under_asset: BT('1', '2'), under_amount: '10000000', pair_asset: ZU, pair_total: '4200000', maker: MM_PUB },
               { tx: 'e3'.repeat(32), block: 2093, under_asset: BT('2', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '3500000', maker: MM_PUB },
+              { tx: 'e5'.repeat(32), block: 2093, under_asset: BT('5', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '8800000', maker: MM_PUB },
+              { tx: 'e6'.repeat(32), block: 2093, under_asset: BT('5', '2'), under_amount: '10000000', pair_asset: ZU, pair_total: '2000000', maker: MM_PUB },
+              { tx: 'e7'.repeat(32), block: 2093, under_asset: BT('6', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '5300000', maker: MM_PUB },
+              { tx: 'e8'.repeat(32), block: 2093, under_asset: BT('6', '2'), under_amount: '10000000', pair_asset: ZU, pair_total: '5400000', maker: MM_PUB },
               { tx: 'e4'.repeat(32), block: 2093, under_asset: ZU, under_amount: '500000', pair_asset: BT('1', '1'), pair_total: '1000000', maker: MM_PUB }] : []),   // a bid: 0.50 zUSDC per BTC 105,000 Up, for 1 token
             ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])]
             .filter(o => !(st.dexGone || []).includes(o.tx)).map(o => ({ ...o, confirmations: st.tip - o.block + 1, pending: false }));
