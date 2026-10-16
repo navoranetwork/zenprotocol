@@ -40,7 +40,19 @@ const ICONS = typeof __ICONS__ === 'object' && __ICONS__ ? __ICONS__ : {};
 const btcLogo = (n = 18) => ICONS.btc ? `<img class="ticon" src="${ICONS.btc}" alt="" width="${n}" height="${n}">` : '';
 const btcAmt = (sats, n = 18) => `<span class="tname">${btcLogo(n)}${esc(formatBTC(sats))} BTC</span>`;
 const zpLogo = (n = 18) => ICONS.zp ? `<img class="ticon" src="${ICONS.zp}" alt="" width="${n}" height="${n}">` : '';
-const tokenIcon = (asset, size = 20) => asset === '00' ? zpLogo(size) : /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
+// Market badges: Bitcoin's own logo; every other ticker a plain coloured disc with its symbol, drawn here (no third-party
+// logos: stock and fund logos are their companies' trademarks). An Up / Down token adds a small arrow disc.
+const BADGE = { ETH: ['Ξ', '#627EEA'], EUR: ['€', '#2F9E6F'], GBP: ['£', '#2F9E6F'], JPY: ['¥', '#2F9E6F'], CHF: ['Fr', '#2F9E6F'], AUD: ['A$', '#2F9E6F'], CAD: ['C$', '#2F9E6F'], ILS: ['₪', '#2F9E6F'],
+  XAU: ['Au', '#C9A227'], GOLD: ['Au', '#C9A227'], XAG: ['Ag', '#8E99A3'], OIL: ['Oil', '#4A4F57'], WTI: ['Oil', '#4A4F57'] };
+const CAT_COLOR = { crypto: '#7B61FF', forex: '#2F9E6F', stocks: '#3B6FD8', commodities: '#B08A2E', other: '#5B6B73' };
+function tickerBadge(t, size = 22, side = null) {
+  const [sym, col] = BADGE[t] || [String(t).slice(0, t.length > 3 ? 2 : 3), CAT_COLOR[tickerCat(t)] || CAT_COLOR.other];
+  const fs = sym.length >= 3 ? 8.5 : sym.length === 2 ? 10.5 : 14;
+  const disc = t === 'BTC' && ICONS.btc ? `<image href="${ICONS.btc}" x="0" y="0" width="24" height="24"/>` : `<circle cx="12" cy="12" r="12" fill="${col}"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-family="Inter,system-ui,sans-serif" font-weight="700" font-size="${fs}" fill="#fff">${esc(sym)}</text>`;
+  const arrow = side ? `<circle cx="19.5" cy="19.5" r="5.5" fill="${side === 'up' ? '#3FC1A0' : '#F08A8A'}" stroke="#0F1A20" stroke-width="1.5"/><path d="${side === 'up' ? 'M19.5 16.8l2.6 3.8h-5.2z' : 'M19.5 22.2l2.6-3.8h-5.2z'}" fill="#0F1A20"/>` : '';
+  return `<svg class="ticon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${disc}${arrow}</svg>`;
+}
+const tokenIcon = (asset, size = 20) => asset === '00' ? zpLogo(size) : S.betInfo?.[asset] ? tickerBadge(S.betInfo[asset].ticker, size, S.betInfo[asset].side) : /^zUSDC$/.test(S.assetNames[asset] || '') && ICONS.zusdc ? `<img class="ticon" src="${ICONS.zusdc}" alt="" width="${size}" height="${size}">` : '';
 // sending to the site's USDC bridge: zUSDC is a withdrawal (paid in USDC to the linked EVM address), anything else is lost
 const toBridge = to => !!(S.bridge && String(to || '').trim() === S.bridge.zp);
 const bridgeWait = () => `about ${S.bridge.conf * 4} to ${S.bridge.conf * 5} minutes (${S.bridge.conf} ZP blocks; longer when testnet blocks are slow)`;
@@ -138,7 +150,7 @@ function betsCard(m, cat) {
   const btn = (b, side) => { const o = bestOffer(orders, sideAsset(b, side), b.collateral), p = offerPrice(o);
     return o && spendable ? `<button type="button" class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn" data-act="bet" data-id="${esc(b.bull)}" data-side="${side}">${side === 'up' ? '▲ Up' : '▼ Down'} <b>${p.toFixed(2)}</b></button>`
       : `<span class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn off" aria-disabled="true">${side === 'up' ? '▲ Up' : '▼ Down'} <span class="muted">${o ? p.toFixed(2) : '–'}</span></span>`; };
-  const rows = open.map(b => `<div class="bet"><div class="between"><div><b>${esc(b.ticker)}</b> at or above <b>${esc(strikeText(b))}</b></div><div class="muted small">closes ${esc(closeText(b.close))}</div></div><div class="betrow">${btn(b, 'up')}${btn(b, 'down')}</div></div>`).join('');
+  const rows = open.map(b => `<div class="bet"><div class="between"><div class="tname">${tickerBadge(b.ticker, 26)}<span><b>${esc(b.ticker)}</b> at or above <b>${esc(strikeText(b))}</b></span></div><div class="muted small">closes ${esc(closeText(b.close))}</div></div><div class="betrow">${btn(b, 'up')}${btn(b, 'down')}</div></div>`).join('');
   return `<div class="card"><h2>Up or down?</h2><div class="list">${rows || '<p class="muted small">No open bets in this group now.</p>'}</div>
     <p class="muted small" data-s="mt10">The number is the price of one token in zUSDC. A token pays 1 zUSDC if you are right at the close, nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
 }
@@ -168,7 +180,7 @@ function yourBets(m) {
       const onSale = sells.map(o => { const p = dexPending.get(o.tx);
         return `<div class="muted small onsale">On sale: ${esc(tokenAmount(unit, o.underAmount))} at ${(Number(o.pairTotal) / Number(o.underAmount)).toFixed(4)} = ${esc(withUnit(unit, o.pairTotal))}${o.waiting ? `<br><span class="spin"></span> ${esc(waitText(o.at))}` : p ? ' · ' + (p === 'taking' ? 'being bought…' : 'being cancelled…') : spendable ? ` <button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div>`; }).join('');
       const sell = n && pay === null && open && spendable ? `<button class="btn sellbtn" data-act="bet-sell" data-id="${esc(b.bull)}" data-side="${side}">Sell ${side === 'up' ? '▲ Up' : '▼ Down'} tokens</button>` : '';
-      return `<div class="betpos"><div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>${sell}</div>`;
+      return `<div class="betpos"><div class="item"><div><div class="tname">${tickerBadge(b.ticker, 22, side)}<span>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</span></div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>${sell}</div>`;
     };
     return line('up') + line('down');
   }).join('');
@@ -227,7 +239,7 @@ function dexView(m, base, loading) {
     return `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div><div>${orderLine(o)}</div><div class="muted small">${who}</div></div></div><div>${btn}</div></div>`;
   }).join('');
   const assets = (S.data.get(active().id)?.state?.assets || []).filter(x => x.asset === '00' || x.spendable > 0n);
-  const known = [...new Set(['00', ...assets.map(x => x.asset), ...list.flatMap(o => [o.underAsset, o.pairAsset])])];
+  const known = [...new Set(['00', ...assets.map(x => x.asset), ...list.flatMap(o => [o.underAsset, o.pairAsset])])].filter(a => !S.betInfo?.[a]);   // Up / Down tokens: bought and sold in the Oracle tab
   const give = S.draft.dgive && known.includes(S.draft.dgive) ? S.draft.dgive : '00';
   const want = S.draft.dwant && known.includes(S.draft.dwant) && S.draft.dwant !== give ? S.draft.dwant : known.find(a => a !== give) || '';
   const pick = (name, sel) => `<div class="tokpick">${known.filter(a => name === 'dwant' ? a !== give : true).map(a => `<button type="button" class="chip tokchip ${a === sel ? 'on' : ''}" aria-checked="${a === sel}" role="radio" data-act="dex-pick" data-name="${name}" data-asset="${esc(a)}">${a === '00' && !ICONS.zp ? '<span class="zpdot">ZP</span>' : tokenIcon(a, 22)}<span><b>${esc(unitOf(a))}</b></span></button>`).join('')}</div>`;
@@ -239,7 +251,7 @@ function dexView(m, base, loading) {
     ${mineRows ? `<div class="card"><h2>Your orders</h2><div class="list">${mineRows}</div></div>` : ''}
     <details class="card how" data-keep="dexall" ${S.keep?.dexall ? 'open' : ''}><summary>All orders and other pairs</summary><div class="list" data-s="mt10">${rows || '<p class="muted small">No open orders.</p>'}</div>
       <p class="muted small" data-s="mt10">Taking needs no signature from the maker; you can take part of an order.</p>
-    ${spendable && want ? `<form data-form="dex-make" data-s="mt10"><h2>Any pair</h2>
+    ${spendable && want ? `<form data-form="dex-make" data-s="mt10"><h2>Advanced: trade any two tokens</h2><p class="muted small">Offer an amount of one token for an amount of another, at your own rate. For ZP and zUSDC the order book above is easier; Up / Down bets are bought and sold in the Oracle tab.</p>
       <div class="field"><span>You give</span>${pick('dgive', give)}<input name="give" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(S.draft.dgamt || '')}"><span class="muted small">Available ${esc(tokenAmount(give, has?.spendable || 0n))} ${esc(unitOf(give))}</span></div>
       <div class="field"><span>You want</span>${pick('dwant', want)}<input name="want" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(S.draft.dwamt || '')}"></div>
       <p class="muted small">Your ${esc(unitOf(give))} waits in the Dex until someone takes the order or you cancel it. Signed with this wallet's key.</p>
@@ -1086,7 +1098,7 @@ const views = {
         const src = !names.length ? '1 source' : `${names.length - dropped.length} of ${names.length} sources agree`;
         const day = e.asOf && m.day && e.asOf !== m.day ? 'close ' + e.asOf : '';
         const tip = names.map(n => n + ' = ' + e.sources[n]).join('\n') + (dropped.length ? '\ndropped: ' + dropped.join(', ') : '');
-        return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b>${TICKER_NAMES[t] ? ` <span class="muted small">${esc(TICKER_NAMES[t])}</span>` : ''}</div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
+        return `<div class="item" title="${esc(tip)}"><div class="tname">${tickerBadge(t, 28)}<div><div><b>${esc(t)}</b>${TICKER_NAMES[t] ? ` <span class="muted small">${esc(TICKER_NAMES[t])}</span>` : ''}</div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
       }).join('');
       body = `${errCard}${loading ? '' : betsCard(m, cat)}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2>${chips}<div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices in this group yet.</p>'}</div>
         <p class="muted small" data-s="mt10">${cat === 'forex' ? 'US dollars for one unit of each currency.' : cat === 'stocks' || cat === 'commodities' ? 'End-of-day closes.' : 'Live prices.'} Several sources must agree.</p></div>`;
@@ -1563,7 +1575,7 @@ async function loadCgpFund(n) {
 }
 // Up and Down tokens are named after their market ("BTC 105,000 Up") and counted in the collateral's decimals
 // (kept in S.betNames too: the site's assets.json replaces the name list when it arrives, and must not drop these)
-function nameBets(bets) { for (const b of bets || []) { const n = `${b.ticker} ${b.strike.toLocaleString('en-US')}`; S.betNames = { ...(S.betNames || {}), [b.bull]: n + ' Up', [b.bear]: n + ' Down' }; S.assetNames[b.bull] = n + ' Up'; S.assetNames[b.bear] = n + ' Down'; S.betDec = { ...(S.betDec || {}), [b.bull]: decimalsOf(b.collateral), [b.bear]: decimalsOf(b.collateral) }; } }
+function nameBets(bets) { for (const b of bets || []) { const n = `${b.ticker} ${b.strike.toLocaleString('en-US')}`; S.betNames = { ...(S.betNames || {}), [b.bull]: n + ' Up', [b.bear]: n + ' Down' }; S.assetNames[b.bull] = n + ' Up'; S.assetNames[b.bear] = n + ' Down'; S.betInfo = { ...(S.betInfo || {}), [b.bull]: { ticker: b.ticker, side: 'up' }, [b.bear]: { ticker: b.ticker, side: 'down' } }; S.betDec = { ...(S.betDec || {}), [b.bull]: decimalsOf(b.collateral), [b.bear]: decimalsOf(b.collateral) }; } }
 async function refreshExtras() {
   const n = node(); if (!n) return;
   // the community site publishes stats.json next to /node/ (CGP fund balance, named contracts)

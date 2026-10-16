@@ -37,7 +37,12 @@ with sync_playwright() as p:
     ok('Your bets' in t and 'Collect 5.00 zUSDC' in t, 'Your bets: the settled market\'s Up tokens can be collected (5.00 zUSDC)')
     ok('Collect 1.50 zUSDC' in t and 'every token pays 0.50' in t, 'a void market: its 3 Down tokens collect 1.50 zUSDC')
     ok('If the oracle has no close price within 24 hours, every token pays 0.50' in t, 'the void rule is shown with the markets')
+    ok(len(pg.query_selector_all('.bet svg.ticon')) >= 2 and len(pg.query_selector_all('.betpos svg.ticon')) >= 2, 'markets and positions carry a ticker badge (Up / Down with an arrow disc)')
     pg.screenshot(path=f'{OUT}/bt1-markets.png', full_page=True)
+    pg.click('button[data-mtab=dex]'); pg.wait_for_timeout(800); pg.click('details.how summary'); pg.wait_for_timeout(200)
+    chips = ' '.join(e.inner_text() for e in pg.query_selector_all('form[data-form=dex-make] .tokchip'))
+    ok('Advanced: trade any two tokens' in pg.inner_text('main') and ' Up' not in chips and ' Down' not in chips and 'zUSDC' in chips, 'the Dex tab\'s advanced form leaves Up / Down tokens out')
+    pg.click('button[data-mtab=oracle]'); pg.wait_for_selector('.bet .betrow', timeout=15000)
 
     # a bet: Up on BTC 105,000 at 0.60
     pg.click('.bet >> nth=0 >> button[data-side=up]'); pg.wait_for_selector('form[data-form=bet]')

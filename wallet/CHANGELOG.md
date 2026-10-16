@@ -11,6 +11,18 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.34.0 — 2026-10-16
+
+### Added
+- Market badges: every oracle price, bet market and position has a small round badge. Bitcoin shows its own logo;
+  the rest are plain discs with the ticker's symbol in its group's colour (Ξ, €, £, ¥, ₪, Au, Ag, or the stock's
+  letters), drawn in the wallet, with no company logos. Up and Down tokens add a small green or red arrow disc,
+  everywhere tokens are listed.
+
+### Changed
+- The Dex tab's "Any pair" form is now "Advanced: trade any two tokens" with a line on what it is for, and leaves
+  Up / Down tokens out (they are bought and sold in the Oracle tab).
+
 ## 0.33.3 — 2026-10-16
 
 ### Fixed
