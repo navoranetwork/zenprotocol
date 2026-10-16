@@ -109,14 +109,17 @@ async function settle(now) {
   save();
 }
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-cache');
   if (req.url.split('?')[0] !== '/markets') { res.statusCode = 404; return res.end('{"error":"unknown path"}'); }
   res.end(JSON.stringify({ contract: CONTRACT, contractId: ID, collateral: COLLATERAL, oracleId: ORACLE_ID, oraclePubKey: ORACLE_KEY, graceMs: GRACE,
     markets: markets.map(m => ({ ticker: m.ticker, line: m.line, price: m.price, close: m.close, status: m.status || 'open', result: m.result || null,
       settlePrice: m.settlePrice ?? null, bull: m.tokens.bull, bear: m.tokens.bear,
       event: { OraclePubKey: m.oraclePubKey, OracleContractId: m.oracleId, Ticker: m.ticker, Price: m.price, Start: m.close, Expiry: m.close, Collateral: m.collateral } })) }));
-}).listen(Number(PORT), HOST, () => log(`bets on ${HOST}:${PORT}`));
+});
+// listen first: if the port is taken (another bets, e.g. a dry run left behind), stop before sending anything
+await new Promise((ok, fail) => server.once('error', fail).listen(Number(PORT), HOST, ok)).catch(e => { console.error(`cannot listen on ${HOST}:${PORT}: ${e.code}; is another bets running (docker ps)?`); process.exit(1); });
+log(`bets on ${HOST}:${PORT}`);
 
 const makerKey = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '');
 log(`markets for ${CONTRACT} (${TICKERS.join(', ')}), close ${CLOSE_UTC}:00 UTC, seed ${SEED}, odds ${ODDS}, key ${makerKey.slice(0, 12)}…${DRY ? ', DRY' : ''}`);
