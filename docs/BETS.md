@@ -256,6 +256,24 @@ The fair-value quoting (892c5797, above) is pushed but **not deployed yet**. Ope
    curl -s localhost:11581/explorer/api/bets/markets | head -c 800
    ```
 
+### Fair-value quoting on the testnet (2026-10-16 evening)
+
+- Live since 19:12 UTC with `BETS_QUOTE` 5, `BETS_MAX_ISSUE` 15 and `BETS_BID_BUDGET` 25, and 80 zUSDC bridged to
+  the service's key (`tzn1qr606fj36kxfx6czpw4nxd805lp6jly3r0pld994jjue9jzv3qvuszejah2`, m/44'/258'/0'/2/1). Lines:
+  - BTC: 78,600, 80,200, 81,000, 81,800, 83,500, plus the first 81,900;
+  - ETH: 2,330, 2,380, 2,400, 2,430, 2,480, plus 2,460.
+- First run: a second Issue and copies of orders a minute later, the same order cancelled three times, and a refused
+  Cancel ("Could not find order in wallet") ending the cycle.
+  - The service now remembers its own Makes for 20 minutes (in `recent-makes.json`, kept across restarts) and its
+    Cancels for 10. A refused call no longer stops the cycle. Commits 2016d6e1, 7fb0e52d and 2fc5d65c.
+- Open: the explorer's `/dex/orders?pending=1` did not show our Makes, or mark our Cancels, while they were in the
+  mempool.
+  - `scripts/v1/dex-mempool-probe.mjs` shows that a mempool Cancel parses correctly: the target matches the order,
+    and `contractId` = `ZEN_DEX`.
+  - The cause is not found yet. The suspect is the step between a block and `/addressdb/balance` of the Dex: an order
+    counts as open only while the Dex holds its order asset.
+  - The service no longer depends on it.
+
 ## Still to build
 
 1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after
