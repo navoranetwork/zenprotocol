@@ -221,6 +221,41 @@ Code: `wallet/src/bets.js` (pure parts) and `betsCard`, `yourBets`, `betModal`, 
 - **Checked live on the testnet, 2026-10-16:** both first markets with Up and Down at 0.55, once the Issue and the
   Makes were in a block (2910–2911).
 
+## Where we are (2026-10-16, 19:00 Israel)
+
+The testnet still runs the first version of the service, with static 0.55 offers on BTC ≥ 81,900 and ETH ≥ 2,460.
+The fair-value quoting (892c5797, above) is pushed but **not deployed yet**. Open steps, all on the testnet server
+(91.98.3.17, `~/zenprotocol-testnet`):
+
+1. **Check the zUSDC in the node wallet.** The wallet is shared with the ZP market maker, whose three bid levels lock
+   about 120. The new service needs about 130 on a weekend (10 markets), or less with a smaller `BETS_QUOTE`:
+   ```
+   curl -s localhost:31567/wallet/balance | python3 -c "import sys,json;print(sum(x['balance'] for x in json.load(sys.stdin) if x['asset'].startswith('000000015ab27aa3'))/1e6)"
+   ```
+   If short: bridge more USDC, or set `BETS_QUOTE=5000000`, `BETS_MAX_ISSUE=15000000` and `BETS_BID_BUDGET=15000000`
+   in `testnet-stack.env`.
+2. **Dry run.** It needs the port, so stop the service first, and remove the container afterwards:
+   ```
+   git pull -q; C="docker compose -f docker-compose.testnet.yml -f docker-compose.testnet-stack.yml"
+   $C stop bets
+   timeout 40 $C --profile bets run --rm -T -e BETS_DRY=1 -e BETS_DATA=/tmp/dry -e BETS_MAX_TX=40 bets | cut -c1-150 | head -45
+   docker ps -aq --filter name=bets-run | xargs -r docker rm -f
+   ```
+   Expect `open` lines for 5 BTC and 5 ETH lines, then `issue`, `ask` and `bid` lines with `fair Up` near 0.5 for
+   the middle line.
+3. **Go live:** `$C --profile bets up -d --force-recreate bets`, then `$C logs --tail 30 bets`.
+   - The old 0.55 offers stay while they are within 0.03 of the fair price.
+   - Otherwise they are cancelled. Their 2 tokens are below the minimum size, so they are made again at 10.
+4. **Tell the wallet session:**
+   - each market now has `fair` and `quoting` in `/bets/markets`;
+   - bids exist, so Sell now works;
+   - a ticker has 5 lines per close.
+5. **First Settle:** the close of 2026-10-17 22:00 UTC. A check is scheduled for 22:40 UTC:
+   ```
+   $C logs --since 1h bets | grep -E "attest|settle|redeem|failed"
+   curl -s localhost:11581/explorer/api/bets/markets | head -c 800
+   ```
+
 ## Still to build
 
 1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after
