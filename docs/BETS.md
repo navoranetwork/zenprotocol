@@ -10,9 +10,25 @@ run of `scripts/v1/fixedpayout-try.mjs`, zenprotocol 94793406): the node's check
   - Redeem: about 24,000;
   - Void: about 23,000.
   Every call is within its declared 30,000 + 512 per coin.
-- The oracle's slot stamping built on zp-lab-1 (selftest 15 ok at 46f3761d). Its slot checks (fecec897) wait for a
-  rebuild.
-- Not on the testnet yet: it waits for the node image with dab00f8.
+- The oracle's slot stamping built on zp-lab-1 (selftest 18 ok at fecec897).
+
+**Live on the testnet since 2026-10-16** (node image on dab00f8):
+- fixedpayout-try passed there too, with the same id.
+- Activated at 13:39 UTC: `ctzn1qqqqqqqg2enlrs70ansf244j8750jlcp5yq5z3spjn6n6qdgr8s2hql289scfxf0c`, expires at block
+  22,905.
+- The oracle runs hourly slots (first stamped round 1792155600000 = 13:00:00 UTC).
+- The `bets` service has been running since 13:50 UTC, with these keys:
+  - signing key m/44'/258'/0'/2/1 (from mm-key.mjs; public key 021785702c28…);
+  - the oracle's key 02bee4711911864b76160c865bd29cb8a33c9f4a6d0186dffa02808b0daf122a15;
+  - EUR is added to `BETS_DAILY`: no FX markets on weekends.
+- The first markets close 2026-10-17 22:00 UTC (1792274400000):
+  - **BTC ≥ 81,900**: Issue 1c5742bf…2961, Make Up/Down 58dd06d0…9c9e / 301a58bb…90ec;
+  - **ETH ≥ 2,460**: Issue a0ba3015…ce30, Make 1d4e1d79…c409 / c7c4390d…348d.
+
+  The Makes follow the Issue in the same minute: the node wallet spends its unconfirmed outputs.
+- A dry run left behind (`docker compose run` under `timeout` leaves the container running) held port 8097. Since
+  b9c52641 the service listens before its loop and stops at once on a taken port. For a dry run, remove the container
+  afterwards: `docker ps -aq --filter name=bets-run | xargs -r docker rm -f`.
 
 ## What a market is
 
@@ -117,6 +133,6 @@ no fee per gas; the cost counts toward the block's weight.
 
 ## Still to build
 
-1. Activation on the testnet once the node image has dab00f8 (the check and tries passed, above), and a first run of
-   the service with `BETS_DRY=1`.
+1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after
+   the close round).
 2. Wallet: the Up / Down flow in the Oracle tab, Redeem after the close, positions under Activity → Trading.
