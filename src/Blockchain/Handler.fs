@@ -18,7 +18,7 @@ open Environment
 [<Literal>]
 let THRESHOLD_DURATION = 10000UL
 
-/// GET /blockchain/blocks walks back from the tip when skip + take is at most this many blocks.
+/// GET /blockchain/blocks and /blockchain/headers walk back from the tip when skip + take is at most this many blocks.
 [<Literal>]
 let RecentBlocksWalk = 20000
 
@@ -313,7 +313,11 @@ let handleRequest chain (requestId:RequestId) request session timestamp state =
         getHeaders state.tipState.tip.hash []
         |> requestId.reply<BlockHeader list>
     | GetHeaders (blockNumber, take) ->
-        BlockRepository.getMainHeaderPaginate session blockNumber take
+        // as GetBlocks: walk back from the tip for recent headers (the stats page asks for the last 2,600)
+        (if blockNumber >= 0 && take >= 0 && blockNumber + take <= RecentBlocksWalk then
+            BlockRepository.getMainHeadersFromTip session state.tipState.tip blockNumber take
+         else
+            BlockRepository.getMainHeaderPaginate session blockNumber take)
         |> List.map (fun header -> header.header)
         |> requestId.reply<BlockHeader list>
     | GetMempool ->

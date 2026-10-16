@@ -1159,7 +1159,7 @@ let ``Remembered signatures are used only for our template, and only for the sam
     Crypto.VerifiedSignatures.hits |> should equal (hits + 1L)
 
 [<Test>]
-let ``walking back from the tip gives the same blocks as the full scan, after a reorg``() =
+let ``walking back from the tip gives the same blocks and headers as the full scan, after a reorg``() =
     use databaseContext = DatabaseContext.createEmpty (tempDir())
     use session = DatabaseContext.createSession databaseContext
     let state = getGenesisState session
@@ -1173,8 +1173,12 @@ let ``walking back from the tip gives the same blocks as the full scan, after a 
     let numbers = List.map (fun (h: ExtendedBlockHeader.T) -> h.header.blockNumber)
     for skip in 0 .. 8 do
         for take in 0 .. 8 do
-            BlockRepository.getMainHeadersFromTip session state.tipState.tip skip take |> numbers
-            |> should equal (BlockRepository.getMainHeaderPaginate session skip take |> numbers)
+            let walked = BlockRepository.getMainHeadersFromTip session state.tipState.tip skip take
+            let scanned = BlockRepository.getMainHeaderPaginate session skip take
+            walked |> numbers |> should equal (scanned |> numbers)
+            // GetHeaders replies with the block headers themselves; GetBlocks with each header's full block
+            walked |> List.map (fun h -> h.header) |> should equal (scanned |> List.map (fun h -> h.header))
+            walked |> List.map (fun h -> h.hash) |> should equal (scanned |> List.map (fun h -> h.hash))
     // the main chain is genesis and five blocks: newest first
     BlockRepository.getMainHeadersFromTip session state.tipState.tip 0 10 |> numbers |> should equal [ 6ul; 5ul; 4ul; 3ul; 2ul; 1ul ]
     BlockRepository.getMainHeadersFromTip session state.tipState.tip 2 3 |> numbers |> should equal [ 4ul; 3ul; 2ul ]
