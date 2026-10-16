@@ -85,6 +85,7 @@ http.createServer((req, res) => {
           const rows = [...all, pend].map(row);
           return send(res, 200, { tip: st.tip, indexedTo: st.tip - 10, base: '00', quote: ZU, asks: rows.filter(r => r.order.under_asset === '00').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.order.under_asset !== '00').sort((a, b) => b.price - a.price), last: { side: 'buy', price: 0.101, size: '1000000000' } });
         }
+        case '/assets.json': return st.bets ? send(res, 200, { assets: [{ asset: ZUSDC, name: 'zUSDC' }] }) : send(res, 404, {});   // as the site's index: it names what it knows, not the bet tokens
         case '/explorer/api/bets/markets': return st.bets ? send(res, 200, { tip: st.tip, contract: BETC_ADDR, contractId: BETC, collateral: ZUSDC, graceMs: 86400000, markets: BETS().map(m => ({ ...m, ticker: m.event.Ticker, line: m.event.Price / 1000, price: m.event.Price, close: m.event.Start, book: { up: { ask: null, bid: null }, down: { ask: null, bid: null } } })) }) : send(res, 404, { error: 'unknown path' });
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
         case '/__published': return send(res, 200, st.published);

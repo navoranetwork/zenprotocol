@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.32.3 — 2026-10-16
+
+### Fixed
+- Up and Down tokens kept their market's name ("BTC 81,900 Up") only until the site's asset list arrived, which
+  replaced the names; the home Tokens card then showed the token's id. The bet names are now kept apart and merged in.
+
 ## 0.32.2 — 2026-10-16
 
 ### Changed

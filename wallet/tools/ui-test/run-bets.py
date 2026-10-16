@@ -26,7 +26,10 @@ with sync_playwright() as p:
     ok('open when the bet contract is active' in pg.inner_text('main'), 'before the contract: a short note, no bet buttons')
     pg.screenshot(path=f'{OUT}/bt0-before.png')
 
-    mock(bets=1); pg.click('nav >> text=Wallet'); pg.click('button[data-act=refresh]'); pg.wait_for_timeout(2000); pg.click('nav >> text=Markets'); pg.wait_for_selector('.bet .betrow', timeout=15000)
+    mock(bets=1); pg.click('nav >> text=Wallet'); pg.click('button[data-act=refresh]'); pg.wait_for_timeout(2500)
+    th = pg.inner_text('main')
+    ok('BTC 100,000 Up' in th and 'ETH 3,500 Down' in th and '00000001c1c1' not in th, 'the home Tokens card names Up / Down tokens after their market (also after the site\'s assets.json), not by id')
+    pg.click('nav >> text=Markets'); pg.wait_for_selector('.bet .betrow', timeout=15000)
     t = pg.inner_text('main')
     ok('BTC at or above 105,000' in t and 'ETH at or above 3,800' in t and 'closes' in t, 'open markets: ticker, strike, close time')
     ok(pg.query_selector('button[data-act=bet][data-side=up]') is not None and '0.60' in t and '0.42' in t and '0.35' in t, 'Up and Down show the Dex price of a token')

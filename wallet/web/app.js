@@ -1530,7 +1530,8 @@ async function loadCgpFund(n) {
   } catch { /* the node has no address index: the fund stays "not available" */ }
 }
 // Up and Down tokens are named after their market ("BTC 105,000 Up") and counted in the collateral's decimals
-function nameBets(bets) { for (const b of bets || []) { const n = `${b.ticker} ${b.strike.toLocaleString('en-US')}`; S.assetNames[b.bull] ??= n + ' Up'; S.assetNames[b.bear] ??= n + ' Down'; S.betDec = { ...(S.betDec || {}), [b.bull]: decimalsOf(b.collateral), [b.bear]: decimalsOf(b.collateral) }; } }
+// (kept in S.betNames too: the site's assets.json replaces the name list when it arrives, and must not drop these)
+function nameBets(bets) { for (const b of bets || []) { const n = `${b.ticker} ${b.strike.toLocaleString('en-US')}`; S.betNames = { ...(S.betNames || {}), [b.bull]: n + ' Up', [b.bear]: n + ' Down' }; S.assetNames[b.bull] = n + ' Up'; S.assetNames[b.bear] = n + ' Down'; S.betDec = { ...(S.betDec || {}), [b.bull]: decimalsOf(b.collateral), [b.bear]: decimalsOf(b.collateral) }; } }
 async function refreshExtras() {
   const n = node(); if (!n) return;
   // the community site publishes stats.json next to /node/ (CGP fund balance, named contracts)
@@ -1548,7 +1549,7 @@ async function refreshExtras() {
       if (ra.ok) {
         const j = await ra.json(), names = {};
         for (const x of Array.isArray(j?.assets) ? j.assets : []) if (typeof x?.asset === 'string' && typeof x?.name === 'string') names[x.asset] = x.name.slice(0, 40);
-        S.assetNames = { ...BUILTIN_NAMES, ...names };
+        S.assetNames = { ...BUILTIN_NAMES, ...names, ...(S.betNames || {}) };
       }
     }
   } catch { /* optional */ }
