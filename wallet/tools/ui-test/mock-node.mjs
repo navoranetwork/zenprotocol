@@ -26,8 +26,19 @@ const other = encodeAddress(deriveKey(w.account, 0, 21).pkHash, NET);
 const TOKEN = '00000001' + 'ee'.repeat(32);   // as the node's JSON names assets: BE32 version + contract hash
 const fund = () => [...(st.split ? Array.from({ length: st.split }, (_, i) => ({ outpoint: { txHash: 'ae'.repeat(32), index: i }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: '00', amount: String(st.zp / BigInt(st.split)) } })) : [{ outpoint: { txHash: 'ab'.repeat(32), index: st.utxo }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: '00', amount: String(st.zp) } }]),
   ...(st.tokens ? [{ outpoint: { txHash: 'ac'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: TOKEN, amount: '250' } }] : []),
-  ...(st.zusdc ? [{ outpoint: { txHash: 'ad'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: ZUSDC, amount: '2000000' } }] : [])];
+  ...(st.zusdc ? [{ outpoint: { txHash: 'ad'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: ZUSDC, amount: '2000000' } }] : []),
+  ...(st.bets ? [{ outpoint: { txHash: 'af'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: BT('3', '1'), amount: '5000000' } }] : [])];
 const ZUSDC = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';   // the testnet's V1 zUSDC (6 decimals)
+// Up / Down bets (bets=1): the bet contract, two open markets with Dex offers of their tokens, and a settled market
+// whose Up tokens this wallet holds (5 tokens, won); /oracle/auditpath gives the close proof
+const BETC = '00000001' + 'c1'.repeat(32), BETC_ADDR = encodeAddress(unhex(BETC), NET, true), ORACLE_C = '00000001' + 'ca'.repeat(32);
+const BT = (n, side) => BETC + (n + side).padStart(64, '0');
+const T0 = Math.floor(Date.now() / 3600e3) * 3600e3, CLOSE_SETTLED = T0 - 7200e3;
+const betEvent = (ticker, price, close) => ({ OraclePubKey: '02' + '0a'.repeat(32), OracleContractId: ORACLE_C, Ticker: ticker, Price: price, Start: close, Expiry: close, Collateral: ZUSDC });
+const BETS = () => [
+  { event: betEvent('BTC', 105000000, T0 + 3 * 3600e3), bull: BT('1', '1'), bear: BT('1', '2'), status: 'open', result: null, contract: BETC },
+  { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null, contract: BETC },
+  { event: betEvent('BTC', 100000000, CLOSE_SETTLED), bull: BT('3', '1'), bear: BT('3', '2'), status: 'settled', result: 'bull', settlePrice: 101234.5, contract: BETC }];
 const offers = () => [
   { id: 'o-mine1', zp: 3, amount: '300000000', sats: 60000, confs: 2, state: 'open', until: null, buyer: null, seller: hex(key0.publicKey), scripts: 2, scriptList: ['0014' + '11'.repeat(20), '0014' + '22'.repeat(20)], used: 0, canReserve: true, payment: null },
   { id: 'o-mine2', zp: 1, amount: '100000000', sats: 20000, confs: 2, state: 'reserved', until: st.tip + 50, buyer: 'cd'.repeat(32), seller: hex(key0.publicKey), scripts: 2, used: 1, canReserve: false, payment: null },
@@ -47,7 +58,7 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; st.hist = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'hist') st.hist = v === '1'; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; st.hist = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bets') st.bets = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'hist') st.hist = v === '1'; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
         case '/explorer/api/dex/orders':
         case '/explorer/api/dex/book':
@@ -58,6 +69,9 @@ http.createServer((req, res) => {
             { tx: 'a1'.repeat(32), block: 2091, under_asset: '00', under_amount: '10000000000', pair_asset: ZU, pair_total: '10100000', maker: MM_PUB },
             ...(st.book ? [{ tx: 'a2'.repeat(32), block: 2092, under_asset: '00', under_amount: '10000000000', pair_asset: ZU, pair_total: '10150000', maker: MM_PUB },
               { tx: 'b2'.repeat(32), block: 2092, under_asset: ZU, under_amount: '9850000', pair_asset: '00', pair_total: '10000000000', maker: MM_PUB }] : []),
+            ...(st.bets ? [{ tx: 'e1'.repeat(32), block: 2093, under_asset: BT('1', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '6000000', maker: MM_PUB },
+              { tx: 'e2'.repeat(32), block: 2093, under_asset: BT('1', '2'), under_amount: '10000000', pair_asset: ZU, pair_total: '4200000', maker: MM_PUB },
+              { tx: 'e3'.repeat(32), block: 2093, under_asset: BT('2', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '3500000', maker: MM_PUB }] : []),
             ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])]
             .filter(o => !(st.dexGone || []).includes(o.tx)).map(o => ({ ...o, confirmations: st.tip - o.block + 1, pending: false }));
           if (u.pathname.endsWith('/orders')) return send(res, 200, { tip: st.tip, dex: DEX, orders: all.filter(o => o.tx !== st.goneLive) });
@@ -69,9 +83,14 @@ http.createServer((req, res) => {
           const rows = [...all, pend].map(row);
           return send(res, 200, { tip: st.tip, indexedTo: st.tip - 10, base: '00', quote: ZU, asks: rows.filter(r => r.order.under_asset === '00').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.order.under_asset !== '00').sort((a, b) => b.price - a.price), last: { side: 'buy', price: 0.101, size: '1000000000' } });
         }
+        case '/explorer/api/bets/markets': return st.bets ? send(res, 200, { tip: st.tip, markets: BETS() }) : send(res, 404, { error: 'unknown path' });
+        case '/oracle/auditpath': return st.bets && u.searchParams.get('ticker') === 'BTC' && +u.searchParams.get('timestamp') === CLOSE_SETTLED
+          ? send(res, 200, { ticker: 'BTC', value: 101234.5, valueScaled: 101234500, timestamp: CLOSE_SETTLED, root: '5e'.repeat(32), index: 0, auditPath: ['a0'.repeat(32), 'b0'.repeat(32)], tx: 'c0'.repeat(32) })
+          : send(res, 404, { error: 'no such round' });
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
         case '/__published': return send(res, 200, st.published);
         case '/__lastdex': return send(res, 200, st.lastDex || null);
+        case '/__lastbet': return send(res, 200, st.lastBet || null);
         case '/blockchain/info': return send(res, 200, { chain: NET === 'main' ? 'main' : 'testnet', blocks: st.tip, headers: st.tip, difficulty: 0.1, medianTime: Date.now() });
         case '/blockchain/cgp': return send(res, 200, { interval: Math.floor(st.tip / (NET === 'main' ? 10000 : 100)) + 1, allocation: st.alloc, payout: null });
         case '/blockchain/candidates': return send(res, 200, st.cands ? [
@@ -154,10 +173,11 @@ http.createServer((req, res) => {
         case '/blockchain/contract/execute': {
           const r = new Reader(unhex(body.tx)), n = VarInt.read(r), inputs = [];
           let inSum = 0n;
-          for (let i = 0; i < n; i++) { if (r.u8() !== 1) throw new Error('pointed output expected'); inputs.push({ type: 'outpoint', outpoint: Outpoint.read(r) }); inSum += Output.read(r).spend.amount; }
+          const inOuts = [];
+          for (let i = 0; i < n; i++) { if (r.u8() !== 1) throw new Error('pointed output expected'); inputs.push({ type: 'outpoint', outpoint: Outpoint.read(r) }); const io = Output.read(r); inOuts.push(io); inSum += io.spend.amount; }
           const m = VarInt.read(r), outputs = []; for (let i = 0; i < m; i++) outputs.push(Output.read(r));
           const msg = Data.read(new Reader(unhex(body.messageBody)));
-          const swap = body.address === SWAP_ADDR, dex = body.address === DEX_ADDR, zen = { contract: { version: 0, hash: new Uint8Array(32) }, subtype: new Uint8Array(32) };
+          const swap = body.address === SWAP_ADDR, dex = body.address === DEX_ADDR, bet = body.address === BETC_ADDR, zen = { contract: { version: 0, hash: new Uint8Array(32) }, subtype: new Uint8Array(32) };
           const add = { inputs: [], outputs: [] };
           if (swap) {
             if (!/^0[23][0-9a-f]{64}$/.test(body.options?.sender || '')) return send(res, 400, 'offer needs id, sats, s0, returnAddress, and a signed call', 'text/plain');
@@ -171,7 +191,7 @@ http.createServer((req, res) => {
           }
           if (dex) {   // as contracts/v1/Dex.fst: Take (anonymous), Make and Cancel (signed by the maker)
             const f = Object.fromEntries(msg.v), dexLock = { type: 'Contract', contractId: { version: 1, hash: unhex(DEX.slice(8)) } };
-            const aid = id => id === '00' ? zen : { contract: { version: parseInt(id.slice(0, 8), 16), hash: unhex(id.slice(8, 72)) }, subtype: new Uint8Array(32) };
+            const aid = id => id === '00' ? zen : { contract: { version: parseInt(id.slice(0, 8), 16), hash: unhex(id.slice(8, 72)) }, subtype: id.length === 136 ? unhex(id.slice(72)) : new Uint8Array(32) };
             const order = { contract: { version: 1, hash: unhex(DEX.slice(8)) }, subtype: unhex('0e'.repeat(32)) }, makerHash = sha3_256(f.MakerPubKey.v);
             const signed = /^0[23][0-9a-f]{64}$/.test(body.options?.sender || '');
             if (body.command === 'Take') {
@@ -189,7 +209,18 @@ http.createServer((req, res) => {
               st.lastDex = { command: body.command, signed };
             }
           }
-          const tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract', contractId: dex ? { version: 1, hash: unhex(DEX.slice(8)) } : swap ? { version: 1, hash: unhex(SWAP.slice(8)) } : { version: 0, hash: unhex(VOTING.slice(8)) }, command: body.command,
+          if (bet && body.command === 'Redeem') {   // as FixedPayout: the winning tokens (sent to the contract) pay 1 zUSDC unit each to the signer
+            const f = Object.fromEntries(msg.v);
+            if (!/^0[23][0-9a-f]{64}$/.test(body.options?.sender || '')) return send(res, 400, 'Redeem needs a signed sender', 'text/plain');
+            if (f.Position.v !== 'Bull' || f.Value.v !== 101234500n || f.AuditPath.v.length !== 2) return send(res, 400, 'Invalid proof', 'text/plain');
+            const isTok = a => hex(a.contract.hash) === BETC.slice(8);   // the bet contract's own tokens: what was sent minus change
+            const n = inOuts.filter(o => isTok(o.spend.asset)).reduce((a, o) => a + o.spend.amount, 0n) - outputs.filter(o => isTok(o.spend.asset)).reduce((a, o) => a + o.spend.amount, 0n);
+            add.outputs.push({ lock: { type: 'Destroy' }, spend: { asset: inOuts.find(o => isTok(o.spend.asset)).spend.asset, amount: n } });
+            add.inputs.push({ type: 'outpoint', outpoint: { txHash: unhex('c1'.repeat(32)), index: 0 } });
+            add.outputs.push({ lock: { type: 'PK', hash: sha3_256(unhex(body.options.sender)) }, spend: { asset: { contract: { version: 1, hash: unhex(ZUSDC.slice(8)) }, subtype: new Uint8Array(32) }, amount: n } });
+            st.lastBet = { command: 'Redeem', tokens: String(n) };
+          }
+          const tx = { version: 0, inputs: [...inputs, ...add.inputs], outputs: [...outputs, ...add.outputs], contract: null, witnesses: [{ type: 'Contract', contractId: bet ? { version: 1, hash: unhex(BETC.slice(8)) } : dex ? { version: 1, hash: unhex(DEX.slice(8)) } : swap ? { version: 1, hash: unhex(SWAP.slice(8)) } : { version: 0, hash: unhex(VOTING.slice(8)) }, command: body.command,
             messageBody: msg, stateCommitment: { type: 'NotCommitted' }, beginInputs: inputs.length, beginOutputs: outputs.length, inputsLength: add.inputs.length, outputsLength: add.outputs.length, signature: null, cost: 5n }] };
           return send(res, 200, hex(serializeTx(tx)), 'text/plain');
         }

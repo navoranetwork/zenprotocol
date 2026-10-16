@@ -11,6 +11,16 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.32.0 — 2026-10-16
+
+### Added
+- Up or down? bets in the Oracle tab, ready for the bet contract (FixedPayout on ZP contracts V1). Each market asks
+  whether a price will be at or above a strike at a close time; Up and Down show the Dex price of a token, and a bet
+  buys Up or Down tokens on the Dex (each pays 1 zUSDC if right). Your bets lists them; a winning side is collected
+  with the oracle's proof of the close price (a signed Redeem, checked before signing). Until the contract is active
+  on the network, the tab shows a short note instead. The Redeem encoding is checked against the oracle/Dex session's
+  testnet vectors when they come.
+
 ## 0.31.3 — 2026-10-16
 
 ### Fixed

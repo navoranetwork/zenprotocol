@@ -7,6 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall, prepareCombine } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel, bookRow, bookFromOrders, levels, parsePrice, limitOrder } from '../src/dex.js';
+import { marketOf, sideAsset, bestOffer, offerPrice, betQuote, redeemBody, expectRedeem, winner } from '../src/bets.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
@@ -23,7 +24,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const shortAddr = a => a ? a.slice(0, 10) + '…' + a.slice(-6) : '';
 const BUILTIN_NAMES = typeof __ASSET_NAMES__ === 'object' && __ASSET_NAMES__ ? __ASSET_NAMES__ : {};
 // a token's amount as its users read it: zUSDC has 6 decimals (as USDC), other tokens are shown in units of 1e-8 like ZP
-const decimalsOf = asset => asset !== '00' && /^zUSDC\b/.test(S.assetNames[asset] || '') ? 6 : 8;
+// zUSDC has 6 decimals; an Up or Down token counts units of its market's collateral, so it has the collateral's
+const decimalsOf = asset => S.betDec?.[asset] ?? (asset !== '00' && /^zUSDC\b/.test(S.assetNames[asset] || '') ? 6 : 8);
 const unitOf = asset => asset === '00' ? 'ZP' : (S.assetNames[asset] || 'Token ' + String(asset).slice(8, 16) + '…');
 function fmtUnits(units, dec) {
   const v = BigInt(units), neg = v < 0n, a = neg ? -v : v, d = 10n ** BigInt(dec), whole = (a / d).toLocaleString('en-US');
@@ -119,6 +121,68 @@ function tradesCard(m) {
   return `<div class="card"><h2>Trades</h2><div class="tradehead"><span>Price (zUSDC)</span><span>Amount (ZP)</span><span>Time</span></div><div class="trades">${ts.map(t => `<div class="trade"><span class="${t.side === 'buy' ? 'bid' : 'ask'}">${Number(t.price).toFixed(4)}</span><span>${zpShort(t.size)}</span><span class="muted">${esc(when(t))}</span></div>`).join('')}</div>
     <p class="muted small booknote">Green: someone bought ZP. Red: someone sold.</p></div>`;
 }
+// ---------------------------------------------------------------- Up / Down bets (src/bets.js)
+// A bet buys Up or Down tokens of one market on the Dex (a Take); each pays 1 zUSDC if right, nothing if not.
+const closeText = ms => { const d = new Date(ms), today = new Date().toDateString() === d.toDateString(), t = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const left = ms - Date.now(), h = Math.floor(left / 3600e3), mi = Math.round((left % 3600e3) / 60e3);
+  return (today ? t + ' today' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' + t) + (left > 0 ? ` (in ${h ? h + ' h ' : ''}${mi} min)` : ''); };
+const strikeText = b => b.strike.toLocaleString('en-US', { maximumFractionDigits: 3 });
+const betOrders = () => (S.markets?.orders || []).map(r => { try { return { ...orderOf(r), pending: !!r.pending, busy: dexPending.has(r.tx) }; } catch { return null; } }).filter(Boolean);
+const betHeld = b => { const as = S.data.get(active().id)?.state?.assets || []; const h = a => { const x = as.find(y => y.asset === a); return x ? x.spendable + x.maturing : 0n; }; return { up: h(b.bull), down: h(b.bear) }; };
+function betsCard(m, cat) {
+  if (!m) return '';
+  if (!m.bets) return `<div class="card"><h2>Up or down?</h2><p class="muted small">Bets on these prices open when the bet contract is active on this network. You will pick a market, say Up or Down, and get 1 zUSDC for each token if you are right.</p></div>`;
+  const orders = betOrders(), spendable = canSpend(S.open.get(active().id));
+  const open = m.bets.filter(b => tickerCat(b.ticker) === cat && b.status === 'open' && b.close > Date.now()).sort((x, y) => x.close - y.close || x.ticker.localeCompare(y.ticker) || x.strike - y.strike);
+  const btn = (b, side) => { const o = bestOffer(orders, sideAsset(b, side), b.collateral), p = offerPrice(o);
+    return o && spendable ? `<button type="button" class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn" data-act="bet" data-id="${esc(b.bull)}" data-side="${side}">${side === 'up' ? '▲ Up' : '▼ Down'} <b>${p.toFixed(2)}</b></button>`
+      : `<span class="chip ${side === 'up' ? 'buy' : 'sell'} betbtn off" aria-disabled="true">${side === 'up' ? '▲ Up' : '▼ Down'} <span class="muted">${o ? p.toFixed(2) : '–'}</span></span>`; };
+  const rows = open.map(b => `<div class="bet"><div class="between"><div><b>${esc(b.ticker)}</b> at or above <b>${esc(strikeText(b))}</b></div><div class="muted small">closes ${esc(closeText(b.close))}</div></div><div class="betrow">${btn(b, 'up')}${btn(b, 'down')}</div></div>`).join('');
+  return `<div class="card"><h2>Up or down?</h2><div class="list">${rows || '<p class="muted small">No open bets in this group now.</p>'}</div>
+    <p class="muted small" data-s="mt10">The number is the price of one token in zUSDC. A token pays 1 zUSDC if you are right at the close, nothing if not.</p></div>${yourBets(m)}`;
+}
+function yourBets(m) {
+  const rows = m.bets.map(b => [b, betHeld(b)]).filter(([, h]) => h.up > 0n || h.down > 0n).map(([b, h]) => {
+    const unit = b.collateral, line = side => {
+      const n = h[side]; if (!n) return '';
+      const won = b.status === 'settled' && b.result ? (b.result === 'bull') === (side === 'up') : null, key = b.bull + side, sent = S.redeemed?.[key] && Date.now() - S.redeemed[key] < 10 * 60e3;
+      const right = won === true ? (sent ? '<span class="muted small"><span class="spin"></span> Collecting…</span>' : canSpend(S.open.get(active().id)) && b.contract ? `<button class="btn primary mini" data-act="bet-redeem" data-id="${esc(b.bull)}" data-side="${side}">Collect ${esc(withUnit(unit, n))}</button>` : `<span class="small">Won ${esc(withUnit(unit, n))}</span>`)
+        : won === false ? '<span class="muted small">Lost</span>' : `<span class="muted small">${b.status === 'open' ? 'If right: ' : 'Waiting for the result · '}${esc(withUnit(unit, n))}</span>`;
+      return `<div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${esc(tokenAmount(unit, n))} tokens · ${b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : 'closes ' + esc(closeText(b.close))}</div></div><div>${right}</div></div>`;
+    };
+    return line('up') + line('down');
+  }).join('');
+  return rows ? `<div class="card"><h2>Your bets</h2><div class="list">${rows}</div>${S.modal ? '' : errBox()}</div>` : '';
+}
+function betModal(md) {
+  const b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral);
+  if (!b || !o) return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Bet</h2><p class="muted">This offer is gone. Try again from the list.</p><button class="btn primary big" data-act="close">OK</button></div></div>`;
+  const have = S.data.get(active().id)?.state?.assets.find(x => x.asset === b.collateral)?.spendable || 0n, v = S.draft.bstake ?? '';
+  let q = null; try { q = betQuote(o, parseUnits(v, decimalsOf(b.collateral))); } catch { /* not yet */ }
+  const up = md.side === 'up', cond = `${b.ticker} is ${up ? 'at or above' : 'below'} ${strikeText(b)} at ${closeText(b.close)}`;
+  return `<div class="modal" role="dialog" aria-modal="true"><form class="sheet" data-form="bet"><h2>${up ? '▲ Up' : '▼ Down'}: ${esc(b.ticker)} ${up ? '≥' : '<'} ${esc(strikeText(b))}</h2>
+    <div class="card small">You win if <b>${esc(cond)}</b>. Price ${offerPrice(o).toFixed(4)} zUSDC per token; each pays 1 zUSDC if you are right.</div>
+    <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(b.collateral, 18)}Your stake (${esc(unitOf(b.collateral))})</span><span data-s="right">You have ${esc(tokenAmount(b.collateral, have))}</span></span>
+      <input name="stake" inputmode="decimal" autocomplete="off" value="${esc(v)}" placeholder="up to ${esc(tokenAmount(b.collateral, o.pairTotal < have ? o.pairTotal : have))}"></label>
+    <div class="kv"><span class="muted">If right you get</span><span class="amt ok" id="bet-win">${q ? esc(withUnit(b.collateral, q.payout)) + ' (+' + esc(tokenAmount(b.collateral, q.profit)) + ')' : '–'}</span></div>
+    <div class="kv"><span class="muted">If not</span><span class="amt">0</span></div>
+    <p class="muted small">At most ${esc(withUnit(b.collateral, o.pairTotal))} at this price. You can sell the tokens before the close on the Dex.</p>
+    ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review'}</button></div></form></div>`;
+}
+async function betRedeem(b, side) {
+  const a = active(), w = S.open.get(a.id); await refreshWallet(a.id);
+  const d = S.data.get(a.id); if (!d?.state) throw new Error('Could not read the balance from the node');
+  const asset = sideAsset(b, side), n = betHeld(b)[side]; if (!n) throw new Error('No tokens of this side in this wallet');
+  const r = await fetch(`${siteBase()}/oracle/auditpath?ticker=${encodeURIComponent(b.ticker)}&timestamp=${b.close}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('The oracle has no price for this close yet: try again later');
+  const proof = await r.json();
+  if (winner(b.event, proof.valueScaled) !== side) throw new Error('The oracle price says this side did not win');
+  // signed: the contract pays the winnings to the signer's key (as Issue locks the tokens to it)
+  const signer = signerOf(w), myHash = pkHashOf(hex(signer.publicKey));
+  const prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: b.contract, command: 'Redeem', body: redeemBody(b.event, side, proof), spends: [{ asset, amount: n }], signer, expect: expectRedeem(b.collateral, n, myHash) });
+  S.modal = { type: 'dex-confirm', kind: 'redeem', key: b.bull + side, prepared, lines: [['Winning tokens', tokenAmount(b.collateral, n)], ['You get', withUnit(b.collateral, n)], ['Close price', Number(proof.value).toLocaleString('en-US', { maximumFractionDigits: 3 })]] }; S.error = ''; render();
+}
+
 function dexView(m, base, loading) {
   if (!m?.dex) return `<div class="card"><p class="muted small">${loading ? 'Loading…' : 'This site has no Dex.'}</p></div>`;
   const me = myPub(), spendable = canSpend(S.open.get(active().id));
@@ -153,13 +217,13 @@ async function dexPrepare(kind, o, extra = {}) {
   const d = S.data.get(a.id); if (!d?.state) throw new Error('Could not read the balance from the node');
   const signer = signerOf(w), me = hex(signer.publicKey), dex = S.markets.dex, myHash = hex(decodeAddress(receiveAddress(w)).hash);
   let prepared, lines;
-  if (kind === 'take') {
+  if (kind === 'take' || kind === 'bet') {
     // the book's newest rows are hints: the order must still be open on the chain before anything is signed
     const live = await fetch(siteBase() + '/explorer/api/dex/orders', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
     if (live && Array.isArray(live.orders) && !live.orders.some(r => r.tx === o.tx && !r.pending)) { loadMarkets(); throw new Error('Someone took it first: this order is no longer open. The book is refreshed: tap the next price'); }
     const { body, payout } = takeBody(o, extra.provided, decodeAddress(receiveAddress(w)).hash);
     prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Take', body, spends: [{ asset: o.pairAsset, amount: extra.provided }], expect: expectTake(o, extra.provided, payout, myHash) });
-    lines = [['You give', withUnit(o.pairAsset, extra.provided)], ['You get', withUnit(o.underAsset, payout)], ...(extra.provided < o.pairTotal ? [['Left in the order', withUnit(o.underAsset, o.underAmount - payout) + ' for ' + withUnit(o.pairAsset, o.pairTotal - extra.provided)]] : [])];
+    lines = extra.lines ? extra.lines(payout) : [['You give', withUnit(o.pairAsset, extra.provided)], ['You get', withUnit(o.underAsset, payout)], ...(extra.provided < o.pairTotal ? [['Left in the order', withUnit(o.underAsset, o.underAmount - payout) + ' for ' + withUnit(o.pairAsset, o.pairTotal - extra.provided)]] : [])];
   } else if (kind === 'make') {
     prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Make', body: makeBody({ ...o, maker: me }), spends: [{ asset: o.underAsset, amount: o.underAmount }], signer, expect: expectMake(o) });
     lines = [['You give', withUnit(o.underAsset, o.underAmount)], ['You want', withUnit(o.pairAsset, o.pairTotal)]];
@@ -260,7 +324,10 @@ async function loadMarkets() {
     if (!Array.isArray(round.tickers) || !Array.isArray(round.values)) throw new Error('unexpected oracle answer');
     const dj = await get('/explorer/api/dex/orders').catch(() => null), orders = Array.isArray(dj?.orders) ? dj.orders : [];
     const q = quoteId(), [book, tj] = q ? await Promise.all([get(`/explorer/api/dex/book?base=00&quote=${q}&qdec=6&pending=1`).catch(() => null), get(`/explorer/api/dex/trades?base=00&quote=${q}&limit=20`).catch(() => null)]) : [null, null];
-    S.markets = { round, evidence, orders, dex: typeof dj?.dex === 'string' && /^[0-9a-f]{72}$/.test(dj.dex) ? dj.dex : null, day: new Date(round.timestamp).toISOString().slice(0, 10),
+    const bj = await get('/explorer/api/bets/markets').catch(() => null), braw = Array.isArray(bj) ? bj : Array.isArray(bj?.markets) ? bj.markets : null;
+    const bets = braw && braw.map(r => { try { return marketOf(r); } catch { return null; } }).filter(Boolean);
+    nameBets(bets);
+    S.markets = { bets, round, evidence, orders, dex: typeof dj?.dex === 'string' && /^[0-9a-f]{72}$/.test(dj.dex) ? dj.dex : null, day: new Date(round.timestamp).toISOString().slice(0, 10),
       book: book && Array.isArray(book.asks) ? book : null, trades: Array.isArray(tj?.trades) ? tj.trades : Array.isArray(tj) ? tj : [] };
   } catch (e) { S.markets = null; S.marketsError = 'Could not read the oracle: ' + e.message; }
   await loadSwap();
@@ -989,7 +1056,7 @@ const views = {
         const tip = names.map(n => n + ' = ' + e.sources[n]).join('\n') + (dropped.length ? '\ndropped: ' + dropped.join(', ') : '');
         return `<div class="item" title="${esc(tip)}"><div><div><b>${esc(t)}</b>${TICKER_NAMES[t] ? ` <span class="muted small">${esc(TICKER_NAMES[t])}</span>` : ''}</div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
       }).join('');
-      body = `${errCard}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2>${chips}<div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices in this group yet.</p>'}</div>
+      body = `${errCard}${loading ? '' : betsCard(m, cat)}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2>${chips}<div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices in this group yet.</p>'}</div>
         <p class="muted small" data-s="mt10">${cat === 'forex' ? 'US dollars for one unit of each currency.' : cat === 'stocks' || cat === 'commodities' ? 'End-of-day closes.' : 'Live prices.'} Several sources must agree.</p></div>`;
     } else if (tab === 'dex') {
       body = errCard + dexView(m, base, loading);
@@ -1357,6 +1424,7 @@ function modalHtml() {
     ${realBanner('buy')}
     ${errBox()}<div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="buy-reserve" data-id="${esc(o.id)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : oneClick ? 'Reserve and pay' : 'Reserve'}</button></div></div></div>`;
   }
+  if (m.type === 'bet') return betModal(m);
   if (m.type === 'dex-take') {
     const o = m.o, have = S.data.get(active().id)?.state?.assets.find(x => x.asset === o.pairAsset)?.spendable || 0n, v = S.draft.dtake ?? '';
     let get = ''; try { const p = o.pairAsset === '00' ? parseZP(v) : parseUnits(v, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal) get = withUnit(o.underAsset, payoutFor(o, p)); } catch { /* not yet */ }
@@ -1367,13 +1435,13 @@ function modalHtml() {
     <div class="kv"><span class="muted">You get</span><span class="amt" id="dex-get">${get ? esc(get) : '–'}</span></div>
     ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review'}</button></div></form></div>`;
   }
-  if (m.type === 'dex-confirm') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>${m.kind === 'take' ? 'Confirm take' : m.kind === 'make' ? 'Confirm order' : 'Cancel order'}</h2>
+  if (m.type === 'dex-confirm') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>${m.kind === 'bet' ? 'Confirm bet' : m.kind === 'redeem' ? 'Collect winnings' : m.kind === 'take' ? 'Confirm take' : m.kind === 'make' ? 'Confirm order' : 'Cancel order'}</h2>
     <div class="card">${m.lines.map(([k, v]) => `<div class="kv"><span class="muted">${esc(k)}</span><span class="amt">${esc(v)}</span></div>`).join('')}<div class="kv"><span class="muted">Fee</span><span>1 kalapa</span></div></div>
     ${(m.warn || []).map(x => `<div class="warn small">${esc(x)}</div>`).join('')}
-    <p class="muted small">Checked before signing: the Dex pays exactly this, and nothing goes to anyone else.</p>${errBox()}
+    <p class="muted small">Checked before signing: ${m.kind === 'redeem' ? 'the bet contract' : 'the Dex'} pays exactly this, and nothing goes to anyone else.</p>${errBox()}
     <div class="row"><button class="btn" data-act="close">Back</button><button class="btn primary" data-act="dex-send" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Sign and send'}</button></div></div></div>`;
   if (m.type === 'dex-sent') return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2 class="ok">${m.kind === 'cancel' ? 'Cancelled' : 'Sent'}</h2>
-    <p>${m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the book now, marked as waiting for its block (about 4 minutes); then anyone can take it.' : `Order cancelled: it is off the book now. ${esc(m.back || 'Your coins')} come${m.back ? 's' : ''} back to your balance with the next block, about 4 minutes.`}</p>
+    <p>${m.kind === 'bet' ? 'Your bet is on its way. The tokens arrive in the next block, about 4 minutes; they show under Your bets.' : m.kind === 'redeem' ? 'Your winnings are on their way: the zUSDC arrives in the next block, about 4 minutes.' : m.kind === 'take' ? 'Your take is on its way. The coins arrive in the next block, about 4 minutes.' : m.kind === 'make' ? 'Your order is on its way. It shows in the book now, marked as waiting for its block (about 4 minutes); then anyone can take it.' : `Order cancelled: it is off the book now. ${esc(m.back || 'Your coins')} come${m.back ? 's' : ''} back to your balance with the next block, about 4 minutes.`}</p>
     <div class="card small"><div class="between"><span class="muted">Transaction</span><button type="button" class="chip mini" data-act="copy" data-text="${esc(m.hash)}">Copy</button></div><div class="mono" data-s="wrap">${esc(m.hash)}</div></div>
     <button class="btn primary big" data-act="close">Done</button></div></div>`;
   if (m.type === 'token') {
@@ -1460,6 +1528,8 @@ async function loadCgpFund(n) {
     render();
   } catch { /* the node has no address index: the fund stays "not available" */ }
 }
+// Up and Down tokens are named after their market ("BTC 105,000 Up") and counted in the collateral's decimals
+function nameBets(bets) { for (const b of bets || []) { const n = `${b.ticker} ${b.strike.toLocaleString('en-US')}`; S.assetNames[b.bull] ??= n + ' Up'; S.assetNames[b.bear] ??= n + ' Down'; S.betDec = { ...(S.betDec || {}), [b.bull]: decimalsOf(b.collateral), [b.bear]: decimalsOf(b.collateral) }; } }
 async function refreshExtras() {
   const n = node(); if (!n) return;
   // the community site publishes stats.json next to /node/ (CGP fund balance, named contracts)
@@ -1472,6 +1542,8 @@ async function refreshExtras() {
       // the site's USDC bridge (testnet): its ZP address is named, and zUSDC sent there is a withdrawal
       try { const rb = await fetch(u.origin + '/bridge/status', { cache: 'no-cache' }); const j = rb.ok ? await rb.json() : null;
         S.bridge = j && typeof j.bridgeZp === 'string' && /^[0-9a-f]{72}$/.test(j.asset || '') ? { zp: j.bridgeZp, asset: j.asset, conf: Number(j.zpConfirmations) || 2, auto: j.autoWithdraw !== false } : null; } catch { S.bridge = null; }
+      try { const rm = await fetch(u.origin + '/explorer/api/bets/markets', { cache: 'no-cache' }); const j = rm.ok ? await rm.json() : null, rows = Array.isArray(j) ? j : j?.markets;
+        if (Array.isArray(rows)) nameBets(rows.map(r => { try { return marketOf(r); } catch { return null; } }).filter(Boolean)); } catch { /* no bets on this site */ }
       const ra = await fetch(u.origin + '/assets.json', { cache: 'no-cache' });
       if (ra.ok) {
         const j = await ra.json(), names = {};
@@ -1859,12 +1931,15 @@ $app.addEventListener('click', async e => {
     if (act === 'dex-all') { const o = S.modal?.o, i = $app.querySelector('[data-form=dex-take] [name=give]'); if (o && i) { i.value = tokenAmount(o.pairAsset, o.pairTotal).replace(/,/g, ''); i.dispatchEvent(new Event('input', { bubbles: true })); } return; }
     if (act === 'dex-cancel') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (!o) return; S.busy = true; render(); try { await dexPrepare('cancel', o); } finally { S.busy = false; render(); } return; }
     if (act === 'dex-pick') { const f = $app.querySelector('[data-form=dex-make]'); S.draft = { ...S.draft, [t.dataset.name]: t.dataset.asset, dgamt: f?.give.value || '', dwamt: f?.want.value || '' }; S.error = ''; return render(); }
+    if (act === 'bet') { S.draft.bstake = ''; S.modal = { type: 'bet', id: t.dataset.id, side: t.dataset.side }; S.error = ''; return render(); }
+    if (act === 'bet-redeem') { const b = (S.markets?.bets || []).find(x => x.bull === t.dataset.id); if (!b) return; S.busy = true; render(); try { await betRedeem(b, t.dataset.side); } finally { S.busy = false; } return render(); }
     if (act === 'dex-send') {
       S.busy = true; render();
       const m = S.modal, hash = await publish(node(), m.prepared);
-      if (m.kind !== 'make') { dexPending.set(m.o.tx, m.kind === 'take' ? 'taking' : 'cancelling'); if (m.kind === 'cancel') dropDexMade([m.o.tx]); }
+      if (m.kind === 'redeem') { S.redeemed = { ...(S.redeemed || {}), [m.key]: Date.now() }; }
+      else if (m.kind !== 'make') { dexPending.set(m.o.tx, m.kind === 'cancel' ? 'cancelling' : 'taking'); if (m.kind === 'cancel') dropDexMade([m.o.tx]); }
       else addDexMade({ tx: hash, net: net(), at: Date.now(), under_asset: m.o.underAsset, under_amount: String(m.o.underAmount), pair_asset: m.o.pairAsset, pair_total: String(m.o.pairTotal), maker: myPub() });
-      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash, back: m.kind === 'cancel' ? withUnit(m.o.underAsset, m.o.underAmount) : null }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
+      S.busy = false; S.modal = { type: 'dex-sent', kind: m.kind, hash, back: m.kind === 'cancel' && m.o ? withUnit(m.o.underAsset, m.o.underAmount) : null }; S.draft = { ...S.draft, dgamt: '', dwamt: '', dtake: '', dprice: '', damt: '' }; freshScreen = true;
       render(); setTimeout(() => { refreshAll(); loadMarkets(); }, 1500); return;
     }
     if (act === 'token') { S.modal = { type: 'token', asset: t.dataset.asset }; return render(); }
@@ -1901,6 +1976,11 @@ $app.addEventListener('click', async e => {
 $app.addEventListener('toggle', e => { const d = e.target; if (d?.dataset?.keep) (S.keep ||= {})[d.dataset.keep] = d.open; }, true);
 $app.addEventListener('input', e => {
   const t = e.target; S.lastActivity = Date.now();
+  if (t.name === 'stake' && t.closest('[data-form=bet]') && S.modal?.type === 'bet') {   // the winnings as you type
+    const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral), el = $app.querySelector('#bet-win'); S.draft.bstake = t.value;
+    let txt = '–'; try { const q = betQuote(o, parseUnits(t.value, decimalsOf(b.collateral))); txt = withUnit(b.collateral, q.payout) + ' (+' + tokenAmount(b.collateral, q.profit) + ')'; } catch (e) { if (/More than/.test(e.message)) txt = 'more than this offer'; }
+    if (el) el.textContent = txt; return;
+  }
   if (t.name === 'give' && t.closest('[data-form=dex-take]') && S.modal?.o) {   // the payout as you type
     const o = S.modal.o, el = $app.querySelector('#dex-get'); S.draft.dtake = t.value;
     let txt = '–'; try { const p = o.pairAsset === '00' ? parseZP(t.value.trim().replace(/,/g, '')) : parseUnits(t.value, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal && payoutFor(o, p) > 0n) txt = withUnit(o.underAsset, payoutFor(o, p)); else if (p > o.pairTotal) txt = 'more than the order'; } catch { /* not yet */ }
@@ -1947,6 +2027,18 @@ $app.addEventListener('submit', async e => {
         S.vault.wallets.push(rec); storage.save(S.vault); S.open.set(rec.id, opened);
         S.settings.active = rec.id; saveSettings(); S.draft = {};
         go('home'); return refreshAll(true);
+      }
+      case 'bet': {
+        const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral);
+        if (!o) throw new Error('This offer is gone: close and pick again');
+        const raw = String(v.stake || '').trim(); S.draft.bstake = raw;
+        const q = betQuote(o, parseUnits(raw, decimalsOf(b.collateral)));
+        const have = S.data.get(active().id)?.state?.assets.find(x => x.asset === b.collateral)?.spendable || 0n;
+        if (q.stake > have) throw new Error(`You have ${withUnit(b.collateral, have)}`);
+        const up = md.side === 'up';
+        S.busy = true; render();
+        try { await dexPrepare('bet', o, { provided: q.stake, lines: payout => [['Bet', `${up ? '▲ Up' : '▼ Down'}: ${b.ticker} ${up ? '≥' : '<'} ${strikeText(b)}`], ['Closes', closeText(b.close)], ['Your stake', withUnit(b.collateral, q.stake)], ['If right you get', withUnit(b.collateral, payout)]] }); }
+        finally { S.busy = false; } return render();
       }
       case 'dex-take': {
         const o = S.modal.o, raw = String(v.give || '').trim(); S.draft.dtake = raw;
