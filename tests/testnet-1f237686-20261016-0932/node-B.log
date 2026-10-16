@@ -1,0 +1,163 @@
+[09:34:20 INF] Node running... press CTRL+C to exit
+[09:34:20 WRN] ZP_NODE_V1_ONLY: V0 tooling not checked; V0 contracts cannot be activated by this node
+[09:34:20 INF] V1 libsecp256k1 self-test passed: /opt/zp-src-testnet-v1/src/Node/bin/Debug/libsecp256k1.so (sha256 2889daf967e2d1297034c5fbe04ca80f6337f7da569049b633376139f271ac9b)
+[09:34:20 INF] DB is stored at: /opt/zp-src-testnet-v1/src/Node/bin/Debug/data/local/1/local
+[09:34:20 INF] Api running on http://127.0.0.1:20001
+[09:34:20 INF] No tip in db
+[09:34:20 INF] Listening on 127.0.0.1:10001
+[09:34:20 INF] External IP is 127.0.0.1
+[09:34:20 DBG] Connecting to 127.0.0.1:10000
+[09:34:20 INF] Connected to 127.0.0.1:10000
+[09:34:20 INF] Peer accepted
+[09:34:21 INF] Blockchain: Handling command RequestMemPool started
+[09:34:21 INF] Blockchain: Handling command RequestMemPool ended
+[09:34:21 INF] Blockchain: Handling command RequestTip started
+[09:34:21 INF] Blockchain: Handling command RequestTip ended
+[09:34:21 INF] Blockchain: Handling command ValidateMinedBlock started
+[09:34:21 INF] Validating new block #1 with 1 txs 6d678ab961c8b47046da8d19c0de5be07eb0fe1e1e82ad9a5b32145b5d4811c7
+[09:34:21 INF] BlockHandler: Genesis block received
+[09:34:21 INF] Tally adding block #1 of block 6d678ab961c8b47046da8d19c0de5be07eb0fe1e1e82ad9a5b32145b5d4811c7 for interval #1
+[09:34:21 INF] BlockHandler: Connecting to longest chain
+[09:34:21 INF] BlockHandler: New tip #1 6d678ab961c8b47046da8d19c0de5be07eb0fe1e1e82ad9a5b32145b5d4811c7
+[09:34:21 INF] Blockchain: Handling command ValidateMinedBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[09:34:21 INF] Handling new block header #315
+[09:34:21 INF] Request block #315 0000d67c97d26b2aa7bf60a26f9cebf3d233990fe6a745f44c07ce04b7ca4313 from peers
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[09:34:21 INF] Blockchain: Handling request GetBlockChainInfo started
+[09:34:21 INF] Blockchain: Handling request GetBlockChainInfo ended
+[09:34:21 INF] Blockchain: Handling command HandleMemPool started
+[09:34:21 INF] Blockchain: Handling command HandleMemPool ended
+[09:34:21 INF] Blockchain: Handling command HandleTip started
+[09:34:21 INF] Request block #315 0000d67c97d26b2aa7bf60a26f9cebf3d233990fe6a745f44c07ce04b7ca4313 from peers
+[09:34:21 INF] Blockchain: Handling command HandleTip ended
+[09:34:21 INF] Blockchain: Handling command RequestMemPool started
+[09:34:21 INF] Blockchain: Handling command RequestMemPool ended
+[09:34:21 INF] Blockchain: Handling command RequestTip started
+[09:34:21 INF] Blockchain: Handling command RequestTip ended
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[09:34:21 INF] Handling new block header #316
+[09:34:21 INF] Request block #316 0000c87ab6ed6dd534c91a7e1fc325111e169a1ee84af65c644873eca57acd61 from peers
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader started
+[09:34:21 INF] Handling new block header #316
+[09:34:21 INF] Request block #316 0000c87ab6ed6dd534c91a7e1fc325111e169a1ee84af65c644873eca57acd61 from peers
+[09:34:21 INF] Blockchain: Handling command ValidateNewBlockHeader ended
+[09:34:21 INF] Blockchain: Handling command HandleMemPool started
+[09:34:21 INF] Blockchain: Handling command HandleMemPool ended
+[09:34:21 INF] Blockchain: Handling command HandleTip started
+[09:34:21 INF] Request block #316 0000c87ab6ed6dd534c91a7e1fc325111e169a1ee84af65c644873eca57acd61 from peers
+[09:34:21 INF] Blockchain: Handling command HandleTip ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #315 with 1 txs 0000d67c97d26b2aa7bf60a26f9cebf3d233990fe6a745f44c07ce04b7ca4313
+[09:34:21 INF] Adding block as orphan #315 0000d67c97d26b2aa7bf60a26f9cebf3d233990fe6a745f44c07ce04b7ca4313
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #316 with 1 txs 0000c87ab6ed6dd534c91a7e1fc325111e169a1ee84af65c644873eca57acd61
+[09:34:21 INF] Adding block to orphan chain #316 0000c87ab6ed6dd534c91a7e1fc325111e169a1ee84af65c644873eca57acd61
+[09:34:21 INF] Request root of orphan chain from network block 314 0000164bf40b1a0c1ca2dc54f1cc392ac9932c7afee9aeb88f75bce2642e6e6b
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #314 with 1 txs 0000164bf40b1a0c1ca2dc54f1cc392ac9932c7afee9aeb88f75bce2642e6e6b
+[09:34:21 INF] Adding block as orphan #314 0000164bf40b1a0c1ca2dc54f1cc392ac9932c7afee9aeb88f75bce2642e6e6b
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #313 with 1 txs 0000d89f399a7dad2dc094dee4be20bb8056dda27f1df8477998e6303c1234b7
+[09:34:21 INF] Adding block as orphan #313 0000d89f399a7dad2dc094dee4be20bb8056dda27f1df8477998e6303c1234b7
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #312 with 1 txs 0000184300ec02f43fdda490b378671faf312c18994d85c49b84a12ce44ed68c
+[09:34:21 INF] Adding block as orphan #312 0000184300ec02f43fdda490b378671faf312c18994d85c49b84a12ce44ed68c
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #311 with 1 txs 00006271011e5c6eee64ccc8092575400ffe8ab50ec01359fcc1a88d2d2ae5b5
+[09:34:21 INF] Adding block as orphan #311 00006271011e5c6eee64ccc8092575400ffe8ab50ec01359fcc1a88d2d2ae5b5
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #310 with 1 txs 0000f9d91043f6fe566e81c2bcac83ca69ee2915de895be376bc7326d18ae8c0
+[09:34:21 INF] Adding block as orphan #310 0000f9d91043f6fe566e81c2bcac83ca69ee2915de895be376bc7326d18ae8c0
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #309 with 1 txs 0000fd2d1e854f2b5265db880598c8b3ae34d7a99695b21acd946e6e8343cbd8
+[09:34:21 INF] Adding block as orphan #309 0000fd2d1e854f2b5265db880598c8b3ae34d7a99695b21acd946e6e8343cbd8
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #308 with 1 txs 00000cdd1c4a2f23161aa35a68f4869eb5d12e5d247872ba11136c44e2e57063
+[09:34:21 INF] Adding block as orphan #308 00000cdd1c4a2f23161aa35a68f4869eb5d12e5d247872ba11136c44e2e57063
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #307 with 1 txs 00003675d0d64d1ac0f2910f10773673a94f573aa363d1ea8d4592cb6e9ca73e
+[09:34:21 INF] Adding block as orphan #307 00003675d0d64d1ac0f2910f10773673a94f573aa363d1ea8d4592cb6e9ca73e
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #306 with 1 txs 0000ff216a2536cead740a7f40fc2135abc758ea1fc8eeb336203dec380a4fd2
+[09:34:21 INF] Adding block as orphan #306 0000ff216a2536cead740a7f40fc2135abc758ea1fc8eeb336203dec380a4fd2
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #305 with 1 txs 0000847f51b526397b0f9c7c7e78cdde105b9b6ff14764840584bc7197b0f1d9
+[09:34:21 INF] Adding block as orphan #305 0000847f51b526397b0f9c7c7e78cdde105b9b6ff14764840584bc7197b0f1d9
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #304 with 1 txs 0000feb0cd21e29e36d0ad6df8e3048ce2f8f22e352cdfdc49807543316a05eb
+[09:34:21 INF] Adding block as orphan #304 0000feb0cd21e29e36d0ad6df8e3048ce2f8f22e352cdfdc49807543316a05eb
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #303 with 1 txs 0000c65166410b4899b4595d49361a8fbb41720b5c00755501692db9e4772853
+[09:34:21 INF] Adding block as orphan #303 0000c65166410b4899b4595d49361a8fbb41720b5c00755501692db9e4772853
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #302 with 1 txs 000104b1b0c4febc19b05af87042fb469f3c3145fa746d6c88dad465ad3f40d4
+[09:34:21 INF] Adding block as orphan #302 000104b1b0c4febc19b05af87042fb469f3c3145fa746d6c88dad465ad3f40d4
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #301 with 1 txs 00009ac0c92f84297dbf459d1db39d18fe1588eb019081664fc4ac0c55c3eb4e
+[09:34:21 INF] Adding block as orphan #301 00009ac0c92f84297dbf459d1db39d18fe1588eb019081664fc4ac0c55c3eb4e
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #300 with 1 txs 0000d0f65df92a2c82d1e3dd4876fd03316646e417b9d2b2f9ff45823b4c2e09
+[09:34:21 INF] Adding block as orphan #300 0000d0f65df92a2c82d1e3dd4876fd03316646e417b9d2b2f9ff45823b4c2e09
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #299 with 1 txs 0000ac2c3c3a0166578e3aea19fc6712b2242aed43f6570f151cbd723c5528e9
+[09:34:21 INF] Adding block as orphan #299 0000ac2c3c3a0166578e3aea19fc6712b2242aed43f6570f151cbd723c5528e9
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #298 with 1 txs 000182ccdab791893c96213ba45f66e966363d1408446b0fcd3626b5c4fc8cc8
+[09:34:21 INF] Adding block as orphan #298 000182ccdab791893c96213ba45f66e966363d1408446b0fcd3626b5c4fc8cc8
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #297 with 1 txs 00017f45a1d3e458c3a1b1845a865d37d6016174948308dc11cd59438793032e
+[09:34:21 INF] Adding block as orphan #297 00017f45a1d3e458c3a1b1845a865d37d6016174948308dc11cd59438793032e
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #296 with 1 txs 0001abe3df4abd79dd14d694a20a2da5c4d004ed8e4fb1adfbd3458590ab7f55
+[09:34:21 INF] Adding block as orphan #296 0001abe3df4abd79dd14d694a20a2da5c4d004ed8e4fb1adfbd3458590ab7f55
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #295 with 1 txs 0000cdee81432a19b3881f16621697af6d953b812979e03baa2a5fb7a3c482db
+[09:34:21 INF] Adding block as orphan #295 0000cdee81432a19b3881f16621697af6d953b812979e03baa2a5fb7a3c482db
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #294 with 1 txs 0000dd4c73305738c7be8b439653c279caa0224842ffb04769c4932422c7db1f
+[09:34:21 INF] Adding block as orphan #294 0000dd4c73305738c7be8b439653c279caa0224842ffb04769c4932422c7db1f
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #293 with 1 txs 0000d557d8ff0d2b13d5100c88e51f51e7878ee41d14421a034dbbb5fb29101a
+[09:34:21 INF] Adding block as orphan #293 0000d557d8ff0d2b13d5100c88e51f51e7878ee41d14421a034dbbb5fb29101a
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #292 with 1 txs 0001a41598ea9e371e00d12127bc3b8e0ebbe87dc72d6fe9be3fea1a25df1f9b
+[09:34:21 INF] Adding block as orphan #292 0001a41598ea9e371e00d12127bc3b8e0ebbe87dc72d6fe9be3fea1a25df1f9b
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #291 with 1 txs 000011af70dc2937e92f8cf8e5302ee88bd51cbbc4161b55c647260f04289d20
+[09:34:21 INF] Adding block as orphan #291 000011af70dc2937e92f8cf8e5302ee88bd51cbbc4161b55c647260f04289d20
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended

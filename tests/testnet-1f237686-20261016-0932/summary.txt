@@ -1,1 +1,9 @@
 [2026-10-16 09:32] lab testnet on 1f237686 rehearsal: sed instead of head (no early pipe close)
+[2026-10-16 09:32] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-16 09:32] F*: F* 2026.09.27
+[2026-10-16 09:32] toolchain: zp-contracts-v1 dab00f8 Zen.Integers.u8/u16/u32/u64ToNat, i32/i64ToInt (F*'s machine-i
+[2026-10-16 09:33] Zulib: all 50 modules verify
+[2026-10-16 09:33] node built (Debug)
+[2026-10-16 09:34] lab-testnet-v1.sh: exit 1; [09:34:21] FAIL: activation after the fork: zp-engine: the cost bound is not proven (make/verify --prove); nodes accept it and gas enforces the cost, but users cannot check the proof. --allow-unproven to publish anyway
+[2026-10-16 09:34] 
+[2026-10-16 09:34] token template DLL (build-contract.sh): 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e

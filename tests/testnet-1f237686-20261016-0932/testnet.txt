@@ -1,0 +1,53 @@
+[09:33:48] lab testnet: V1 fork at block 60; node 1f237686, toolchain dab00f8
+[09:33:48] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[09:33:57] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[09:34:12] 1. before the fork (height 1): activation not accepted (not supported)
+[09:34:21] FAIL: activation after the fork: zp-engine: the cost bound is not proven (make/verify --prove); nodes accept it and gas enforces the cost, but users cannot check the proof. --allow-unproven to publish anyway
+--- A
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+[09:34:21 INF] Blockchain: Handling command RequestBlock started
+[09:34:21 INF] Blockchain: Handling command RequestBlock ended
+--- B
+[09:34:21 INF] Validating new block #294 with 1 txs 0000dd4c73305738c7be8b439653c279caa0224842ffb04769c4932422c7db1f
+[09:34:21 INF] Adding block as orphan #294 0000dd4c73305738c7be8b439653c279caa0224842ffb04769c4932422c7db1f
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #293 with 1 txs 0000d557d8ff0d2b13d5100c88e51f51e7878ee41d14421a034dbbb5fb29101a
+[09:34:21 INF] Adding block as orphan #293 0000d557d8ff0d2b13d5100c88e51f51e7878ee41d14421a034dbbb5fb29101a
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #292 with 1 txs 0001a41598ea9e371e00d12127bc3b8e0ebbe87dc72d6fe9be3fea1a25df1f9b
+[09:34:21 INF] Adding block as orphan #292 0001a41598ea9e371e00d12127bc3b8e0ebbe87dc72d6fe9be3fea1a25df1f9b
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+[09:34:21 INF] Blockchain: Handling command ValidateBlock started
+[09:34:21 INF] Validating new block #291 with 1 txs 000011af70dc2937e92f8cf8e5302ee88bd51cbbc4161b55c647260f04289d20
+[09:34:21 INF] Adding block as orphan #291 000011af70dc2937e92f8cf8e5302ee88bd51cbbc4161b55c647260f04289d20
+[09:34:21 INF] Blockchain: Handling command ValidateBlock ended
+--- C
+[09:34:21 INF] Blockchain: Handling command ValidateMinedBlock ended
+[09:34:21 DBG] Wallet adding block #119 of block 03815acec81c045cecb4a5091b48c6bc284cc12ba923ec20840a8bcb86335a0e
+[09:34:21 INF] Blockchain: Handling request GetMempool started
+[09:34:21 INF] Blockchain: Handling request GetMempool ended
+[09:34:21 INF] Blockchain: Handling request GetBlockTemplate started
+[09:34:21 INF] Blockchain: Handling request GetBlockTemplate ended
+[09:34:21 INF] New block mined
+[09:34:21 INF] Blockchain: Handling command ValidateMinedBlock started
+[09:34:21 INF] Validating new block #120 with 1 txs 0084481245cfb237d1c83a0779763c3ee2ab4d62d4e0c8d030976151d2103526
+[09:34:21 INF] BlockHandler: New block #120 of 26-10-16 09:34:21 with 1 txs 0x537114724 0084481245cfb237d1c83a0779763c3ee2ab4d62d4e0c8d030976151d2103526
+[09:34:21 INF] Tally adding block #120 of block 0084481245cfb237d1c83a0779763c3ee2ab4d62d4e0c8d030976151d2103526 for interval #2
+[09:34:21 INF] BlockHandler: BlockAdded #120 hash #0084481245cfb237d1c83a0779763c3ee2ab4d62d4e0c8d030976151d2103526
+[09:34:21 INF] BlockHandler: Connecting to longest chain
+[09:34:21 INF] BlockHandler: New tip #120 0084481245cfb237d1c83a0779763c3ee2ab4d62d4e0c8d030976151d2103526
+[09:34:21 INF] Blockchain: Handling command ValidateMinedBlock ended

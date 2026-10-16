@@ -1,0 +1,5 @@
+[09:33:48] lab testnet: V1 fork at block 60; node 1f237686, toolchain dab00f8
+[09:33:48] machine: ubuntu-16gb-nbg1-2, 8 cores, AMD EPYC-Rome Processor
+[09:33:57] token contract 00000001d82e92153ff563d788804db60d9939944813bef75898181a161b945452db3b0f
+[09:34:12] 1. before the fork (height 1): activation not accepted (not supported)
+[09:34:21] FAIL: activation after the fork: zp-engine: the cost bound is not proven (make/verify --prove); nodes accept it and gas enforces the cost, but users cannot check the proof. --allow-unproven to publish anyway
