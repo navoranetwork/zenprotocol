@@ -277,3 +277,9 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 .betright { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
 .onsale { margin-top: 4px; }
 .onsale .chip { margin-left: 6px; }
+
+.betpos { border-bottom: 1px solid var(--line2); padding-bottom: 10px; }
+.betpos:last-child { border-bottom: 0; }
+.betpos .item { border-bottom: 0; }
+.btn.sellbtn { width: 100%; justify-content: center; color: #F08A8A; border: 1px solid rgba(240, 138, 138, .55); background: rgba(240, 138, 138, .08); font-weight: 600; }
+.btn.sellbtn:hover { background: rgba(240, 138, 138, .16); }

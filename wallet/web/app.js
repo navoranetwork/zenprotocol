@@ -154,7 +154,7 @@ function yourBets(m) {
     const h = betHeld(b), unit = b.collateral, line = side => {
       const n = h[side], sells = mySells(sideAsset(b, side)); if (!n && !sells.length) return '';
       const pay = n ? redeemValue(b, side, n) : null, key = b.bull + side, sent = S.redeemed?.[key] && Date.now() - S.redeemed[key] < 10 * 60e3, open = b.status === 'open' && b.close > Date.now();
-      const right = !n ? '' : pay === null ? `<span class="muted small">${b.status === 'open' ? 'If right: ' : 'Waiting for the result · '}${esc(withUnit(unit, n))}</span>${open && spendable ? `<button class="chip mini" data-act="bet-sell" data-id="${esc(b.bull)}" data-side="${side}">Sell</button>` : ''}`
+      const right = !n ? '' : pay === null ? `<span class="muted small">${b.status === 'open' ? 'If right: ' : 'Waiting for the result · '}${esc(withUnit(unit, n))}</span>`
         : pay === 0n ? '<span class="muted small">Lost</span>'
         : sent ? '<span class="muted small"><span class="spin"></span> Collecting…</span>'
         : spendable && b.contract ? `<button class="btn primary mini" data-act="bet-redeem" data-id="${esc(b.bull)}" data-side="${side}">Collect ${esc(withUnit(unit, pay))}</button>` : `<span class="small">${esc(withUnit(unit, pay))} to collect</span>`;
@@ -162,7 +162,8 @@ function yourBets(m) {
         : b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : b.status === 'closing' ? 'closed, waiting for the result' : 'closes ' + esc(closeText(b.close));
       const onSale = sells.map(o => { const p = dexPending.get(o.tx);
         return `<div class="muted small onsale">On sale: ${esc(tokenAmount(unit, o.underAmount))} at ${(Number(o.pairTotal) / Number(o.underAmount)).toFixed(4)} = ${esc(withUnit(unit, o.pairTotal))}${o.waiting ? ' · <span class="spin"></span> waiting for its block' : p ? ' · ' + (p === 'taking' ? 'being bought…' : 'being cancelled…') : spendable ? ` <button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div>`; }).join('');
-      return `<div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>`;
+      const sell = n && pay === null && open && spendable ? `<button class="btn sellbtn" data-act="bet-sell" data-id="${esc(b.bull)}" data-side="${side}">Sell ${side === 'up' ? '▲ Up' : '▼ Down'} tokens</button>` : '';
+      return `<div class="betpos"><div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>${sell}</div>`;
     };
     return line('up') + line('down');
   }).join('');

@@ -55,6 +55,8 @@ with sync_playwright() as p:
     pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
 
     # sell back: the BTC 105,000 Up tokens this wallet holds (1.818181)
+    pg.locator('.betpos').first.locator('xpath=ancestor::div[contains(@class,"card")]').screenshot(path=f'{OUT}/bt7-yourbets.png')
+    ok(pg.query_selector('.btn.sellbtn') is not None and 'Sell ▲ Up tokens' in pg.inner_text('main'), 'a full-width Sell button under the open position')
     pg.click('button[data-act=bet-sell][data-side=up]'); pg.wait_for_selector('form[data-form=bet-sell]')
     t = pg.inner_text('.sheet'); ok('You hold 1.818181' in t and 'Someone buys now at 0.5000' in t and 'Sell 1.00 for 0.50 zUSDC' in t, 'sell sheet: holdings, the best bid and a sell-now button for what it takes (1 token for 0.50)')
     pg.screenshot(path=f'{OUT}/bt5-sell.png')

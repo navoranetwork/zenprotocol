@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.33.2 — 2026-10-16
+
+### Changed
+- Your bets: selling is a full-width red button under the position ("Sell ▲ Up tokens"), not a small chip.
+
 ## 0.33.1 — 2026-10-16
 
 ### Fixed
