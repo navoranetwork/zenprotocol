@@ -57,7 +57,7 @@ with sync_playwright() as p:
     pg.click('.bet >> nth=0 >> button[data-side=up]'); pg.wait_for_selector('form[data-form=bet]')
     ok('You win if BTC is at or above 105,000' in pg.inner_text('.sheet'), 'the bet sheet says when you win')
     pg.fill('form[data-form=bet] input[name=stake]', '1.2'); pg.wait_for_timeout(200)
-    ok(pg.inner_text('#bet-win') == '2.00 zUSDC (+0.80)', 'as you type: 1.20 zUSDC at 0.60 wins 2.00 zUSDC (+0.80)')
+    ok(pg.inner_text('#bet-win') == '2.00 zUSDC (+0.80, +66%)', 'as you type: 1.20 zUSDC at 0.60 wins 2.00 zUSDC (+0.80, +66%)')
     pg.screenshot(path=f'{OUT}/bt2-sheet.png')
     pg.fill('form[data-form=bet] input[name=stake]', '7'); pg.click('form[data-form=bet] button.primary'); pg.wait_for_selector('.sheet .err', timeout=15000)
     ok('More than this offer' in pg.inner_text('.sheet') or 'You have' in pg.inner_text('.sheet'), 'more than the offer or the balance is refused')

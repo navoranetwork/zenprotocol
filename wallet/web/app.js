@@ -205,6 +205,8 @@ function sellModal(md) {
     <p class="muted small">Your tokens wait in the Dex until someone buys them, and you can cancel any time under Your bets. Buyers take the cheapest offer first${ask ? `: now ${offerPrice(ask).toFixed(2)}` : ''}.</p>
     ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review sell order'}</button></div></form></div>`;
 }
+// "2.00 zUSDC (+0.90, +82%)": the payout if right, the profit and the profit as a share of the stake
+const winText = (unit, q) => `${withUnit(unit, q.payout)} (+${tokenAmount(unit, q.profit)}, +${Math.floor(Number(q.profit) * 100 / Number(q.stake))}%)`;
 function betModal(md) {
   const b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral);
   if (!b || !o) return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Bet</h2><p class="muted">This offer is gone. Try again from the list.</p><button class="btn primary big" data-act="close">OK</button></div></div>`;
@@ -215,7 +217,7 @@ function betModal(md) {
     <div class="card small">You win if <b>${esc(cond)}</b>. Price ${offerPrice(o).toFixed(4)} zUSDC per token; each pays 1 zUSDC if you are right.</div>
     <label class="field"><span class="row" data-s="between"><span class="tname">${tokenIcon(b.collateral, 18)}Your stake (${esc(unitOf(b.collateral))})</span><span data-s="right">You have ${esc(tokenAmount(b.collateral, have))}</span></span>
       <input name="stake" inputmode="decimal" autocomplete="off" value="${esc(v)}" placeholder="up to ${esc(tokenAmount(b.collateral, o.pairTotal < have ? o.pairTotal : have))}"></label>
-    <div class="kv"><span class="muted">If right you get</span><span class="amt ok" id="bet-win">${q ? esc(withUnit(b.collateral, q.payout)) + ' (+' + esc(tokenAmount(b.collateral, q.profit)) + ')' : '–'}</span></div>
+    <div class="kv"><span class="muted">If right you get</span><span class="amt ok" id="bet-win">${q ? esc(winText(b.collateral, q)) : '–'}</span></div>
     <div class="kv"><span class="muted">If not</span><span class="amt">0</span></div>
     <p class="muted small">At most ${esc(withUnit(b.collateral, o.pairTotal))} at this price. You can sell the tokens before the close on the Dex. ${VOID_NOTE}</p>
     ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review'}</button></div></form></div>`;
@@ -2041,7 +2043,7 @@ $app.addEventListener('input', e => {
   }
   if (t.name === 'stake' && t.closest('[data-form=bet]') && S.modal?.type === 'bet') {   // the winnings as you type
     const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral), el = $app.querySelector('#bet-win'); S.draft.bstake = t.value;
-    let txt = '–'; try { const q = betQuote(o, parseUnits(t.value, decimalsOf(b.collateral))); txt = withUnit(b.collateral, q.payout) + ' (+' + tokenAmount(b.collateral, q.profit) + ')'; } catch (e) { if (/More than/.test(e.message)) txt = 'more than this offer'; }
+    let txt = '–'; try { const q = betQuote(o, parseUnits(t.value, decimalsOf(b.collateral))); txt = winText(b.collateral, q); } catch (e) { if (/More than/.test(e.message)) txt = 'more than this offer'; }
     if (el) el.textContent = txt; return;
   }
   if (t.name === 'give' && t.closest('[data-form=dex-take]') && S.modal?.o) {   // the payout as you type
@@ -2110,7 +2112,7 @@ $app.addEventListener('submit', async e => {
         if (q.stake > have) throw new Error(`You have ${withUnit(b.collateral, have)}`);
         const up = md.side === 'up';
         S.busy = true; render();
-        try { await dexPrepare('bet', o, { provided: q.stake, lines: payout => [['Bet', `${up ? '▲ Up' : '▼ Down'}: ${b.ticker} ${up ? '≥' : '<'} ${strikeText(b)}`], ['Closes', closeText(b.close)], ['Your stake', withUnit(b.collateral, q.stake)], ['If right you get', withUnit(b.collateral, payout)]] }); }
+        try { await dexPrepare('bet', o, { provided: q.stake, lines: payout => [['Bet', `${up ? '▲ Up' : '▼ Down'}: ${b.ticker} ${up ? '≥' : '<'} ${strikeText(b)}`], ['Closes', closeText(b.close)], ['Your stake', withUnit(b.collateral, q.stake)], ['If right you get', `${withUnit(b.collateral, payout)} (+${Math.floor(Number(payout - q.stake) * 100 / Number(q.stake))}%)`]] }); }
         finally { S.busy = false; } return render();
       }
       case 'dex-take': {

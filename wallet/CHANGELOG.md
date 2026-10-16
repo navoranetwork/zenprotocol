@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.35.1 — 2026-10-16
+
+### Changed
+- The bet sheet and its confirmation show the profit as a share of the stake too: "2.00 zUSDC (+0.90, +81%)".
+
 ## 0.35.0 — 2026-10-16
 
 ### Added
