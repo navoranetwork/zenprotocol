@@ -1,6 +1,6 @@
 {
   "name": "zp-wallet",
-  "version": "0.31.0",
+  "version": "0.31.1",
   "private": true,
   "type": "module",
   "description": "ZP Wallet - non-custodial web wallet for the ZP network (community project, not affiliated with Zen Protocol Ltd.)",
