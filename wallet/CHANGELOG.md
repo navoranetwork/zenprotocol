@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.33.1 — 2026-10-16
+
+### Fixed
+- Sell sheet: more tokens than you hold now says so as you type (it showed a total), and an **All** button fills in
+  every token held.
+
 ## 0.33.0 — 2026-10-16
 
 ### Added

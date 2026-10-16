@@ -60,6 +60,10 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/bt5-sell.png')
     pg.fill('form[data-form=bet-sell] input[name=price]', '0.70'); pg.wait_for_timeout(200)
     ok(pg.inner_text('#sell-get') == '1.272726 zUSDC', 'as you type: 1.818181 tokens at 0.70 ask 1.272726 zUSDC')
+    pg.fill('form[data-form=bet-sell] input[name=amount]', '100'); pg.wait_for_timeout(200)
+    ok(pg.inner_text('#sell-get') == 'more than you hold', 'more tokens than held: said as you type')
+    pg.click('button[data-act=sell-all]'); pg.wait_for_timeout(200)
+    ok(pg.input_value('form[data-form=bet-sell] input[name=amount]') == '1.818181' and pg.inner_text('#sell-get') == '1.272726 zUSDC', 'All puts back every token held')
     pg.fill('form[data-form=bet-sell] input[name=price]', '1.2'); pg.click('form[data-form=bet-sell] .row button.primary')
     try: pg.wait_for_selector('.sheet .err', timeout=8000)
     except Exception: print(pg.inner_text('body')[-700:]); raise
