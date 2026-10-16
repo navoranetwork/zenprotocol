@@ -1,0 +1,1 @@
+[2026-10-16 11:02] lab testnet on 3d291af7 lab-testnet-v1.sh: publish with --allow-unproven (make does not prove by default since 469ddeb; nodes never prove)
