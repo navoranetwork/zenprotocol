@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.32.2 — 2026-10-16
+
+### Changed
+- Bets read the explorer's markets answer as built (docs/BETS.md): the contract id and the collateral at the top,
+  statuses open, closing, settled, voidable and void, and each side's best ask and bid. Markets in another collateral
+  are left out.
+
 ## 0.32.1 — 2026-10-16
 
 ### Changed

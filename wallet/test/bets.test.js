@@ -1,7 +1,7 @@
 // Up / Down bets: markets, the best offer, the quote, and the Redeem body.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { marketOf, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, eventFields } from '../src/bets.js';
+import { marketOf, marketsOf, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, eventFields } from '../src/bets.js';
 import { Data, Writer } from '../src/serialize.js';
 
 const Z = 'aa'.repeat(36) + 'bb'.repeat(32), BULL = 'cc'.repeat(36) + '01'.repeat(32), BEAR = 'cc'.repeat(36) + '02'.repeat(32);
@@ -41,4 +41,14 @@ test('Redeem: the market and the side, no proof; it pays 1 per winning token, 1/
   assert.deepEqual([redeemValue(won, 'up', 5000000n), redeemValue(won, 'down', 5000000n)], [5000000n, 0n]);
   const v = { ...m, status: 'void' };
   assert.deepEqual([redeemValue(v, 'up', 5000001n), redeemValue(v, 'down', 3n)], [2500000n, 1n]);   // rounded down
+});
+
+test('the explorer answer: contractId and collateral at the top, statuses, the books', () => {
+  const j = { contract: 'czen1xyz', contractId: 'ee'.repeat(36), collateral: Z, graceMs: 86400000,
+    markets: [{ ...row, line: 67000, status: 'closing', book: { up: { ask: 0.6, bid: 0.55 }, down: { ask: null, bid: 7 } } }, { ...row, bull: 'zz' }, { ...row, status: 'voidable' }] };
+  const ms = marketsOf(j);
+  assert.equal(ms.length, 2);
+  assert.equal(ms[0].contract, 'ee'.repeat(36)); assert.equal(ms[0].status, 'closing'); assert.deepEqual(ms[0].book, { up: { ask: 0.6, bid: 0.55 }, down: { ask: null, bid: null } });
+  assert.equal(ms[1].status, 'voidable'); assert.equal(redeemValue(ms[1], 'up', 4n), null);   // not void yet: nothing to collect
+  assert.equal(marketsOf({ ...j, collateral: '00' }).length, 0);                               // rows in another collateral are refused
 });

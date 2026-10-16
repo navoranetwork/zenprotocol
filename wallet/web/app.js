@@ -7,7 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall, prepareCombine } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel, bookRow, bookFromOrders, levels, parsePrice, limitOrder } from '../src/dex.js';
-import { marketOf, sideAsset, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, expectRedeem } from '../src/bets.js';
+import { marketOf, marketsOf, sideAsset, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, expectRedeem } from '../src/bets.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
@@ -151,7 +151,8 @@ function yourBets(m) {
         : pay === 0n ? '<span class="muted small">Lost</span>'
         : sent ? '<span class="muted small"><span class="spin"></span> Collecting…</span>'
         : canSpend(S.open.get(active().id)) && b.contract ? `<button class="btn primary mini" data-act="bet-redeem" data-id="${esc(b.bull)}" data-side="${side}">Collect ${esc(withUnit(unit, pay))}</button>` : `<span class="small">${esc(withUnit(unit, pay))} to collect</span>`;
-      const state = b.status === 'void' ? 'void: no close price, every token pays 0.50' : b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : b.status === 'closed' ? 'closed, waiting for the result' : 'closes ' + esc(closeText(b.close));
+      const state = b.status === 'void' ? 'void: no close price, every token pays 0.50' : b.status === 'voidable' ? 'no close price in 24 hours: being voided (0.50 per token)'
+        : b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : b.status === 'closing' ? 'closed, waiting for the result' : 'closes ' + esc(closeText(b.close));
       return `<div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${esc(tokenAmount(unit, n))} tokens · ${state}</div></div><div>${right}</div></div>`;
     };
     return line('up') + line('down');
@@ -325,8 +326,7 @@ async function loadMarkets() {
     if (!Array.isArray(round.tickers) || !Array.isArray(round.values)) throw new Error('unexpected oracle answer');
     const dj = await get('/explorer/api/dex/orders').catch(() => null), orders = Array.isArray(dj?.orders) ? dj.orders : [];
     const q = quoteId(), [book, tj] = q ? await Promise.all([get(`/explorer/api/dex/book?base=00&quote=${q}&qdec=6&pending=1`).catch(() => null), get(`/explorer/api/dex/trades?base=00&quote=${q}&limit=20`).catch(() => null)]) : [null, null];
-    const bj = await get('/explorer/api/bets/markets').catch(() => null), braw = Array.isArray(bj) ? bj : Array.isArray(bj?.markets) ? bj.markets : null;
-    const bets = braw && braw.map(r => { try { return marketOf(r); } catch { return null; } }).filter(Boolean);
+    const bets = marketsOf(await get('/explorer/api/bets/markets').catch(() => null));
     nameBets(bets);
     S.markets = { bets, round, evidence, orders, dex: typeof dj?.dex === 'string' && /^[0-9a-f]{72}$/.test(dj.dex) ? dj.dex : null, day: new Date(round.timestamp).toISOString().slice(0, 10),
       book: book && Array.isArray(book.asks) ? book : null, trades: Array.isArray(tj?.trades) ? tj.trades : Array.isArray(tj) ? tj : [] };
@@ -1543,8 +1543,7 @@ async function refreshExtras() {
       // the site's USDC bridge (testnet): its ZP address is named, and zUSDC sent there is a withdrawal
       try { const rb = await fetch(u.origin + '/bridge/status', { cache: 'no-cache' }); const j = rb.ok ? await rb.json() : null;
         S.bridge = j && typeof j.bridgeZp === 'string' && /^[0-9a-f]{72}$/.test(j.asset || '') ? { zp: j.bridgeZp, asset: j.asset, conf: Number(j.zpConfirmations) || 2, auto: j.autoWithdraw !== false } : null; } catch { S.bridge = null; }
-      try { const rm = await fetch(u.origin + '/explorer/api/bets/markets', { cache: 'no-cache' }); const j = rm.ok ? await rm.json() : null, rows = Array.isArray(j) ? j : j?.markets;
-        if (Array.isArray(rows)) nameBets(rows.map(r => { try { return marketOf(r); } catch { return null; } }).filter(Boolean)); } catch { /* no bets on this site */ }
+      try { const rm = await fetch(u.origin + '/explorer/api/bets/markets', { cache: 'no-cache' }); nameBets(marketsOf(rm.ok ? await rm.json() : null)); } catch { /* no bets on this site */ }
       const ra = await fetch(u.origin + '/assets.json', { cache: 'no-cache' });
       if (ra.ok) {
         const j = await ra.json(), names = {};

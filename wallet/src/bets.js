@@ -36,16 +36,25 @@ export const eventFields = ev => [
   ['Expiry', { t: 'U64', v: ev.expiry }], ['Collateral', { t: 'String', v: ev.collateral }]];
 
 // one row of GET /explorer/api/bets/markets, checked; rows that do not parse are left out by the caller
-export function marketOf(row) {
-  const ev = eventOf(row?.event);
+// Status (the explorer's GET /bets/markets): open; closing (after the close, waiting for Settle); settled; voidable
+// (no Settle within 24 h, waiting for the Void); void. `ctx` is the answer's top level: contractId and collateral.
+const STATUS = ['open', 'closing', 'settled', 'voidable', 'void'];
+export function marketOf(row, ctx = {}) {
+  const ev = eventOf(row?.event), cid = String(row?.contractId || ctx.contractId || row?.contract || ctx.contract || '').toLowerCase();
   const m = { ticker: ev.ticker, strike: Number(ev.price) / 1000, close: Number(ev.start), collateral: ev.collateral, event: ev,
     bull: String(row?.bull || '').toLowerCase(), bear: String(row?.bear || '').toLowerCase(),
-    status: ['open', 'closed', 'settled', 'void'].includes(row?.status) ? row.status : 'open',
+    status: STATUS.includes(row?.status) ? row.status : row?.status === 'closed' ? 'closing' : 'open',
     result: row?.result === 'bull' || row?.result === 'bear' ? row.result : null,
-    settlePrice: row?.settlePrice == null ? null : Number(row.settlePrice), contract: HEX(72).test(String(row?.contract || '')) ? row.contract : null };
+    settlePrice: row?.settlePrice == null ? null : Number(row.settlePrice), contract: HEX(72).test(cid) ? cid : null,
+    book: { up: sideBook(row?.book?.up), down: sideBook(row?.book?.down) } };
   if (!ASSET.test(m.bull) || !ASSET.test(m.bear) || m.bull === m.bear) throw new Error('market: bad position tokens');
+  if (ctx.collateral && String(ctx.collateral).toLowerCase() !== m.collateral) throw new Error('market: other collateral');
   return m;
 }
+const price01 = v => v == null || !Number.isFinite(Number(v)) || Number(v) < 0 || Number(v) > 1 ? null : Number(v);
+const sideBook = b => ({ ask: price01(b?.ask), bid: price01(b?.bid) });
+// the markets answer, checked: rows that do not parse are left out
+export const marketsOf = j => { const rows = Array.isArray(j) ? j : Array.isArray(j?.markets) ? j.markets : null; return rows && rows.map(r => { try { return marketOf(r, Array.isArray(j) ? {} : j); } catch { return null; } }).filter(Boolean); };
 export const sideAsset = (m, side) => side === 'up' ? m.bull : m.bear;
 
 // The cheapest open Dex order that sells this side's token for the market's collateral (a bet takes it).

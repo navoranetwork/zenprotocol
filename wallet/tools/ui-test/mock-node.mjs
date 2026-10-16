@@ -37,10 +37,10 @@ const BT = (n, side) => BETC + (n + side).padStart(64, '0');
 const T0 = Math.floor(Date.now() / 3600e3) * 3600e3, CLOSE_SETTLED = T0 - 7200e3;
 const betEvent = (ticker, price, close) => ({ OraclePubKey: '02' + '0a'.repeat(32), OracleContractId: ORACLE_C, Ticker: ticker, Price: price, Start: close, Expiry: close, Collateral: ZUSDC });
 const BETS = () => [
-  { event: betEvent('BTC', 105000000, T0 + 3 * 3600e3), bull: BT('1', '1'), bear: BT('1', '2'), status: 'open', result: null, contract: BETC },
-  { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null, contract: BETC },
-  { event: betEvent('BTC', 100000000, CLOSE_SETTLED), bull: BT('3', '1'), bear: BT('3', '2'), status: 'settled', result: 'bull', settlePrice: 101234.5, contract: BETC },
-  { event: betEvent('ETH', 3500000, T0 - 30 * 3600e3), bull: BT('4', '1'), bear: BT('4', '2'), status: 'void', result: null, contract: BETC }];
+  { event: betEvent('BTC', 105000000, T0 + 3 * 3600e3), bull: BT('1', '1'), bear: BT('1', '2'), status: 'open', result: null },
+  { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null },
+  { event: betEvent('BTC', 100000000, CLOSE_SETTLED), bull: BT('3', '1'), bear: BT('3', '2'), status: 'settled', result: 'bull', settlePrice: 101234.5 },
+  { event: betEvent('ETH', 3500000, T0 - 30 * 3600e3), bull: BT('4', '1'), bear: BT('4', '2'), status: 'void', result: null }];
 const offers = () => [
   { id: 'o-mine1', zp: 3, amount: '300000000', sats: 60000, confs: 2, state: 'open', until: null, buyer: null, seller: hex(key0.publicKey), scripts: 2, scriptList: ['0014' + '11'.repeat(20), '0014' + '22'.repeat(20)], used: 0, canReserve: true, payment: null },
   { id: 'o-mine2', zp: 1, amount: '100000000', sats: 20000, confs: 2, state: 'reserved', until: st.tip + 50, buyer: 'cd'.repeat(32), seller: hex(key0.publicKey), scripts: 2, used: 1, canReserve: false, payment: null },
@@ -85,7 +85,7 @@ http.createServer((req, res) => {
           const rows = [...all, pend].map(row);
           return send(res, 200, { tip: st.tip, indexedTo: st.tip - 10, base: '00', quote: ZU, asks: rows.filter(r => r.order.under_asset === '00').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.order.under_asset !== '00').sort((a, b) => b.price - a.price), last: { side: 'buy', price: 0.101, size: '1000000000' } });
         }
-        case '/explorer/api/bets/markets': return st.bets ? send(res, 200, { tip: st.tip, markets: BETS() }) : send(res, 404, { error: 'unknown path' });
+        case '/explorer/api/bets/markets': return st.bets ? send(res, 200, { tip: st.tip, contract: BETC_ADDR, contractId: BETC, collateral: ZUSDC, graceMs: 86400000, markets: BETS().map(m => ({ ...m, ticker: m.event.Ticker, line: m.event.Price / 1000, price: m.event.Price, close: m.event.Start, book: { up: { ask: null, bid: null }, down: { ask: null, bid: null } } })) }) : send(res, 404, { error: 'unknown path' });
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
         case '/__published': return send(res, 200, st.published);
         case '/__lastdex': return send(res, 200, st.lastDex || null);
