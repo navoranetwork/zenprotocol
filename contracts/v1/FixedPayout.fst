@@ -22,8 +22,8 @@
 // Price U64, close U64, Collateral, tag): tag "Bull" / "Bear" for the positions; "BuWn", "BeWn", "Void" for the
 // settlement markers it keeps (one unit each).
 //
-// Written per the code, not built: it needs zp-contracts-v1 dab00f8 or later (Zen.MerkleTree, Zen.Integers). Its
-// helpers follow MerkleProbe.fst, which passed the V1 session's run on dab00f8. Every command pays the cost of the
+// Needs zp-contracts-v1 dab00f8 or later (Zen.MerkleTree, Zen.Integers). The V1 session's check on dab00f8 accepted it
+// (2026-10-16, after positionTag and wonTag were made to return cost values); tries are next. Every command pays the cost of the
 // costliest one (Settle), padded by autoInc: cf below.
 
 open Zen.Base
@@ -166,15 +166,16 @@ let token (cid: contractId) (m: market) (tg: tag) =
     let! sub = marketHash m tg in
     C.ret ((v, h, sub) <: asset)
 
-let positionTag (p: position) : tag =
+// every function of a V1 contract returns a cost value (the elaborator wraps each top-level let in Zen.Cost.inc)
+let positionTag (p: position) =
     match p with
-    | Bull -> "Bull"
-    | Bear -> "Bear"
+    | Bull -> C.ret ("Bull" <: tag)
+    | Bear -> C.ret ("Bear" <: tag)
 
-let wonTag (p: position) : tag =
+let wonTag (p: position) =
     match p with
-    | Bull -> "BuWn"
-    | Bear -> "BeWn"
+    | Bull -> C.ret ("BuWn" <: tag)
+    | Bear -> C.ret ("BeWn" <: tag)
 
 // the oracle's leaf: Sha3 of the ticker's bytes, then the value as a U64 (FixedPayout's hashLeaf, the oracle service)
 let leafOf (key: ticker) (value: U64.t) =
@@ -273,7 +274,8 @@ let settle (tx: txSkeleton) (ctx: context) (cid: contractId) (body: option data)
     | Some m, Some p, Some (root, ts, value, idx, path) ->
         (let! proofOk = proofHolds m p root ts value idx path in
          let! free = markersFree cid m w tx in
-         let! won = token cid m (wonTag p) in
+         let! wt = wonTag p in
+         let! won = token cid m wt in
          let! att = attestToken m.oracleContractId root ts m.oraclePubKey in
          let! held = keepOne att cid w tx in
          let inTime = U64.lte ctx.timestamp (U64.add_mod m.close grace) in
@@ -306,8 +308,10 @@ let redeem (tx: txSkeleton) (cid: contractId) (sender: sender) (body: option dat
     let! pos = parsePosition body in
     match mk, pos with
     | Some m, Some p ->
-        (let! tok = token cid m (positionTag p) in
-         let! won = token cid m (wonTag p) in
+        (let! pt = positionTag p in
+         let! tok = token cid m pt in
+         let! wt = wonTag p in
+         let! won = token cid m wt in
          let! vd = token cid m "Void" in
          let! n = TX.getAvailableTokens tok tx in
          let half = U64.div n 2UL in
