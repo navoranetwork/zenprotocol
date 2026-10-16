@@ -1,1 +1,9 @@
 [2026-10-16 11:44] lab testnet on 3f8cc6ed lab-testnet-v1.sh: let A's wallet finish the reorg before restarting A (a node stopped mid-undo does not start: Wallet.Account.sync KeyNotFoundException)
+[2026-10-16 11:44] dotnet: /opt/dotnet/dotnet, SDKs: 10.0.112 [/opt/dotnet/sdk] 
+[2026-10-16 11:44] F*: F* 2026.09.27
+[2026-10-16 11:44] toolchain: zp-contracts-v1 dab00f8 Zen.Integers.u8/u16/u32/u64ToNat, i32/i64ToInt (F*'s machine-i
+[2026-10-16 11:44] Zulib: all 50 modules verify
+[2026-10-16 11:45] node built (Debug)
+[2026-10-16 11:47] lab-testnet-v1.sh: exit 0; [11:47:15] PASSED
+[2026-10-16 11:47] contract DLL SHA-256 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e (compare with another machine: build-contract.sh of the same source)
+[2026-10-16 11:47] token template DLL (build-contract.sh): 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e
