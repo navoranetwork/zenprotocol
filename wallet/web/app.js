@@ -1776,7 +1776,7 @@ function priorVote(command, interval, phase) {
 }
 function votedText({ v, names }) {
   const who = names.length ? (names.length === 1 ? `Wallet “${names[0]}”` : `Wallets ${names.map(n => `“${n}”`).join(', ')}`) : 'This browser';
-  return `${who} already sent a ${v.kind} in this phase (${v.label}). Only the first vote of a wallet counts and it cannot be changed${names.length ? '; to vote with other wallets, select only those' : ''}.`;
+  return `${who} already sent ${/^[aeiou]/i.test(v.kind) ? 'an' : 'a'} ${v.kind} in this phase (${v.label}). Only the first vote of a wallet counts and it cannot be changed${names.length ? '; to vote with other wallets, select only those' : ''}.`;
 }
 const votedBox = p => `<div class="card" data-s="flush"><p class="ok small">✓ ${esc(votedText(p))}</p></div>`;
 function sentCard(c) {

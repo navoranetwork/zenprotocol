@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.36.3 — 2026-10-16
+
+### Fixed
+- "already sent an allocation vote" (it said "a allocation vote").
+
 ## 0.36.2 — 2026-10-16
 
 ### Changed
