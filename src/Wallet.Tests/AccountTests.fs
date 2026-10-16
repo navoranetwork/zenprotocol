@@ -755,3 +755,45 @@ let ``creating and signing raw transaction``() =
         let bob = View.addMempoolTransaction dataAccess session (Transaction.hash tx) tx bob
 
         bob |> balanceShouldBe session Asset.Zen 3UL
+
+// A node stopped in the middle of a reorganization: its wallet's tip is a block of the old chain, which the node's
+// main chain (GetAllBlocks) does not have. Account.sync failed on it (KeyNotFoundException: the V1 lab testnet's
+// node A did not start again, 2026-10-16); syncWithChain starts the wallet again from genesis.
+[<Test>]
+let ``wallet whose tip is on an abandoned chain syncs again from genesis instead of failing``() =
+    use session = DataAccess.DatabaseContext.createSession databaseContext
+    let mkBlock (parent: Hash.Hash) (number: uint32) (nonce: uint64) (txs: Transaction list) =
+        let header = { version = 0ul; parent = parent; blockNumber = number; commitments = Hash.zero
+                       timestamp = 0UL; difficulty = 0ul; nonce = nonce, 0UL }
+        { header = header; transactions = List.map Transaction.toExtended txs; txMerkleRoot = Hash.zero
+          witnessMerkleRoot = Hash.zero; activeContractSetMerkleRoot = Hash.zero; commitments = [] }
+    let paid = {version=Version0;inputs=[];outputs=[{lock = PK accountPKHash; spend={asset=Asset.Zen;amount=10UL}}];witnesses=[];contract=None}
+    let b1 = mkBlock Hash.zero 1ul 0UL []
+    let b2 = mkBlock (Block.hash b1.header) 2ul 0UL [ paid ]
+    let b3 = mkBlock (Block.hash b2.header) 3ul 0UL []
+    let b4 = mkBlock (Block.hash b3.header) 4ul 0UL []
+    let fork3 = mkBlock (Block.hash b2.header) 3ul 7UL []          // the old chain's block 3
+    let main = [ b1; b2; b3; b4 ]
+    // the node's GetAllBlocks: main-chain blocks from height n + 1
+    let blocksFrom (n: int) =
+        main |> List.filter (fun b -> int b.header.blockNumber > n) |> List.map (fun b -> Block.hash b.header, b) |> Map.ofList
+    let tip = b4
+    let tipHash = Block.hash tip.header
+
+    // stopped half way: the wallet's tip is fork3
+    let account = DataAccess.Account.get dataAccess session
+    { account with blockHash = Block.hash fork3.header; blockNumber = 3ul } |> DataAccess.Account.put dataAccess session
+    (fun () -> Account.sync dataAccess session tipHash tip.header (blocksFrom 2))
+    |> should throw typeof<System.Collections.Generic.KeyNotFoundException>
+
+    Account.syncWithChain dataAccess session tipHash tip.header blocksFrom |> should equal true
+    let account = DataAccess.Account.get dataAccess session
+    account.blockHash |> should equal tipHash
+    account.blockNumber |> should equal 4ul
+    Account.getUnspentOutputs dataAccess session View.empty 0ul |> should haveLength 1
+
+    // on the main chain it syncs as before, and at the tip it does nothing
+    { account with blockHash = Block.hash b2.header; blockNumber = 2ul } |> DataAccess.Account.put dataAccess session
+    Account.syncWithChain dataAccess session tipHash tip.header blocksFrom |> should equal false
+    (DataAccess.Account.get dataAccess session).blockHash |> should equal tipHash
+    Account.syncWithChain dataAccess session tipHash tip.header blocksFrom |> should equal false

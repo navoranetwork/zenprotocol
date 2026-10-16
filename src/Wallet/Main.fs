@@ -45,15 +45,19 @@ let eventHandler client event dataAccess session accountStatus =
 let private sync dataAccess session client =
     match Blockchain.getTip client with
     | Some (tipBlockHash,tipHeader) ->
-        let account = 
-            Account.tryGet dataAccess session
-            |> Option.map (fun x -> x.blockNumber)
-            |> Option.defaultValue 0ul
-
-        if tipHeader.blockNumber <> account then 
-            Blockchain.getAllBlocks client (int account)
+        let blocksFrom (from: int) =
+            Blockchain.getAllBlocks client from
             |> Map.map (fun _ b -> Serialization.Block.deserialize b |> Option.get) //this is sent over the messaging bus so we can be sure about the existences
-            |> Account.sync dataAccess session tipBlockHash tipHeader
+
+        match Account.tryGet dataAccess session with
+        | Some _ ->
+            // also when the numbers are equal: the wallet may be on another block at the same height
+            if Account.syncWithChain dataAccess session tipBlockHash tipHeader blocksFrom then
+                eventX "Wallet tip was on no chain of this node (stopped during a reorganization?): synced again from genesis"
+                |> Log.warning
+        | None ->
+            if tipHeader.blockNumber <> 0ul then
+                blocksFrom 0 |> Account.sync dataAccess session tipBlockHash tipHeader
 
         eventX "Account synced to block #{blockNumber} {blockHash}"
         >> setField "blockNumber" tipHeader.blockNumber

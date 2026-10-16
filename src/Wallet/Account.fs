@@ -436,6 +436,28 @@ let reset dataAccess session =
     DataAccess.Outputs.truncate dataAccess session
     DataAccess.AddressOutputs.truncate dataAccess session
 
+/// Sync with the node's main chain. `blocksFrom n` gives the main chain's blocks from height n + 1 by hash (the
+/// node's GetAllBlocks). The wallet's tip must be one of them; if it is not (the node stopped in the middle of a
+/// reorganization, the wallet half undone, or the chain reorganized to a shorter one), the wallet starts again from
+/// genesis instead of failing to find the block (KeyNotFoundException, found by the V1 lab testnet, 2026-10-16).
+/// Returns true when it started again.
+let syncWithChain dataAccess session tipBlockHash (tipHeader:BlockHeader) (blocksFrom: int -> Map<Hash.Hash,Block>) =
+    let account = DataAccess.Account.get dataAccess session
+    if account.blockHash = tipBlockHash && account.blockNumber = tipHeader.blockNumber then
+        false
+    elif account.blockNumber = 0ul then
+        sync dataAccess session tipBlockHash tipHeader (blocksFrom 0)
+        false
+    else
+        let blocks = blocksFrom (int account.blockNumber - 1)      // the main chain from the wallet's own height
+        if Map.containsKey account.blockHash blocks then
+            sync dataAccess session tipBlockHash tipHeader blocks
+            false
+        else
+            reset dataAccess session
+            sync dataAccess session tipBlockHash tipHeader (blocksFrom 0)
+            true
+
 let sign dataAccess session password path message = result {
     let account = DataAccess.Account.get dataAccess session
 
