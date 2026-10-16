@@ -5,8 +5,9 @@
   "czen1qqqqqqqrw54zha5378cflx8lyel2xcgq9slewfnpzmuc2camepakjc9wvzga8dtw0": "VCGP",
   "czen1qqqqqqq9pdfruyeqwtga5pfgvhwk2rxkxexjhvek0r55cc8wlqpy5dxs95ylmr2s9": "FPC",
   "czen1qqqqqqq8ptestf6xe72hysaew858j8j2naurpauqljw4cccsqhpfjyk2zcsnmrq85": "DEX-V2",
+  "ctzn1qqqqqqq8fktmlhq45v4acghk7kphdtp6fttlgecgktufwmacstc53yccfnql8rt3r": "BitZen chain (V0, replaced)",
   "ctzn1qqqqqqqfrsyjslq8k2qw56zdaukn6xaeqmxld24hz7zajzwr4j95z67c84qr80uy7": "BitZen chain (Bitcoin headers)",
-  "ctzn1qqqqqqqq2cgxux4r9lz5ldepy7827fzz29w72pwl6s2ulepmevqe2g44swyqsrfgrk": "ZP ⇄ BTC swap",
+  "ctzn1qqqqqqq2cgxux4r9lz5ldepy7827fzz29w72pwl6s2ulepmevqe2g44swyqsrfgrk": "ZP ⇄ BTC swap",
   "ctzn1qqqqqqq0pc6cfr08lmmnq0u00pwj5y26thue9lrq8p3skd2rssks9gjnhycfzmf97": "ZP ⇄ BTC swap (replaced)",
   "ctzn1qqqqqqqwtea80gm9tsvp7zrvef5rtrqsvxj8zw6nma8klcajnlmamntxhgyclqt8k": "Oracle (V1)",
   "00000001cbcf4ef46cab8303e10d994d06b1820c348e276a7be9edfc7653fefbb9acd741": "Oracle (V1)",
@@ -16,5 +17,7 @@
   "ctzn1qqqqqqqy7psyxj3nr8tg908ajjgz8y5rey6epzkvsjpajvv4hn2taq0wf6vyvdhp0": "zUSDC (V0, closed)",
   "ctzn1qqqqqqq0at25gfvnqqk9lnrdsd4ezekck96xtq0h2hyst4plvl2hy53wtlym8deln": "ZenDex (V1)",
   "00000001fd5aa884b260058bf98db06d722cdb162e8cb03eeab920ba87ecfaae4a45cbf9": "ZenDex (V1)",
+  "ctzn1qqqqqqqg2enlrs70ansf244j8750jlcp5yq5z3spjn6n6qdgr8s2hql289scfxf0c": "Up / Down bets (V1)",
+  "000000010accfe3879fd9c12aad647f51f2fe034202828c0329ea7a035033c15707d472c": "Up / Down bets (V1)",
   "tzn1q27ngrump3ahlrtrys9y03c84hj9j8pjupsz0f6qrach80j3jjy6sn0732d": "Market maker"
 }

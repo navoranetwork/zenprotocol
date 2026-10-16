@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.38.1 — 2026-10-17
+
+### Fixed
+- Contracts: the ZP ⇄ BTC swap, the first BitZen chain and the Up / Down bets contract show their names (a typo in
+  site/contract-names.json, and two missing names). A test checks every address in the file.
+
 ## 0.38.0 — 2026-10-16
 
 ### Changed
