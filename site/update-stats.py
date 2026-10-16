@@ -90,10 +90,37 @@ tip = info["blocks"]
 now_ms = int(time.time() * 1000)
 
 # --- headers: block times, hashrate --------------------------------------------------------
-headers = get(f"/blockchain/headers?blockNumber={tip}&take={HEADERS_TAKE}", timeout=180)
-headers.sort(key=lambda h: h["blockNumber"])
-hs = [(h["blockNumber"], h["timestamp"], hashes_per_block(h["target"]), difficulty(h["difficulty"]))
-      for h in headers]
+# /blockchain/headers holds the node for ten seconds or more on mainnet (it reads every header in the database), and
+# wallets wait behind it. So the headers are kept in a cache and only the new ones are read, one block at a time
+# (cheap near the tip). The full request is made only when the cache is missing or far behind.
+def target_of(compact):
+    """Difficulty.uncompress: 3-byte mantissa shifted by the exponent byte."""
+    length = min(max(compact >> 24, 3), 32)
+    return (compact & 0xffffff) << 8 * (length - 3)
+
+
+HCACHE = os.path.join(os.path.dirname(a.cache), "headers.json")
+hc = {}
+try:
+    with open(HCACHE) as f:
+        hc = {int(k): v for k, v in json.load(f).items()}
+except Exception:
+    pass
+first = max(1, tip - HEADERS_TAKE + 1)
+missing = [h for h in range(first, tip + 1) if h not in hc]
+if len(missing) <= 60:
+    for h in missing:
+        blk = safe(f"/blockchain/block?blockNumber={h}")
+        if blk:
+            hc[h] = [blk["header"]["timestamp"], int(blk["header"]["difficulty"])]
+else:
+    for h in get(f"/blockchain/headers?blockNumber={tip}&take={HEADERS_TAKE}", timeout=180):
+        hc[h["blockNumber"]] = [h["timestamp"], int(str(h["difficulty"]), 16)]
+hc = {h: v for h, v in hc.items() if first <= h <= tip}
+os.makedirs(os.path.dirname(HCACHE), exist_ok=True)
+with open(HCACHE, "w") as f:
+    json.dump(hc, f)
+hs = [(h, t, 2 ** 256 // (target_of(d) + 1), difficulty(hex(d))) for h, (t, d) in sorted(hc.items())]
 
 def window_stats(rows):
     if len(rows) < 2:
