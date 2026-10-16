@@ -25,6 +25,9 @@ This is the plan, agreed with the wallet session on 2026-10-17.
    - From 2026-10-17 00:20 Israel the bets service opens no new markets (`BETS_TICKERS=` empty).
    - Nothing tops up the node wallet.
    - Alon cancels his own orders and collects.
+   - The bridge has been stopped since 2026-10-17 00:37 Israel, so nobody can withdraw USDC against zUSDC issued with
+     the public key. Withdrawals sent meanwhile wait for step 3. Do not `up -d` the whole stack before the move: that
+     would start the bridge again.
 2. **The night's markets close** at 2026-10-17 22:00 UTC and settle with the old key.
 3. **The bridge processes every pending withdrawal:** old zUSDC at 0/0 from a linked sender is paid out in USDC and
    burned.
