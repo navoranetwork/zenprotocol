@@ -35,6 +35,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { refuseTestWallet } from '../known-wallets.mjs';
 import { tokens, linesOf, priceOf, nextCloses, isWeekday, stateOf, winnerOf, attestSubtype, bodies, fairUp, quotesFor, planQuotes, spreadFor, medianOf } from './core.mjs';
 
 const env = (k, d) => process.env[k] ?? d;
@@ -251,6 +252,7 @@ const server = http.createServer((req, res) => {
 await new Promise((ok, fail) => server.once('error', fail).listen(Number(PORT), HOST, ok)).catch(e => { console.error(`cannot listen on ${HOST}:${PORT}: ${e.code}; is another bets running (docker ps)?`); process.exit(1); });
 log(`bets on ${HOST}:${PORT}`);
 
+await refuseTestWallet(NODE, PW, 'bets');
 const makerKey = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '').toLowerCase();
 log(`markets for ${CONTRACT} (${TICKERS.join(', ')}; lines ${OFFSETS.join(' ')}), close ${CLOSE_UTC}:00 UTC, quote ${fmt(QUOTE)} spread ${SPREAD} move ${MOVE}, key ${makerKey.slice(0, 12)}…${DRY ? ', DRY' : ''}`);
 for (;;) {

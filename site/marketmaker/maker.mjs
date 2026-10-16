@@ -22,6 +22,7 @@
 //   MM_CANCEL_ALL=1  cancel every open order of this key (each copy), print what was sent and exit; stop the service first
 import { execFileSync } from 'node:child_process';
 import { plan, impliedPrice, sideOf } from './levels.mjs';
+import { refuseTestWallet } from '../known-wallets.mjs';
 
 const env = (k, d) => process.env[k] ?? d;
 const NODE = env('MM_NODE', 'http://127.0.0.1:31567'), PW = env('MM_PASSWORD', 'testnet'), SIGN = env('MM_SIGN', "m/44'/258'/0'/0/0");
@@ -119,6 +120,7 @@ if (SIGN === "m/44'/258'/0'/0/0" && env('MM_MAIN_KEY_OK', '') !== '1') {
   console.error("MM_SIGN is the node wallet's main key, which is the bridge's ZP address: run scripts/v1/mm-key.mjs and set MM_SIGN (or MM_MAIN_KEY_OK=1 when no bridge uses this wallet)");
   process.exit(1);
 }
+await refuseTestWallet(NODE, PW, 'market maker');
 const pk = String(await node('/wallet/publickey', { path: SIGN, password: PW })).replace(/"/g, '').toLowerCase();
 log(`market maker: key ${pk.slice(0, 12)}…, ${LEVELS} levels per side of ${SIZE} ZP, spread ${SPREAD * 1e4} bps, step ${STEP * 1e4} bps${DRY ? ', DRY RUN' : ''}`);
 if (env('MM_CANCEL_ALL', '') === '1') {

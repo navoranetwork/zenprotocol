@@ -26,7 +26,7 @@ x-web: &web
 services:
   oracle:
     <<: *tools
-    command: dotnet /app/zen-oracle.dll run
+    command: sh -c 'node /r/scripts/check-wallet.mjs http://127.0.0.1:31567 "$${ORACLE_PASSWORD}" oracle && exec dotnet /app/zen-oracle.dll run'
     volumes: ["./:/r:ro", "oracle-data:/data"]
     environment: { ORACLE_NODE: "http://127.0.0.1:31567", ORACLE_DATA: /data, ORACLE_LISTEN: "http://127.0.0.1:8085/", ORACLE_PASSWORD: "${TESTNET_PASSWORD:-testnet}" }
   index:

@@ -31,6 +31,17 @@ ARGS=(--data-path /data --api "*:$API_PORT")
 if [ "${PUBLIC_NODE:-0}" = "1" ]; then ARGS+=(--remote --origin any)
 elif [ "${WALLET_API:-0}" = "1" ]; then ARGS+=(--addressdb --origin any); fi
 # A known wallet phrase for the miner (test networks only): import it once, before the first real start.
+# A public test phrase (BIP39 vectors, tool defaults, our docs) gives keys anyone can derive: refused unless
+# ZP_ALLOW_TEST_KEYS=1, for a throwaway devnet only (site/known-wallets.mjs has the same list by key).
+case "$(echo "${TESTNET_MNEMONIC:-}" | tr -s ' ' | tr 'A-Z' 'a-z')" in
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"|\
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"|\
+  "test test test test test test test test test test test junk"|"zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong")
+    if [ "${ZP_ALLOW_TEST_KEYS:-0}" != "1" ] || [ "$NET" != test ]; then
+      echo "TESTNET_MNEMONIC is a public test phrase: anyone can derive its keys. Refused (set a phrase of its own; ZP_ALLOW_TEST_KEYS=1 only for a throwaway devnet)."; exit 3
+    fi
+    echo "WARNING: TESTNET_MNEMONIC is a public test phrase (allowed by ZP_ALLOW_TEST_KEYS=1)";;
+esac
 if [ -n "${TESTNET_MNEMONIC:-}" ] && [ "$NET" = test ] && [ ! -f /data/wallet-imported ]; then
   "${NODE[@]}" "${ARGS[@]}" > /tmp/setup.log 2>&1 & P=$!   # directly, so that kill reaches the node itself
   for _ in $(seq 120); do curl -fs "http://127.0.0.1:$API_PORT/blockchain/info" >/dev/null && break; sleep 1; done

@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { decodeAddress } from '../../wallet/src/keys.js';
+import { refuseTestWallet } from '../known-wallets.mjs';
 
 const env = (k, d) => process.env[k] ?? d;
 const NODE = env('BRIDGE_NODE', 'http://127.0.0.1:31567'), CONTRACT = env('BRIDGE_CONTRACT', ''), ASSET = env('BRIDGE_ASSET', '');
@@ -215,6 +216,8 @@ const readBody = req => new Promise((ok, no) => { let b = ''; req.on('data', c =
 // issued now, as a deposit, to that ZP address, and recorded like one, so the reserves stay matched by zUSDC out.
 // Run with the bridge service stopped (it writes done.json). Refused for a transfer already credited or deposited, one
 // not from a funder, one short of BRIDGE_CONFIRMATIONS, or the bridge's own ZP address (it would be paid out as USDC).
+// a wallet from a public test phrase: anyone could issue zUSDC with its key and take what is sent to its address
+if (!EVM.startsWith('mock:')) await refuseTestWallet(NODE, PW, 'bridge');
 if (process.argv[2] === 'credit') {
   const [, , , evmTx, zpTo] = process.argv;
   try {

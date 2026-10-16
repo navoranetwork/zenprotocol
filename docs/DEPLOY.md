@@ -5,6 +5,26 @@ The aim: a fresh Ubuntu 24.04 x86 server (8 GB RAM) becomes a working testnet no
 ## Install
 `scripts/install-testnet-stack.sh` (see its header). Update later: `git pull`, rebuild `zen-tools` (`docker build -f Docker/Dockerfile.tools -t zen-tools .`), run the script again, `docker compose ... up -d --force-recreate`.
 
+## The node wallet
+- The node wallet signs for the bridge and the oracle:
+  - its key m/44'/258'/0'/3/0 is zUSDC's issuer and the oracle's commit key;
+  - its first address, 0/0, is the bridge's ZP address;
+  - 2/N are the market maker and the bets service.
+- Its phrase must be **its own**. `install-testnet-stack.sh` makes a random one on first install and keeps it only in
+  `.env`: mode 600, never printed or committed. Back it up off the server.
+- **Known test phrases are refused.** `site/known-wallets.mjs`, and in the node, `Docker/entrypoint.sh`:
+  - always on mainnet;
+  - on the testnet only with `ZP_ALLOW_TEST_KEYS=1`, for a throwaway devnet.
+  - The bridge, market maker and bets services check at start, and the oracle through `scripts/check-wallet.mjs`.
+- 2026-10-17: the public testnet's node wallet was the public phrase "abandon … art", so its keys were derivable by
+  anyone. The wallet session found it through the bridge's address. It runs with `ZP_ALLOW_TEST_KEYS=1` until it moves to
+  a new phrase. Moving means:
+  - a new phrase;
+  - the funds moved;
+  - a new zUSDC contract, with holders issued 1:1 from a snapshot;
+  - a new oracle key;
+  - the bridge page updated.
+
 ## After the install: what must be true
 | Check | Command | Expected |
 |---|---|---|

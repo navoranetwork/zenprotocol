@@ -58,14 +58,14 @@ docker build -f Docker/Dockerfile.net10 -t zen-testnet .
 docker network create zt
 MN="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
 docker run -d --name zt-a --network zt -p 127.0.0.1:31567:31567 -e NETWORK=test -e NETWORK_URL=off \
-  -e MINER_THREADS=2 -e WALLET_API=1 -e TESTNET_MNEMONIC="$MN" zen-testnet
+  -e MINER_THREADS=2 -e WALLET_API=1 -e TESTNET_MNEMONIC="$MN" -e ZP_ALLOW_TEST_KEYS=1 zen-testnet
 sleep 40
 for n in b c; do docker run -d --name zt-$n --network zt -e NETWORK=test -e SEEDS=zt-a -e WALLET_API=1 zen-testnet; done
 ```
 
 That network has the same genesis as the public testnet, so to keep it separate from the public one leave `NETWORK_URL=off` and give every node `SEEDS`, so none of them contacts the public seeds. (A fully different chain, with its own genesis and parameters, is made with `scripts/devnet/make-genesis.mjs` and a change in `Chain.fs`; a configuration-file version of that is planned.)
 
-The mnemonic above is public and worthless: anyone can spend those coins. That is the point, because the load generator and tests need to sign with it.
+The mnemonic above is public and worthless: anyone can spend those coins. That is the point, because the load generator and tests need to sign with it. The node refuses a public phrase unless `ZP_ALLOW_TEST_KEYS=1` (testnet only; never on mainnet), and so do the bridge, oracle, market maker and bets services (`site/known-wallets.mjs`). **Never use it for a node that runs those services**: anyone could issue zUSDC with its key or sign oracle rounds. The public testnet used it until 2026-10-17 (docs/DEPLOY.md, "The node wallet").
 
 ## Devnet: private network on the `local` chain
 

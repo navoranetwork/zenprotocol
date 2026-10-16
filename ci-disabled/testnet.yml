@@ -26,7 +26,7 @@ jobs:
       - name: Start 3 nodes (A mines and is the seed)
         run: |
           docker network create zt
-          docker run -d --name zt-a --network zt -p 127.0.0.1:31567:31567 -e NETWORK=test -e NETWORK_URL=off -e SEEDS= -e MINER_THREADS=2 -e WALLET_API=1 -e TESTNET_MNEMONIC="$MN" zen-testnet
+          docker run -d --name zt-a --network zt -p 127.0.0.1:31567:31567 -e NETWORK=test -e NETWORK_URL=off -e SEEDS= -e MINER_THREADS=2 -e WALLET_API=1 -e TESTNET_MNEMONIC="$MN" -e ZP_ALLOW_TEST_KEYS=1 zen-testnet
           sleep 40
           docker run -d --name zt-b --network zt -p 127.0.0.1:31568:31567 -e NETWORK=test -e SEEDS=zt-a -e WALLET_API=1 zen-testnet
           docker run -d --name zt-c --network zt -p 127.0.0.1:31569:31567 -e NETWORK=test -e SEEDS=zt-a -e WALLET_API=1 zen-testnet

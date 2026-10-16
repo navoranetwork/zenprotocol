@@ -14,23 +14,32 @@
 #                       Without it those tickers are skipped (never published from one source); the rest works without any key.
 #   DIR=...             install folder (default ~/zenprotocol-testnet)
 # Re-running it updates the code and restarts the services; contracts that are already recorded in
-# testnet-stack.env are kept. Nothing here uses real money: the wallet phrase is the public test phrase.
+# testnet-stack.env are kept. Nothing here uses real money, but the node wallet signs for the bridge (zUSDC) and the
+# oracle, so its phrase is made here on first install, kept only in $DIR/.env (mode 600), never printed or committed.
 set -euo pipefail
 
 DIR="${DIR:-$HOME/zenprotocol-testnet}"
 export DIR
 SUDO=""; [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null && SUDO="sudo"
-MN="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
 PW=testnet
+D="$SUDO docker"; docker info >/dev/null 2>&1 && D="docker"
+# the node wallet's phrase: the one in .env, or a new random one (24 words). Never the public test phrase: the node
+# and the services refuse it (site/known-wallets.mjs).
+MN=$(sed -n 's/^TESTNET_MNEMONIC=//p' "$DIR/.env" 2>/dev/null | tail -1)
+if [ -z "$MN" ]; then
+  MN=$($D run --rm node:22-alpine sh -c 'cd /tmp && npm i --silent --no-audit --no-fund @scure/bip39@1.5.4 >/dev/null 2>&1 && node -e "const b=require(\"@scure/bip39\"); const { wordlist } = require(\"@scure/bip39/wordlists/english\"); console.log(b.generateMnemonic(wordlist, 256))"')
+  [ "$(echo "$MN" | wc -w)" = 24 ] || { echo "could not make a wallet phrase"; exit 1; }
+  echo "a new wallet phrase is made; it goes into $DIR/.env (TESTNET_MNEMONIC): back it up, do not share it"
+fi
 API=http://127.0.0.1:31567
 
 echo "== 1/6 The node"
 export MINER_THREADS="${MINER_THREADS:-1}" TESTNET_MNEMONIC="$MN"
 curl -fsSL "https://raw.githubusercontent.com/navoranetwork/zenprotocol/node-upgrade-script/scripts/install-testnet-seed.sh" | bash
 cd "$DIR"
-grep -q TESTNET_MNEMONIC .env || echo "TESTNET_MNEMONIC=$MN" >> .env
+grep -q TESTNET_MNEMONIC .env || echo "TESTNET_MNEMONIC=$MN" >> .env   # the seed installer rewrites .env: put the phrase back
+chmod 600 .env
 grep -q '^MINER_THREADS=' .env && sed -i "s/^MINER_THREADS=.*/MINER_THREADS=$MINER_THREADS/" .env
-D="$SUDO docker"; docker info >/dev/null 2>&1 && D="docker"
 $D compose -f docker-compose.testnet.yml up -d
 command -v python3 >/dev/null || $SUDO apt-get install -y python3
 
