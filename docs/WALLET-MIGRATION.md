@@ -38,6 +38,18 @@ This is the plan, agreed with the wallet session on 2026-10-17.
 7. **Send the wallet session:** the new zUSDC asset id, the oracle key, the bridge address and the service addresses.
    It updates its tests, its mock, BETS.md, ORACLE.md, TESTNET-V1-MIGRATION.md and site/test/bridge.test.mjs.
 
+## The scripts
+- `scripts/v1/wallet-move.mjs snapshot` writes `snapshot.json` and `issue-plan.json`, and runs the asserts.
+- `scripts/v1/wallet-move.mjs issue` issues once from the plan, keeping `issued.json`.
+- The rules are in `site/wallet-move-core.mjs`, tested in `site/test/wallet-move.test.mjs`.
+- Both run in the zen-tools image with the index database mounted; the commands are in the script's header.
+- The new phrase is read from a file and never printed.
+- The snapshot refuses to run when:
+  - the mempool holds a call to zUSDC, FixedPayout or the Dex;
+  - the bridge's asset is not the old zUSDC;
+  - the Dex holds a different amount than its open orders say;
+  - the old zUSDC found at all addresses is not the supply (a holder the index has not seen yet).
+
 ## The snapshot (`snapshot.json`)
 Each owner (a PK address) is credited with:
 - old zUSDC held at the owner's address;
