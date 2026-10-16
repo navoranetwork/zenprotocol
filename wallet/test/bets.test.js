@@ -51,6 +51,8 @@ test('the explorer answer: contractId and collateral at the top, statuses, the b
   assert.equal(ms[0].contract, 'ee'.repeat(36)); assert.equal(ms[0].status, 'closing'); assert.deepEqual(ms[0].book, { up: { ask: 0.6, bid: 0.55 }, down: { ask: null, bid: null } });
   assert.equal(ms[1].status, 'voidable'); assert.equal(redeemValue(ms[1], 'up', 4n), null);   // not void yet: nothing to collect
   assert.equal(marketsOf({ ...j, collateral: '00' }).length, 0);                               // rows in another collateral are refused
+  const q = marketsOf({ ...j, markets: [{ ...row, fair: 0.53, quoting: true }, { ...row, fair: null, quoting: false }, { ...row, fair: 3 }] });
+  assert.deepEqual(q.map(m => [m.fair, m.quoting]), [[0.53, true], [null, false], [null, null]]);
 });
 
 test('the live testnet BTC market: the wallet Redeem body is byte for byte the market service builder (site/bets/core.mjs)', async () => {

@@ -46,7 +46,8 @@ export function marketOf(row, ctx = {}) {
     status: STATUS.includes(row?.status) ? row.status : row?.status === 'closed' ? 'closing' : 'open',
     result: row?.result === 'bull' || row?.result === 'bear' ? row.result : null,
     settlePrice: row?.settlePrice == null ? null : Number(row.settlePrice), contract: HEX(72).test(cid) ? cid : null,
-    book: { up: sideBook(row?.book?.up), down: sideBook(row?.book?.down) } };
+    book: { up: sideBook(row?.book?.up), down: sideBook(row?.book?.down) },
+    fair: price01(row?.fair), quoting: row?.quoting === false ? false : row?.quoting === true ? true : null };
   if (!ASSET.test(m.bull) || !ASSET.test(m.bear) || m.bull === m.bear) throw new Error('market: bad position tokens');
   if (ctx.collateral && String(ctx.collateral).toLowerCase() !== m.collateral) throw new Error('market: other collateral');
   return m;

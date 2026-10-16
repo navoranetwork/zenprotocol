@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.37.2 — 2026-10-16
+
+### Added
+- Bets read the market service's `fair` and `quoting`: when it has stopped quoting a close (20 minutes before it), the
+  table says that only other traders' offers are left.
+
 ## 0.37.1 — 2026-10-16
 
 ### Changed

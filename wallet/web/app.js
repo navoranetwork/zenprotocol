@@ -167,7 +167,8 @@ function betsCard(m, cat) {
     const b0 = list[0], now = nowOf(b0.ticker), near = now == null ? null : list.reduce((x, y) => Math.abs(y.strike - now) < Math.abs(x.strike - now) ? y : x);
     const rows = list.map(b => `<div class="chainrow${b === near ? ' near' : ''}"><span class="line">${esc(strikeText(b))}${b === near ? ' <span class="nowmark" title="nearest to the price now">◀</span>' : ''}</span>${odd(b, 'up')}${odd(b, 'down')}</div>`).join('');
     return `<div class="chain"><div class="chainhead"><div class="tname">${tickerBadge(b0.ticker, 26)}<span><b>${esc(b0.ticker)}</b>${now != null ? ` <span class="muted small">now ${esc(now.toLocaleString('en-US', { maximumFractionDigits: 2 }))}</span>` : ''}</span></div><div class="muted small">closes ${esc(closeText(b0.close))}</div></div>
-      <div class="chainrow chaintop muted small"><span>At or above</span><span>▲ Up</span><span>▼ Down</span></div>${rows}</div>`;
+      <div class="chainrow chaintop muted small"><span>At or above</span><span>▲ Up</span><span>▼ Down</span></div>${rows}
+      ${list.every(b => b.quoting === false) ? '<p class="muted small" data-s="mt6">The market maker has stopped quoting (it stops 20 minutes before the close): only other traders\' offers are left.</p>' : ''}</div>`;
   }).join('');
   return `<div class="card"><h2>Up or down?</h2>${tables || '<p class="muted small">No open bets in this group now.</p>'}
     <p class="muted small" data-s="mt10">Pick a line and a side. The number is the price of one token in zUSDC: it pays 1 zUSDC if the price at the close is at or above the line (Up) or below it (Down), nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
