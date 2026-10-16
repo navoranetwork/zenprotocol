@@ -1,9 +1,18 @@
 # Up / Down markets on oracle prices (FixedPayout V1)
 
-Status, 2026-10-16: the contract is written (`contracts/v1/FixedPayout.fst`), not built yet. It needs the node image
-with zp-contracts-v1 dab00f8 or later (`Zen.MerkleTree`, `Zen.Integers`). `contracts/v1/probes/MerkleProbe.fst`, which
-proves an oracle price the same way, passed on dab00f8. The oracle service stamps rounds with their slot (below); that
-change also waits for a lab build. Nothing here is on the testnet yet.
+Status, 2026-10-16: the contract (`contracts/v1/FixedPayout.fst`) passed on zp-contracts-v1 dab00f8 (the V1 session's
+run of `scripts/v1/fixedpayout-try.mjs`, zenprotocol 94793406): the node's check, then all 38 try checks.
+- Contract id with the f06ddc34 source: `000000010accfe3879fd9c12aad647f51f2fe034202828c0329ea7a035033c15707d472c`
+  (17,231 bytes). A later edit of the source, even a comment, gives another id.
+- Gas used:
+  - Issue, Cancel and refusals: 22,547 to 23,059;
+  - Settle: 10,311 (path of 0);
+  - Redeem: about 24,000;
+  - Void: about 23,000.
+  Every call is within its declared 30,000 + 512 per coin.
+- The oracle's slot stamping built on zp-lab-1 (selftest 15 ok at 46f3761d). Its slot checks (fecec897) wait for a
+  rebuild.
+- Not on the testnet yet: it waits for the node image with dab00f8.
 
 ## What a market is
 
@@ -81,8 +90,7 @@ no fee per gas; the cost counts toward the block's weight.
 
 ## Still to build
 
-1. The engine check and tries of `contracts/v1/FixedPayout.fst` on dab00f8 (the V1 session or the lab), then
-   activation on the testnet.
+1. Activation on the testnet once the node image has dab00f8 (the check and tries passed, above).
 2. The market service:
    - opens markets (lines near the price, daily closes);
    - runs Attest for each close round to the contract, then Settle;
