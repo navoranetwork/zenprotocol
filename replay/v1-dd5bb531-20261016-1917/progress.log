@@ -3,3 +3,5 @@
 [2026-10-16 21:18] +120 min: block 457511 of 1052892 (8334/min), disk 39G
 [2026-10-16 22:18] +180 min: block 723421 of 1052892 (4601/min), disk 38G
 [2026-10-16 23:19] +241 min: block 1005285 of 1052892 (4803/min), disk 37G
+[2026-10-16 23:29] reached 1055813: checking against the reference
+[2026-10-16 23:47] PASSED
