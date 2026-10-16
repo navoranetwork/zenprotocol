@@ -11,6 +11,14 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.36.1 — 2026-10-16
+
+### Fixed
+- After the snapshot block the vote weight is the ZP held at that block (read from the node's address index), not the
+  balance now; the label says so. Weights show two decimals, on the home card too.
+- The node's default payout candidate, the CGP fund paying itself 1 kalapa, is shown as **No payout** (the fund keeps
+  its ZP) instead of an address and 0.00000001 ZP.
+
 ## 0.36.0 — 2026-10-16
 
 ### Added

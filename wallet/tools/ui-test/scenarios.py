@@ -128,7 +128,7 @@ console.log(encodeAddress(unhex('00000000cdaa2a511cd2e1d07555b00314d1be40a649d3b
     vote_screen(page, 95)
     page.click('button[data-act=load-cands]'); page.wait_for_selector('button[data-act=vote-cand]'); shot(page, '09-candidates')
     items = page.query_selector_all('button[data-act=vote-cand]')
-    check(len(items) == 2, 'two candidates listed')
+    check(len(items) == 3 and 'No payout' in items[2].inner_text(), 'three candidates listed, the last the default No payout')
     print('   candidate rows:', [i.inner_text().replace('\n', ' | ') for i in items])
     items[0].click(); page.wait_for_selector('text=Confirm payout vote'); shot(page, '10-cand-review')
     page.click('button[data-act=confirm-vote]'); page.wait_for_selector('text=Vote sent')

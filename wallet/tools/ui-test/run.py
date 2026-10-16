@@ -73,7 +73,7 @@ with sync_playwright() as p:
     # candidates and payout vote
     mock(tip=VOTE_TIP)
     pg.click('button[data-act=load-cands]'); pg.wait_for_timeout(600); pg.screenshot(path=f'{OUT}/7-candidates.png', full_page=True)
-    items = pg.query_selector_all('button[data-act=vote-cand]'); ok(len(items) == 2, f'two candidates listed ({len(items)})')
+    items = pg.query_selector_all('button[data-act=vote-cand]'); ok(len(items) == 3 and 'No payout' in items[2].inner_text(), f'three candidates listed, the last the default No payout ({len(items)})')
     if items:
         items[0].click(); pg.wait_for_timeout(1500)
         t = pg.inner_text('body')

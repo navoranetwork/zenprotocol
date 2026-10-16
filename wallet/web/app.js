@@ -13,7 +13,7 @@ import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
 import { parseZP, formatZP, ZP } from '../src/tx.js';
-import { hex } from '../src/serialize.js';
+import { hex, unhex } from '../src/serialize.js';
 import contractNames from '../../site/contract-names.json';
 
 const LOCK_AFTER_MS = 15 * 60 * 1000;
@@ -336,6 +336,24 @@ const zpOf = id => { const z = S.data.get(id)?.state?.assets.find(x => x.asset =
 // wallets that vote together (null = every wallet that can sign); watch-only wallets cannot sign a ballot
 const voters = () => { const sel = S.settings.voteWallets[net()]; return walletsHere().filter(w => w.kind !== 'watch' && (sel === null || sel.includes(w.id))); };
 const voteWeight = () => voters().reduce((s, w) => s + zpOf(w.id), 0n);
+// After the snapshot block the weight is the balance at that block (the node's address index, as site/chain-index.mjs
+// reads it), not the balance now. Kept per interval and wallet.
+const snapKey = (i, id) => net() + ':' + i + ':' + id;
+const snapZp = (i, id) => S.snapBal?.[snapKey(i, id)];
+async function loadSnapWeights() {
+  const p = CGP_PARAMS[net()], ph = phaseAt(p, (S.tip || 0) + 1); if (ph.phase === 'before') return false;
+  const snap = snapshotBlock(p, ph.interval), n = node(); if (!n) return false;
+  let changed = false;
+  for (const w of walletsHere()) {
+    const k = snapKey(ph.interval, w.id), o = S.open.get(w.id); if (!o || (S.snapBal || {})[k] !== undefined) continue;
+    try { const rows = await n.request('/addressdb/balance', { addresses: addresses(o), blockNumber: String(snap) });
+      (S.snapBal ||= {})[k] = (Array.isArray(rows) ? rows : []).filter(x => x.asset === '00').reduce((a, x) => a + BigInt(x.balance), 0n); changed = true; } catch { /* the next round asks again */ }
+  }
+  return changed;
+}
+// the weight that counts in the phase now: at the snapshot once it is past (when known), else the balance now
+const weightOf = id => { const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), v = ph.phase === 'before' ? undefined : snapZp(ph.interval, id); return v === undefined ? zpOf(id) : v; };
+const weightNow = () => voters().reduce((s, w) => s + weightOf(w.id), 0n);
 const CONTRACT_ROLE = { CGP: 'Holds the community fund', VCGP: 'Counts CGP votes', FPC: 'Fixed-payout bets', 'DEX-V2': 'Exchange' };
 const EXTEND_WARN = 200000000n; // 2 ZP: ask the user to check the contract once more
 const MY_CONTRACTS_KEY = 'zp-wallet.my-contracts.v1';   // address -> the family it was made from (contracts activated here)
@@ -1038,7 +1056,7 @@ const views = {
       ${c ? `<button class="card cgp" data-go="vote" data-s="plain">
         <div class="row k"><span>CGP · INTERVAL ${c.community}</span><span data-s="right">${esc(c.phase)}</span></div>
         <div data-s="mt4">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
-        <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${formatZP(voteWeight())} ZP</div></button>` : ''}
+        <div class="muted small">Fund ${cgpBalance()} · the fund gets ${alloc()}% of each block reward (${zpStr(c.cgpPerBlock)} ZP) · your vote weight ${balShort(weightNow())} ZP</div></button>` : ''}
       ${others.length ? `<div class="card"><h2>Tokens</h2><div class="list">${others.map(x => `<button type="button" class="item tokrow" data-act="token" data-asset="${esc(x.asset)}"><span class="tname" title="${esc(x.asset)}">${tokenIcon(x.asset)}${S.assetNames[x.asset] ? esc(S.assetNames[x.asset]) : `<span class="mono small">${esc(x.asset.slice(0, 18))}…</span>`}</span><span class="amt">${tokenAmount(x.asset, x.spendable + x.maturing)} <span class="muted">›</span></span></button>`).join('')}</div></div>` : ''}
       <div class="row"><h2>Activity</h2><button class="iconbtn" data-act="refresh" aria-label="Refresh" data-s="fixed">${S.busy ? '<span class="spin"></span>' : I.refresh}</button></div>
       ${actFilter(d)}</div>${nav('home')}`;
@@ -1081,9 +1099,11 @@ const views = {
         <p class="muted small">Choose one wallet or several: their balances at the snapshot block add up to one vote weight.</p>
         <div class="list">${signers.map(w => `<button class="item" data-act="vote-toggle" data-id="${esc(w.id)}" data-s="plain" aria-pressed="${sel.has(w.id)}">
           <span class="row"><span class="check ${sel.has(w.id) ? 'on' : ''}" aria-hidden="true">${sel.has(w.id) ? '✓' : ''}</span><span>${esc(w.name)}</span></span>
-          <span class="amt" data-s="fixed">${formatZP(zpOf(w.id))} ZP</span></button>`).join('') || '<p class="muted small">Add a wallet with its 24 words or key to vote. Watch-only wallets cannot sign a ballot.</p>'}</div>
+          <span class="amt" data-s="fixed">${balShort(weightOf(w.id))} ZP</span></button>`).join('') || '<p class="muted small">Add a wallet with its 24 words or key to vote. Watch-only wallets cannot sign a ballot.</p>'}</div>
         ${signers.length > 1 ? `<div class="row" data-s="mt10"><button class="btn" data-act="vote-all">All</button><button class="btn" data-act="vote-none">None</button></div>` : ''}
-        <div class="kv" data-s="mt10"><span>Vote weight now</span><span class="amt">${formatZP(voteWeight())} ZP</span></div></div>
+        ${(() => { const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), after = ph.phase !== 'before', known = after && voters().every(w => snapZp(ph.interval, w.id) !== undefined);
+          return `<div class="kv" data-s="mt10"><span>${after ? `Vote weight: ZP at the snapshot (block ${snapshotBlock(CGP_PARAMS[net()], ph.interval).toLocaleString('en-US')})` : 'Vote weight if the snapshot were now'}</span><span class="amt">${after && !known ? '<span class="spin"></span>' : balShort(weightNow()) + ' ZP'}</span></div>
+          ${after ? '<p class="muted small">What you hold now does not change it: the next interval\'s snapshot counts the new balance.</p>' : ''}`; })()}</div>
       ${tallyCard(c)}${proposalsCard(c)}${ballotsCard(c)}${sentCard(c)}
       <div class="card"><h2>Protocol upgrade vote</h2><p class="muted small">Inactive: the Repo voting contract has been inactive since block 233,874.</p></div></div>${nav('vote')}`;
   },
@@ -1282,7 +1302,7 @@ const histRow = c => (S.cgpHist?.intervals || []).find(x => x.interval === c.int
 const tallyNow = c => { const row = histRow(c); return row ? tallyInterval(row, { range: allocationRange(CGP_PARAMS[net()], alloc()), threshold: thresholdOf(S.totalZp) }) : null; };
 const bar = pct => `<span class="tbar"><span class="tfill" data-w="${pct}"></span></span>`;
 const zpW = k => zpStr(zpOfKal(k)) + ' ZP';
-const propName = a => contractNames[a] || walletsHere().find(w => receiveAddress(S.open.get(w.id)) === a)?.name || null;
+const propName = a => (a === encodeAddress(unhex(CGP_CONTRACT[net()]), net(), true) ? 'No payout (the fund itself)' : null) || contractNames[a] || walletsHere().find(w => receiveAddress(S.open.get(w.id)) === a)?.name || null;
 const spendText = sp => sp.map(([a, n]) => a === '00' ? formatZP(BigInt(n)) + ' ZP' : withUnit(a, BigInt(n))).join(' + ');
 function tallyCard(c) {
   if (!c) return '';
@@ -1360,8 +1380,11 @@ function ballotsCard(c) {
       <label class="field">Amount (ZP)<input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.namount || '')}" data-fund="${fundZp === null ? '' : fundZp}" required></label>
       <div class="small muted" id="amt-note" aria-live="polite">${fundZp === null ? '' : `The CGP fund holds ${zpStr(fundZp)} ZP: a larger request cannot be paid.`}</div>
       ${openNom ? (pNom ? votedBox(pNom) : `<button class="btn primary" ${none ? 'disabled' : ''}>Review</button>`) : ''}</fieldset></form>`;
+  // the node always lists one candidate that pays the CGP fund 1 kalapa back to itself: a vote for it is a vote for no payout
+  const fundAddr = encodeAddress(unhex(CGP_CONTRACT[net()]), net(), true);
   const cands = S.cands ? (S.cands.length ? S.cands.map((x, i) => `<button class="item" data-act="vote-cand" data-i="${i}" data-s="plain" ${ph.phase === 'Vote' && !none && !pPay ? '' : 'disabled'}>
-      <span class="mono small" data-s="wrap">${esc(x.recipient)}</span><span class="amt">${x.spendlist.map(s => s.asset === '00' ? formatZP(BigInt(s.amount)) + ' ZP' : 'asset ' + esc(s.asset.slice(0, 8)) + '…').join(' + ')}</span></button>`).join('') : '<p class="muted small">No candidates in this interval.</p>')
+      ${x.recipient === fundAddr ? '<span><b>No payout</b><br><span class="muted small">The fund keeps its ZP (the node\'s default choice: 1 kalapa from the fund to itself)</span></span><span></span>'
+        : `<span class="mono small" data-s="wrap">${esc(x.recipient)}</span><span class="amt">${x.spendlist.map(s => s.asset === '00' ? formatZP(BigInt(s.amount)) + ' ZP' : 'asset ' + esc(s.asset.slice(0, 8)) + '…').join(' + ')}</span>`}</button>`).join('') : '<p class="muted small">No candidates in this interval.</p>')
     : `<button class="btn" data-act="load-cands">Show candidates</button>`;
   return `<div class="card"><h2>Casting ballots</h2>
     <p class="muted small">Signed on this device by the selected wallets; each sends one transaction with a 1 kalapa fee. Only the first vote of each key counts in a phase.</p>${note}
@@ -1711,6 +1734,7 @@ function rememberVote(v) { (S.myVotes ||= loadVotes()).push({ ...v, net: net(), 
 async function refreshVotes() {
   const n = node(); if (!n || S.screen !== 'vote') return;
   let changed = false;
+  if (await loadSnapWeights()) changed = true;
   if (!S.cgpHistAt || Date.now() - S.cgpHistAt > 60000) { S.cgpHistAt = Date.now(); const before = JSON.stringify(S.cgpHist?.intervals?.[0] || null); await loadCgpHist(); if (JSON.stringify(S.cgpHist?.intervals?.[0] || null) !== before) changed = true; }
   // follow the chain: when a new phase opens (nominations, voting) the forms open without leaving the screen
   try {
