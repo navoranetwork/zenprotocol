@@ -273,6 +273,29 @@ The fair-value quoting (892c5797, above) is pushed but **not deployed yet**. Ope
   (59, then 28). The explorer now lists an asset at most as many times as the Dex holds it.
   `scripts/v1/dex-mempool-probe.mjs` showed that mempool calls parse correctly.
 
+### Live prices for quoting (2026-10-16, 23:30 Israel)
+
+The wallet session's review found that hourly rounds make the quotes stale within the hour. Since this change:
+
+- **The live price** of BTC and ETH is read each minute by the service: the median of Coinbase (`/v2/prices/X-USD/spot`),
+  Binance (`/api/v3/ticker/price`) and CoinGecko (`/simple/price`).
+  - Another ticker (FX, gold, stocks) is still priced from the latest round.
+  - A live ticker never falls back to the round. With no live price for `BETS_LIVE_STALE_S` (180), its markets are not
+    quoted: their orders are cancelled, and the log says `no live price for …`.
+  - The hourly round is used only for Settle.
+- **The spread**, `spreadFor` in core.mjs:
+  - it starts at `BETS_SPREAD` (0.06);
+  - it is multiplied by the price's move over the last ~5 minutes, in standard deviations, when that is above 1 (at
+    most 3×);
+  - it is ×1.5 in the last 2 hours before the close and ×2 in the last hour, and ×1.5 with a single source;
+  - it is at most 0.30.
+  - Quoting stops 20 minutes before the close.
+- **Requoting:**
+  - An order is made again when it is more than `BETS_MOVE` (now 0.02) from its target.
+  - Each cycle cancels the most mispriced orders first (an ask below its target, a bid above it), before any Make.
+  - Up to `BETS_MAX_TX` 20 calls a minute, 1 s apart.
+- **`/bets/markets`** also gives `spot` (the price used) and `spread` per market.
+
 ## Still to build
 
 1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after

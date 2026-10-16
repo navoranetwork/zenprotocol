@@ -81,6 +81,17 @@ export function quotesFor(pUp, { spread = 0.06, tick = 0.01, min = 0.01, max = 0
   };
   return { up: two(pUp), down: two(1 - pUp) };
 }
+// the spread of a market's quotes: the base, times the last minutes' move in standard deviations when it is above one
+// (at most 3x), times 1.5 in the last 2 hours and 2 in the last hour before the close, times 1.5 with a single live
+// source; at most 0.3
+export function spreadFor(base, { vol, move = null, minutes = 5, msLeft = Infinity, sources = 3 }) {
+  let k = 1;
+  if (move != null && vol > 0 && minutes > 0) { const z = Math.abs(move) / (vol * Math.sqrt(minutes * 60000 / YEAR)); if (z > 1) k *= Math.min(3, z); }
+  if (msLeft < 3600000) k *= 2; else if (msLeft < 7200000) k *= 1.5;
+  if (sources < 2) k *= 1.5;
+  return Math.min(0.3, base * k);
+}
+export const medianOf = xs => { const v = xs.filter(x => x > 0).sort((a, b) => a - b); return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null; };
 // the price of one of our Dex orders on a position token: an ask sells the token for the collateral, a bid buys it
 export const orderPrice = (o, side) => side === 'ask' ? Number(o.pair_total) / Number(o.under_amount) : Number(o.under_amount) / Number(o.pair_total);
 // what to cancel and what to make for one market. want: quotesFor(...) or null (stop quoting); mine: our open orders on

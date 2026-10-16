@@ -107,3 +107,17 @@ test('plan: keep what is near its target, cancel the rest, make the missing slot
   const stop = planQuotes(null, mine, { bull, bear, collateral: C });   // stop quoting: cancel all that can be cancelled
   assert.deepEqual(stop.cancels.length, 3); assert.deepEqual(stop.makes, []);
 });
+
+import { spreadFor, medianOf } from '../bets/core.mjs';
+test('spread: wider on a fast move, near the close, with one source; capped', () => {
+  const day = 86400000;
+  assert.equal(spreadFor(0.06, { vol: 0.55, move: 0, msLeft: day }), 0.06);
+  // BTC 0.55 a year: 5 minutes' sd is about 0.0021; a 0.5 % move is about 2.4 sd
+  assert.ok(Math.abs(spreadFor(0.06, { vol: 0.55, move: 0.005, minutes: 5, msLeft: day }) - 0.06 * 0.005 / (0.55 * Math.sqrt(5 / 525960))) < 1e-9);
+  assert.equal(spreadFor(0.06, { vol: 0.55, move: 0.05, minutes: 5, msLeft: day }), 0.18);      // at most 3x
+  assert.ok(Math.abs(spreadFor(0.06, { vol: 0.55, msLeft: 5400000 }) - 0.09) < 1e-12);
+  assert.equal(spreadFor(0.06, { vol: 0.55, msLeft: 1800000 }), 0.12);
+  assert.ok(Math.abs(spreadFor(0.06, { vol: 0.55, msLeft: day, sources: 1 }) - 0.09) < 1e-12);
+  assert.equal(spreadFor(0.06, { vol: 0.55, move: 0.05, msLeft: 1800000, sources: 1 }), 0.3);
+  assert.equal(medianOf([3, 1, 2]), 2); assert.equal(medianOf([1, 3]), 2); assert.equal(medianOf([0, NaN]), null);
+});
