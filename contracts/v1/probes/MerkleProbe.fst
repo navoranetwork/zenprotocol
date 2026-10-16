@@ -8,10 +8,12 @@
 //                       or leaf: Hash (a test vector, zp-contracts-v1 tests/merkle/vectors.txt) }
 //   succeeds only if: the leaf verifies, a different leaf does not (the leaf of value + 1, or the Sha3 of the given
 //   leaf), and the oracle id parses. Otherwise "merkle check failed".
-// Needs Zen.MerkleTree realized in Zulib V1 (interface-only in 87b24e2: rule 4.9 refuses this source until then).
+// Needs zp-contracts-v1 dab00f8 or later (Zen.MerkleTree realized, Zen.Integers.u64ToNat): the V1 session's run on
+// dab00f8 passed every vector (gas 1,083 / 3,669 / 5,393 for paths of 0 / 3 / 5).
 // scripts/v1/merkle-probe.mjs fills the body from a real round of the oracle service (GET /auditpath).
 
 open Zen.Base
+open Zen.Prelude
 open Zen.Cost
 open Zen.Types
 open Zen.Data
@@ -34,27 +36,28 @@ type auditPath = p:list hash { length p <= 30 }
 
 // FixedPayout's hashLeaf, the same shape: Sha3 of the ticker's bytes, then the value as a U64, padded to 4 characters
 let leafOf (key : ticker) (value : U64.t) =
-    ret Sha3.empty
+    (ret Sha3.empty
     >>= Sha3.updateString key
     >>= Sha3.updateU64 value
-    >>= Sha3.finalize
+    >>= Sha3.finalize)
     |> inc (24 - 6 * S.length key)
     |> (fun x -> x <: hash `cost` 92)
 
-// Zen.MerkleTree.verify padded to a path of 30 (FixedPayout's verifyAuditPath')
+// Zen.MerkleTree.verify at the cost of a path of 30 (V1 meters gas at run time: a shorter path uses less; `length`
+// is not allowed in code that runs, rule 4.5)
 let verifyPadded (r: hash) (p: auditPath) (i: nat) (l: hash) =
     Zen.MerkleTree.verify r p i l
-    |> inc (30 * 420 - length p * 420)
     |> (fun x -> x <: bool `cost` (30 * 420 + 4))
 
-// the body's path: at most 30 hashes, read padded to 30 (FixedPayout's extractAuditPath)
+// the body's path: at most 30 hashes (a 31st item refuses it), read at the cost of 30
 let pathOf (ls: list data) =
-    if length ls <= 30 then
+    let! extra = Zen.List.tryNth ls 30 in
+    match extra with
+    | None ->
         (let (ls: list data { length ls <= 30 }) = ls in
          OptT.tryMapT tryHash ls
-         |> inc ((30 - length ls) * 22)
          |> (fun x -> x <: option auditPath `cost` (30 * 22 + 20)))
-    else C.ret None |> autoInc
+    | Some _ -> C.ret None |> autoInc
 
 let idParses (o: string) =
     if S.length o = 72 then
@@ -99,7 +102,7 @@ let main txSkeleton context contractId command sender messageBody wallet state =
         (let! hs = pathOf p in
          match hs with
          | Some hs ->
-             (let! passed = proves r hs (U64.v i) l1 l2 o in
+             (let! passed = proves r hs (Zen.Integers.u64ToNat i) l1 l2 o in
               if passed then RT.ok @ { tx = txSkeleton; message = None; state = NoChange }
               else RT.autoFailw "merkle check failed")
          | None -> RT.autoFailw "path must be a list of up to 30 hashes")
