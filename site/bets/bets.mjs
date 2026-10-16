@@ -81,6 +81,7 @@ const latestRound = async () => { const r = await (await fetch(ORACLE + '/rounds
 // made twice while its order travels (seen on the testnet 2026-10-16: a second Issue and copies of each order a minute later)
 const SEEN = Number(env('BETS_SEEN_MIN', '20')) * 60000;
 const RECENT = path.join(DATA, 'recent-makes.json');        // kept across restarts: a restart must not make them again
+let recentCancels = [];
 let recentMakes = (() => { try { return JSON.parse(fs.readFileSync(RECENT, 'utf8')); } catch { return []; } })();
 const saveRecent = () => { try { fs.writeFileSync(RECENT, JSON.stringify(recentMakes)); } catch { /* best effort */ } };
 const sameOrder = (a, b) => a.under_asset === b.under_asset && String(a.under_amount) === String(b.under_amount) && a.pair_asset === b.pair_asset && String(a.pair_total) === String(b.pair_total);
@@ -109,7 +110,10 @@ async function quote(now, makerKey) {
   const { ts, values } = await latestRound();
   const listed = ((await (await fetch(EXPLORER + '/dex/orders?pending=1')).json()).orders || []).filter(o => (o.maker || '').toLowerCase() === makerKey);
   recentMakes = recentMakes.filter(r => now - r.at < SEEN && !listed.some(o => sameOrder(o, r))); saveRecent();
-  const mineAll = [...listed, ...recentMakes.map(r => ({ ...r, pending: true }))];
+  // our Cancels of the last 10 minutes: the order counts as being cancelled (its slot waits) until it leaves the list
+  recentCancels = recentCancels.filter(r => now - r.at < 600000 && listed.some(o => sameOrder(o, r)));
+  const mineAll = [...listed.map(o => recentCancels.some(r => sameOrder(o, r)) ? { ...o, pendingCancel: o.pendingCancel || 'ours' } : o),
+    ...recentMakes.map(r => ({ ...r, pending: true }))];
   const bal = await walletBalances();
   const has = a => bal.get(a) || 0, take = (a, n) => bal.set(a, has(a) - n), give = (a, n) => bal.set(a, has(a) + n);
   let bidLocked = mineAll.filter(o => o.under_asset === COLLATERAL).reduce((s, o) => s + Number(o.under_amount), 0);
@@ -123,33 +127,38 @@ async function quote(now, makerKey) {
     const plan = planQuotes(live ? quotesFor(m.fair, { spread: SPREAD }) : null, mine, { bull: t.bull, bear: t.bear, collateral: COLLATERAL, move: MOVE, minSize: QUOTE / 4 });
     for (const o of plan.cancels) {
       if (sent >= MAX_TX) return;
-      const tx = await execute(DEX, 'Cancel', bodies.make(o.under_asset, o.under_amount, o.pair_asset, o.pair_total, o.maker), [], SIGN);
+      recentCancels.push({ under_asset: o.under_asset, under_amount: o.under_amount, pair_asset: o.pair_asset, pair_total: o.pair_total, at: now });
+      let tx;
+      try { tx = await execute(DEX, 'Cancel', bodies.make(o.under_asset, o.under_amount, o.pair_asset, o.pair_total, o.maker), [], SIGN); }
+      catch (e) { log(`cancel ${keyOf(m)} ${o.name} ${o.side}: ${e.message.slice(0, 120)}`); continue; }   // gone already (taken or cancelled): next order
       log(`cancel ${keyOf(m)} ${o.name} ${o.side} at ${o.side === 'ask' ? (o.pair_total / o.under_amount).toFixed(2) : (o.under_amount / o.pair_total).toFixed(2)} -> ${tx}`);
     }
     for (const k of plan.makes) {
       if (sent >= MAX_TX) return;
-      if (k.side === 'ask') {
-        if (has(k.token) < QUOTE) {                                        // mint a pair: QUOTE more Up and Down
-          if ((m.issued ?? 0) + QUOTE > MAX_ISSUE || has(COLLATERAL) < QUOTE) { if (has(k.token) < QUOTE / 10) { short.add(`tokens for ${keyOf(m)}`); continue; } }
-          else {
-            m.issueTx = await execute(CONTRACT, 'Issue', bodies.issue(m), [{ asset: COLLATERAL, amount: QUOTE }], SIGN);
-            m.issued = (m.issued ?? 0) + QUOTE; take(COLLATERAL, QUOTE); give(t.bull, QUOTE); give(t.bear, QUOTE); save();
-            log(`issue ${keyOf(m)}: ${fmt(QUOTE)} pairs -> ${m.issueTx}`);
-            if (sent >= MAX_TX) return;
+      try {
+        if (k.side === 'ask') {
+          if (has(k.token) < QUOTE) {                                        // mint a pair: QUOTE more Up and Down
+            if ((m.issued ?? 0) + QUOTE > MAX_ISSUE || has(COLLATERAL) < QUOTE) { if (has(k.token) < QUOTE / 10) { short.add(`tokens for ${keyOf(m)}`); continue; } }
+            else {
+              m.issueTx = await execute(CONTRACT, 'Issue', bodies.issue(m), [{ asset: COLLATERAL, amount: QUOTE }], SIGN);
+              m.issued = (m.issued ?? 0) + QUOTE; take(COLLATERAL, QUOTE); give(t.bull, QUOTE); give(t.bear, QUOTE); save();
+              log(`issue ${keyOf(m)}: ${fmt(QUOTE)} pairs -> ${m.issueTx}`);
+              if (sent >= MAX_TX) return;
+            }
           }
+          const size = Math.min(QUOTE, has(k.token)), total = Math.round(size * k.price);
+          const tx = await execute(DEX, 'Make', bodies.make(k.token, size, COLLATERAL, total, makerKey), [{ asset: k.token, amount: size }], SIGN);
+          take(k.token, size); recentMakes.push({ under_asset: k.token, under_amount: String(size), pair_asset: COLLATERAL, pair_total: String(total), maker: makerKey, at: now, tx }); saveRecent();
+          log(`ask ${keyOf(m)} ${k.name}: ${fmt(size)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
+        } else {
+          const cost = Math.round(QUOTE * k.price);
+          if (bidLocked + cost > BID_BUDGET || has(COLLATERAL) < cost) { short.add('collateral for bids'); continue; }
+          const tx = await execute(DEX, 'Make', bodies.make(COLLATERAL, cost, k.token, QUOTE, makerKey), [{ asset: COLLATERAL, amount: cost }], SIGN);
+          take(COLLATERAL, cost); bidLocked += cost;
+          recentMakes.push({ under_asset: COLLATERAL, under_amount: String(cost), pair_asset: k.token, pair_total: String(QUOTE), maker: makerKey, at: now, tx }); saveRecent();
+          log(`bid ${keyOf(m)} ${k.name}: ${fmt(QUOTE)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
         }
-        const size = Math.min(QUOTE, has(k.token)), total = Math.round(size * k.price);
-        const tx = await execute(DEX, 'Make', bodies.make(k.token, size, COLLATERAL, total, makerKey), [{ asset: k.token, amount: size }], SIGN);
-        take(k.token, size); recentMakes.push({ under_asset: k.token, under_amount: String(size), pair_asset: COLLATERAL, pair_total: String(total), maker: makerKey, at: now, tx }); saveRecent();
-        log(`ask ${keyOf(m)} ${k.name}: ${fmt(size)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
-      } else {
-        const cost = Math.round(QUOTE * k.price);
-        if (bidLocked + cost > BID_BUDGET || has(COLLATERAL) < cost) { short.add('collateral for bids'); continue; }
-        const tx = await execute(DEX, 'Make', bodies.make(COLLATERAL, cost, k.token, QUOTE, makerKey), [{ asset: COLLATERAL, amount: cost }], SIGN);
-        take(COLLATERAL, cost); bidLocked += cost;
-        recentMakes.push({ under_asset: COLLATERAL, under_amount: String(cost), pair_asset: k.token, pair_total: String(QUOTE), maker: makerKey, at: now, tx }); saveRecent();
-        log(`bid ${keyOf(m)} ${k.name}: ${fmt(QUOTE)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
-      }
+      } catch (e) { log(`${k.side} ${keyOf(m)} ${k.name}: ${e.message.slice(0, 160)}`); }   // a refused call: the next slot
     }
   }
   for (const s of short) log(`short of ${s}`);
