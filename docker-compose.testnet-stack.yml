@@ -8,6 +8,8 @@
 #   faucet    gives test ZP from its own wallet (site/faucet/faucet.mjs)     127.0.0.1:8095
 #   bitzen    BitZen header relayer: Bitcoin headers to the contract BITZEN_CONTRACT (site/bitzen/relayer.mjs); /bitzen.json
 #   prover    BitZen prover: proves payments to reserved swap offers (site/bitzen/prover.mjs; V1 only, profile v1)
+#   bets      Up / Down markets on oracle prices: opens, seeds, settles, voids (site/bets/bets.mjs; profile bets,
+#             after FixedPayout V1 is active: docs/BETS.md)   127.0.0.1:8097
 # All use the host network and talk to the node on 127.0.0.1:31567.
 x-tools: &tools
   image: zen-tools
@@ -63,6 +65,12 @@ services:
     working_dir: /r
     command: node /r/site/bitzen/prover.mjs
     environment: { PROVER_NODE: "http://127.0.0.1:31567", PROVER_PASSWORD: "${TESTNET_PASSWORD:-testnet}", PROVER_STATE: /data/bitzen-prover.json, PROVER_LISTEN: "127.0.0.1:8096", PROVER_BTC_NET: "${PROVER_BTC_NET:-main}" }
+  bets:
+    <<: *web
+    profiles: ["bets"]
+    working_dir: /r
+    command: node /r/site/bets/bets.mjs
+    environment: { BETS_NODE: "http://127.0.0.1:31567", BETS_PASSWORD: "${TESTNET_PASSWORD:-testnet}", BETS_ORACLE: "http://127.0.0.1:8085", BETS_DATA: /data/bets, BETS_LISTEN: "127.0.0.1:8097" }
 volumes:
   faucet-data:
   oracle-data:

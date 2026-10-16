@@ -18,6 +18,10 @@
 //   GET /explorer/api/dex/trades?base=00&quote=<asset>&limit=&since=<block>&qdec=6   fills (Takes) only, newest first, with side, price, size
 //   GET /explorer/api/dex/trades                        (no base/quote) every Dex call, as before
 //   Rows newer than the index (the newest blocks and the mempool) are hints for display: re-read an order before signing.
+//   GET /explorer/api/bets/markets                      Up / Down markets (FixedPayout V1, docs/BETS.md) from the market service
+//                                                       (--bets, default http://127.0.0.1:8097), each with its book: best Up and
+//                                                       Down asks and bids in the collateral (0 to 1)
+//   GET /explorer/api/bets/positions?address=<tzn1…>    the address's Up and Down tokens per market, what they pay or are worth
 //
 // Blocks not indexed yet (the index fills from genesis) are read from the node directly; near
 // the tip that is fast. Run by the zen-explorer service (setup-site.sh).
@@ -30,6 +34,7 @@ const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return
 const NODE = arg('api', 'http://127.0.0.1:11567'), PORT = Number(arg('port', 11580));
 const DB = arg('db', '/var/lib/zen-stats/chain-index.sqlite');
 const DEX = arg('dex', process.env.ZEN_DEX || '');
+const BETS = arg('bets', process.env.BETS_API || 'http://127.0.0.1:8097').replace(/\/$/, '');
 const HEX64 = /^[0-9a-f]{64}$/;
 
 let db = null, q = null;
@@ -298,6 +303,35 @@ async function handle(p, query) {
     const lastRow = db.prepare("SELECT * FROM dex WHERE command='Take' AND ((under_asset=? AND pair_asset=?) OR (under_asset=? AND pair_asset=?)) ORDER BY block DESC, tx LIMIT 1").get(base, quote, quote, base);
     const last = fills([...fresh.recent.sort((a, b) => b.block - a.block), ...(lastRow ? [lastRow] : [])], { base, quote, qdec, tip: t })[0] || null;
     return { tip: t, indexedTo: indexed, base, quote, ...book(mine, { base, quote, qdec }), last };
+  }
+  if (p === '/bets/markets' || p === '/bets/positions') {
+    const svc = await fetch(BETS + '/markets', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : Promise.reject(new Error('bets ' + r.status)))
+      .catch(() => { throw Object.assign(new Error('the market service is not answering'), { status: 503 }); });
+    // the books of the position tokens: Dex orders selling a position for the collateral (asks) and buying it (bids)
+    let orders = [];
+    if (DEX && open()) {
+      const fresh = await dexFresh(t, indexed);
+      const held = new Set((await nodePost('/addressdb/balance', { addresses: [dexAddress()] })).map(x => x.asset));
+      orders = openOrders({ indexed: db.prepare("SELECT * FROM dex WHERE order_asset IS NOT NULL ORDER BY block DESC").all(), recent: fresh.recent, mempool: fresh.mempool, held, tip: t });
+    }
+    const side = asset => {
+      const asks = orders.filter(o => o.under_asset === asset && o.pair_asset === svc.collateral && !o.pending).map(o => Number(o.pair_total) / Number(o.under_amount));
+      const bids = orders.filter(o => o.pair_asset === asset && o.under_asset === svc.collateral && !o.pending).map(o => Number(o.under_amount) / Number(o.pair_total));
+      return { ask: asks.length ? Math.min(...asks) : null, bid: bids.length ? Math.max(...bids) : null };
+    };
+    const markets = svc.markets.map(m => ({ ...m, book: { up: side(m.bull), down: side(m.bear) } }));
+    if (p === '/bets/markets') return { tip: t, contract: svc.contract, contractId: svc.contractId, collateral: svc.collateral, graceMs: svc.graceMs, markets };
+    const addr = query.get('address') || '';
+    if (!ADDRESS.test(addr)) throw bad('address: a ZP address');
+    const bal = new Map((await nodePost('/addressdb/balance', { addresses: [addr] })).map(x => [x.asset, Number(x.balance)]));
+    const worth = (m, s, n) => m.status === 'settled' ? (m.result === s ? n : 0) : m.status === 'void' ? Math.floor(n / 2) : null;
+    const positions = markets.flatMap(m => [['up', 'bull', m.bull], ['down', 'bear', m.bear]].filter(([, , a]) => bal.get(a) > 0).map(([name, s, a]) => {
+      const n = bal.get(a), pays = worth(m, s, n), b = m.book[name];
+      return { ticker: m.ticker, line: m.line, close: m.close, status: m.status, result: m.result, side: name, asset: a, amount: String(n),
+        pays: pays === null ? null : String(pays), redeemable: pays !== null && pays > 0,
+        valueNow: pays === null && b.bid !== null ? String(Math.floor(n * b.bid)) : null, event: m.event };
+    }));
+    return { tip: t, address: addr, collateral: svc.collateral, positions };
   }
   if (p === '/find/blocks') { if (!open()) throw Object.assign(new Error('index not ready'), { status: 503 }); return { tip: t, indexedTo: indexed, ...findBlocks(query) }; }
   if (p === '/find/txs') {

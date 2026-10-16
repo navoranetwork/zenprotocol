@@ -88,12 +88,35 @@ Every command declares 30,000 + 512 per coin in the contract's wallet. That is a
 over a path of 30, the token and attestation hashes, and four reads of the wallet. The others are padded to it. V1 has
 no fee per gas; the cost counts toward the block's weight.
 
+## The market service and the API (written 2026-10-16, tested without the chain)
+
+- **`site/bets/bets.mjs`** (the `bets` service of the testnet stack, profile `bets`, 127.0.0.1:8097). Each minute:
+  1. Opens one market per ticker for the next close: `BETS_CLOSE_UTC`, 22:00 UTC by default, at least 12 h ahead.
+     Stocks and gold open only on weekdays. The line is the oracle's latest value to 3 digits (BTC 82,396 → 82,400).
+  2. Seeds each market: Issue `BETS_SEED` (2 zUSDC), then offers Up and Down on the Dex at `BETS_ODDS` (0.55 each).
+  3. After the close: takes the oracle's round stamped with the close and runs Attest to the contract. Once the token is
+     in the contract's wallet, it sends Settle with the winner.
+  4. Sends Void for a market with no Settle 24 h after its close.
+  A market's state comes from the markers the contract holds, so a restart loses nothing. `markets.json` in its data
+  directory keeps the list and the transactions sent.
+- **`site/bets/core.mjs`**: token ids, lines, closes, state, message bodies. `site/test/bets.test.mjs`: 7 tests. The
+  token subtypes match the engine's try on dab00f8 byte for byte.
+- **Explorer API:**
+  - `GET /explorer/api/bets/markets`: the service's list. Each market has `bull` and `bear` (asset ids), `event` (the
+    body fields), `status` (open, closing, settled, void, voidable), `result`, `settlePrice`, and `book.up` /
+    `book.down` with the best ask and bid in zUSDC (0 to 1).
+  - `GET /explorer/api/bets/positions?address=`: the address's Up and Down tokens per market. Each has `pays` (once
+    settled or void), `redeemable` and `valueNow` (at the best bid).
+- **Activation:** `scripts/v1/testnet-v1-bets.mjs` prints `BETS_CONTRACT` and `BETS_ID`. In `testnet-stack.env` also set:
+  - `BETS_SIGN`: a key of its own, not the bridge's;
+  - `BETS_DEX`;
+  - `BETS_ORACLE_ADDRESS` and `BETS_ORACLE_ID`;
+  - `BETS_ORACLE_KEY`: the oracle's compressed public key;
+  - `BETS_COLLATERAL`: zUSDC.
+  Then `docker compose … --profile bets up -d bets`. Never `--remove-orphans`.
+
 ## Still to build
 
-1. Activation on the testnet once the node image has dab00f8 (the check and tries passed, above).
-2. The market service:
-   - opens markets (lines near the price, daily closes);
-   - runs Attest for each close round to the contract, then Settle;
-   - seeds each book by minting pairs.
-3. Explorer: `GET /explorer/api/bets/markets` and `GET /explorer/api/bets/positions?address=`.
-4. Wallet: the Up / Down flow in the Oracle tab, Redeem after the close, positions under Activity → Trading.
+1. Activation on the testnet once the node image has dab00f8 (the check and tries passed, above), and a first run of
+   the service with `BETS_DRY=1`.
+2. Wallet: the Up / Down flow in the Oracle tab, Redeem after the close, positions under Activity → Trading.
