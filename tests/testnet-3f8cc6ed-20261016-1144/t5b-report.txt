@@ -1,0 +1,22 @@
+11:47:45 Bitcoin block 971695 (5944 transactions), transaction 97e2af44f58aad9a3983a5f4e503323e7e499f144919f83bbe5d7062e308bb03 at position 1, output 0: 45888 sat to 0014f8b47321010f8a5f383fc0aacf33553c9c142ba5
+11:47:46 BitZenChain.fst: activation sent, 000000012381250f80f6501d4d09bde5a7a37720d9bed556e2f0bb21387591682d7b07a8
+11:48:04 BitZenChain.fst: active
+11:48:06 PASS checkpoint at Bitcoin block 971695 
+11:48:08 PASS add block 971696 
+11:48:10 PASS add block 971697 
+11:48:12 PASS add block 971698 
+11:48:14 PASS add block 971699 
+11:48:14 PASS pay at 5 confirmations refused (the block has fewer confirmations than asked)
+11:48:16 PASS add block 971700 
+11:48:18 PASS pay at 6 confirmations accepted in ZP transaction 2e59e299deae95a7daf9dab2882c31190914b8cc59eda6e2cfb4c5735c970e7c
+11:48:18 PASS amount above the output refused (the output pays less than the amount)
+11:48:18 PASS another script refused (the output pays another script)
+11:48:18 BitZenSwap.fst: activation sent, 000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20
+11:48:37 BitZenSwap.fst: active
+11:48:39 PASS swap init 
+11:48:41 PASS swap offer o1: 100000 ZP units for 45888 sat 
+11:48:44 PASS swap reserve o1 
+11:48:46 PASS pay with notify = swap, ref o1 in 2c797fe82d80ed34eae1a100801a9c3263862c1f478d125e58b98cd1d8d363ee
+11:48:46 PASS the buyer received 100000 ZP units in the same transaction
+11:48:46 PASS the same payment again (offer closed) refused (paid needs a reserved offer (ref) and the payment)
+11:48:46 RESULT: PASS

@@ -7,3 +7,5 @@
 [2026-10-16 11:47] lab-testnet-v1.sh: exit 0; [11:47:15] PASSED
 [2026-10-16 11:47] contract DLL SHA-256 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e (compare with another machine: build-contract.sh of the same source)
 [2026-10-16 11:47] token template DLL (build-contract.sh): 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e
+[2026-10-16 11:47] T5b (BitZen f3d87cd docs/PRODUCT.md: holds 80 min / 2 h / 4 h, take-back): start
+[2026-10-16 11:48] T5b: 11:48:46 RESULT: PASS
