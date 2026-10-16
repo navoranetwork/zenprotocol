@@ -303,3 +303,4 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 .prop .between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 h3 { font-size: 14px; margin: 10px 0 2px; }
 .nw { white-space: nowrap; }
+.phasebox.locked:disabled { opacity: .85; }

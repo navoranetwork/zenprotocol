@@ -70,6 +70,8 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}/6b-your-ballots.png', full_page=True)
     pg.click('nav.nav button[data-go=home]'); pg.wait_for_timeout(500); pg.click('nav.nav button[data-go=vote]'); pg.wait_for_timeout(1500)
     ok('In a block' in pg.inner_text('body'), 'after the node has it in a block the status says so')
+    ok(pg.is_disabled('input[name=pct]') and pg.is_disabled('form[data-form=vote-alloc] .tabs3 button') and ('your vote (sent)' in pg.inner_text('form[data-form=vote-alloc]').lower() and '🔒 CGP 10%' in pg.inner_text('form[data-form=vote-alloc] .cmp')) and pg.query_selector('#alloc-go') is None,
+       'after the vote the allocation form is locked: field, chips and slider disabled, the value sent shown')
     # candidates and payout vote
     mock(tip=VOTE_TIP)
     pg.click('button[data-act=load-cands]'); pg.wait_for_timeout(600); pg.screenshot(path=f'{OUT}/7-candidates.png', full_page=True)

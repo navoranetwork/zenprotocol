@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.36.2 — 2026-10-16
+
+### Changed
+- After an allocation vote the form locks for the rest of the phase: the slider, the value buttons and the field
+  cannot be moved, and it shows the value sent ("Your vote (sent) 🔒 CGP 10%").
+
 ## 0.36.1 — 2026-10-16
 
 ### Fixed

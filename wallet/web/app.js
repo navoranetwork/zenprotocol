@@ -1359,12 +1359,14 @@ function ballotsCard(c) {
     : status(false, `nominations for interval ${num(ph.interval)} were blocks ${blk(n0)}–${blk(n1)}. Next: blocks ${blk(nextSnap + 1)}–${blk(nextSnap + phasesOf(p, ph.interval + 1).nomination)} (interval ${num(ph.interval + 1)})`);
   const voteStatus = openVote ? status(true, `voting until block ${blk(v1)}${left(v1)}`) : status(false, `voting opens at block ${blk(v0)} and runs to ${blk(v1)}`);
   const values = many ? [...new Set([r.min, cur, r.max])] : Array.from({ length: r.max - r.min + 1 }, (_, i) => r.min + i);
-  const pct0 = S.draft.pct || String(cur);
+  // after this wallet's ballot the form is locked and shows the value sent (only the first ballot counts)
+  const sentPct = pAlloc ? (String(pAlloc.v.label || '').match(/^(\d{1,3})%/) || [])[1] : null;
+  const pct0 = sentPct ?? (S.draft.pct || String(cur));
   const allocForm = `<form data-form="vote-alloc" class="screen" data-s="flush"><h2>Allocation vote</h2>${voteStatus}
-      <fieldset class="phasebox" ${openVote ? '' : 'disabled'}><p class="muted small">Share of each block reward paid to the CGP fund; the miners get the rest. Counted in the voting phase. With ${cur}% in force the valid votes are ${r.min}% to ${r.max}%: anything else is ignored.</p>
+      <fieldset class="phasebox${pAlloc ? ' locked' : ''}" ${openVote && !pAlloc ? '' : 'disabled'}><p class="muted small">Share of each block reward paid to the CGP fund; the miners get the rest. Counted in the voting phase. With ${cur}% in force the valid votes are ${r.min}% to ${r.max}%: anything else is ignored.</p>
       <div class="cmp"><div><div class="k">Now in force</div><div class="v">CGP ${cur}%</div><div class="muted small">miners ${100 - cur}%</div></div>
         <div class="arrow" aria-hidden="true">→</div>
-        <div><div class="k">Your vote</div><div class="v" id="alloc-v">CGP ${esc(pct0)}%</div><div class="muted small" id="alloc-m"></div></div></div>
+        <div><div class="k">${pAlloc ? 'Your vote (sent)' : 'Your vote'}</div><div class="v">${pAlloc ? '🔒 ' : ''}<span id="alloc-v">CGP ${esc(pct0)}%</span></div><div class="muted small" id="alloc-m"></div></div></div>
       <div class="tabs3" role="group" aria-label="Choose a value">${values.map(v => `<button type="button" class="chip ${String(v) === pct0 ? 'on' : ''}" data-act="alloc-pick" data-v="${v}">${v}%${v === cur ? '<br><span class="muted small">keep</span>' : ''}</button>`).join('')}</div>
       ${many ? `<input type="range" class="slider" name="pctr" min="${r.min}" max="${r.max}" step="1" value="${esc(pct0)}" aria-label="Allocation (%)">` : ''}
       <label class="field">Allocation (%)<input name="pct" inputmode="numeric" autocomplete="off" value="${esc(pct0)}" data-min="${r.min}" data-max="${r.max}" data-cur="${cur}" required></label>
