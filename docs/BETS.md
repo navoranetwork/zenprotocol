@@ -29,6 +29,14 @@ run of `scripts/v1/fixedpayout-try.mjs`, zenprotocol 94793406): the node's check
 - A dry run left behind (`docker compose run` under `timeout` leaves the container running) held port 8097. Since
   b9c52641 the service listens before its loop and stops at once on a taken port. For a dry run, remove the container
   afterwards: `docker ps -aq --filter name=bets-run | xargs -r docker rm -f`.
+- At 13:59 UTC the wallet session saw the Issue and the Makes still in the mempool. By 14:07 the chain had gone
+  2907 → 2911 and they were mined: an ordinary wait for blocks (4 min on average).
+  - Block weight is not a limit for these calls. A V1 call weighs 400 × its declared gas, plus the signature and
+    100 × its size: about 12–13M for an Issue, against a block limit of 8,000M (zp-pow testnet-v1, `Consensus/Weight.fs`).
+  - The template builder adds a call that spends an earlier call's outputs in a later pass
+    (`BlockTemplateBuilder.foldUntilUnchanged`).
+- 14:08 UTC: `/explorer/api/bets/markets` showed ask 0.55 on Up and Down for both markets. The ZP Wallet (Markets →
+  Oracle, "Up or down?") shows them with the close in local time and the 0.50 void rule.
 
 ## What a market is
 
