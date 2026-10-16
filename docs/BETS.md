@@ -267,13 +267,11 @@ The fair-value quoting (892c5797, above) is pushed but **not deployed yet**. Ope
   Cancel ("Could not find order in wallet") ending the cycle.
   - The service now remembers its own Makes for 20 minutes (in `recent-makes.json`, kept across restarts) and its
     Cancels for 10. A refused call no longer stops the cycle. Commits 2016d6e1, 7fb0e52d and 2fc5d65c.
-- Open: the explorer's `/dex/orders?pending=1` did not show our Makes, or mark our Cancels, while they were in the
-  mempool.
-  - `scripts/v1/dex-mempool-probe.mjs` shows that a mempool Cancel parses correctly: the target matches the order,
-    and `contractId` = `ZEN_DEX`.
-  - The cause is not found yet. The suspect is the step between a block and `/addressdb/balance` of the Dex: an order
-    counts as open only while the Dex holds its order asset.
-  - The service no longer depends on it.
+- Found (7501ee51), and the explorer needs a restart to take it. Identical orders share one order asset, since its
+  subtype hashes the order. So every earlier Make of the same price and size, made again after a Cancel, was listed as
+  open while the Dex held one unit, and the service saw copies that did not exist. The count jumped between two calls
+  (59, then 28). The explorer now lists an asset at most as many times as the Dex holds it.
+  `scripts/v1/dex-mempool-probe.mjs` showed that mempool calls parse correctly.
 
 ## Still to build
 
