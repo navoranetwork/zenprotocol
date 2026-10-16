@@ -11,6 +11,14 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.35.0 — 2026-10-16
+
+### Added
+- Real logos where their owners allow it: Ether and Solana (cryptocurrency-icons, CC0), and flags for the currencies
+  (EUR, GBP, JPY, CHF, AUD, CAD, CNY, ILS; flag-icons, MIT), next to Bitcoin's. Shown on prices, markets and
+  positions. Stocks, funds and metals keep the plain symbol disc (company logos are their owners' trademarks).
+  Sources and terms in web/icons/README.md.
+
 ## 0.34.0 — 2026-10-16
 
 ### Added

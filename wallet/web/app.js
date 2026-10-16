@@ -45,10 +45,13 @@ const zpLogo = (n = 18) => ICONS.zp ? `<img class="ticon" src="${ICONS.zp}" alt=
 const BADGE = { ETH: ['Ξ', '#627EEA'], EUR: ['€', '#2F9E6F'], GBP: ['£', '#2F9E6F'], JPY: ['¥', '#2F9E6F'], CHF: ['Fr', '#2F9E6F'], AUD: ['A$', '#2F9E6F'], CAD: ['C$', '#2F9E6F'], ILS: ['₪', '#2F9E6F'],
   XAU: ['Au', '#C9A227'], GOLD: ['Au', '#C9A227'], XAG: ['Ag', '#8E99A3'], OIL: ['Oil', '#4A4F57'], WTI: ['Oil', '#4A4F57'] };
 const CAT_COLOR = { crypto: '#7B61FF', forex: '#2F9E6F', stocks: '#3B6FD8', commodities: '#B08A2E', other: '#5B6B73' };
+// bundled logos (web/icons/README.md): coins in their own colours, currencies by flag, shown in a circle
+const LOGO = { BTC: 'btc', ETH: 'eth', SOL: 'sol', EUR: 'fl-eu', GBP: 'fl-gb', JPY: 'fl-jp', CHF: 'fl-ch', AUD: 'fl-au', CAD: 'fl-ca', CNY: 'fl-cn', ILS: 'fl-il' };
+let badgeN = 0;
 function tickerBadge(t, size = 22, side = null) {
   const [sym, col] = BADGE[t] || [String(t).slice(0, t.length > 3 ? 2 : 3), CAT_COLOR[tickerCat(t)] || CAT_COLOR.other];
-  const fs = sym.length >= 3 ? 8.5 : sym.length === 2 ? 10.5 : 14;
-  const disc = t === 'BTC' && ICONS.btc ? `<image href="${ICONS.btc}" x="0" y="0" width="24" height="24"/>` : `<circle cx="12" cy="12" r="12" fill="${col}"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-family="Inter,system-ui,sans-serif" font-weight="700" font-size="${fs}" fill="#fff">${esc(sym)}</text>`;
+  const fs = sym.length >= 3 ? 8.5 : sym.length === 2 ? 10.5 : 14, logo = ICONS[LOGO[t]], id = 'tb' + (++badgeN);
+  const disc = logo ? `<clipPath id="${id}"><circle cx="12" cy="12" r="12"/></clipPath><image href="${logo}" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>` : `<circle cx="12" cy="12" r="12" fill="${col}"/><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-family="Inter,system-ui,sans-serif" font-weight="700" font-size="${fs}" fill="#fff">${esc(sym)}</text>`;
   const arrow = side ? `<circle cx="19.5" cy="19.5" r="5.5" fill="${side === 'up' ? '#3FC1A0' : '#F08A8A'}" stroke="#0F1A20" stroke-width="1.5"/><path d="${side === 'up' ? 'M19.5 16.8l2.6 3.8h-5.2z' : 'M19.5 22.2l2.6-3.8h-5.2z'}" fill="#0F1A20"/>` : '';
   return `<svg class="ticon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${disc}${arrow}</svg>`;
 }

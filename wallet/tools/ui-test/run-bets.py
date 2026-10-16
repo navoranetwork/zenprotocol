@@ -44,6 +44,15 @@ with sync_playwright() as p:
     ok('Advanced: trade any two tokens' in pg.inner_text('main') and ' Up' not in chips and ' Down' not in chips and 'zUSDC' in chips, 'the Dex tab\'s advanced form leaves Up / Down tokens out')
     pg.click('button[data-mtab=oracle]'); pg.wait_for_selector('.bet .betrow', timeout=15000)
 
+    # badges: coin logos, flags for currencies, plain discs for stocks and metals
+    shots = []
+    for cat in ['crypto', 'forex', 'stocks', 'commodities']:
+        pg.click(f'button[data-act=ocat][data-v={cat}]'); pg.wait_for_timeout(250)
+        card = pg.locator('h2:has-text("Prices in USD")').locator('xpath=..'); card.screenshot(path=f'{OUT}/bt-badges-{cat}.png')
+        shots.append(len(pg.query_selector_all('h2:has-text("Prices in USD") ~ .list svg.ticon image')))
+    ok(shots[0] == 2 and shots[1] == 4 and shots[2] == 0 and shots[3] == 0, f'logos: BTC and ETH, four flags, none for stocks and gold ({shots})')
+    pg.click('button[data-act=ocat][data-v=crypto]'); pg.wait_for_timeout(250)
+
     # a bet: Up on BTC 105,000 at 0.60
     pg.click('.bet >> nth=0 >> button[data-side=up]'); pg.wait_for_selector('form[data-form=bet]')
     ok('You win if BTC is at or above 105,000' in pg.inner_text('.sheet'), 'the bet sheet says when you win')
