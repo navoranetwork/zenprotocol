@@ -9,7 +9,7 @@ Everything here runs on our testnet (testnet coins, no value) with the original 
 | Issuer-controlled token | `AuthenticatedSupply` | Only the holder of one key can issue or destroy the token (a model for a stable token with an authorised issuer) | works: issue 4242, destroy 242, balance 4000 |
 | Price oracle | `Oracle` + service `src/Oracle` | Commit a Merkle root of prices; anyone gets proofs; attestation tokens for consumers | works: commitment confirmed, proof served |
 | Decentralised exchange | `Dex` (ZenDex) | Make, take (partly or fully) and cancel orders between any two assets, no operator, no fees | make, take and cancel are confirmed; the take pays out to the taker's wallet |
-| Bull/Bear bet on a price | `FixedPayout` | Issue Bull and Bear position tokens against collateral, redeem the winning side with an oracle proof | see [ORACLE.md](ORACLE.md); scenario in `scripts/testnet-bet.sh` |
+| Bull/Bear bet on a price | `FixedPayout` | Issue Bull and Bear position tokens against collateral, redeem the winning side with an oracle proof | see [ORACLE.md](ORACLE.md); scenario in `scripts/testnet-bet.sh`. V1: Up / Down markets with one close, Settle, Void after 24 h ([BETS.md](BETS.md)), written, not built yet |
 
 ## Where each can lead
 

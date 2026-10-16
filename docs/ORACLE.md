@@ -6,7 +6,7 @@ Status: the contracts are the developers' originals (repository `zenprotocol/con
 
 ## How it works
 
-1. Every interval (default hourly) the service reads the price of each ticker, e.g. `EUR = 1.083` (USD per euro).
+1. Every interval (default hourly) the service reads the price of each ticker, e.g. `EUR = 1.083` (USD per euro). The round is stamped with the start of its slot (13:00:00.000 for an hourly round), one round per slot; a failed round is retried every 5 minutes within its slot. So a bet's close is a known timestamp (docs/BETS.md).
 2. For each ticker it builds a **leaf**: the Zulib `Sha3` of the identifier string followed by the U64 `value × 1000` (exactly `hashLeaf` in FixedPayout.fst). The leaves, in the configured order, form a **Merkle tree** (the tree of the node's `Consensus` library, so the root is identical to what contracts compute).
 3. The service executes the Oracle contract with command `Commit` and the **root** as `Commit`. The transaction is signed with the oracle's key. The contract mints a *commitment token* derived from `(root ‖ oracle public key)` and keeps it. Now the chain proves *that root existed at that block*.
 4. Anyone who needs the value asks the service `GET /auditpath?...` for: timestamp, value, root, index, audit path.
@@ -20,7 +20,7 @@ Trust: the oracle is trusted for the *value*. The chain proves the *time* (the c
 | Contract | Commands | Role |
 |---|---|---|
 | Oracle | `Commit`, `Attest` | Records a root (optionally with an attestation fee) and mints attestation tokens |
-| FixedPayout | `Issue`, `Redeem`, `Cancel` | Bull/Bear position tokens on a ticker, price and time window; collateral goes to the winning side. Needs a z3 limit of 30,000,000 to verify |
+| FixedPayout | `Issue`, `Redeem`, `Cancel` | Bull/Bear position tokens on a ticker, price and time window; collateral goes to the winning side. Needs a z3 limit of 30,000,000 to verify. The V1 version (`contracts/v1/FixedPayout.fst`, one close, Settle once, Void after 24 h) is in docs/BETS.md |
 | Bet | `Buy`, `RedeemBull`, `RedeemBear` | Older simple version of the same idea |
 
 Message bodies (dictionaries) are listed in each contract's README (`zenprotocol/contracts`). Notes:

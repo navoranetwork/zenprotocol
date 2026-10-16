@@ -49,50 +49,61 @@ let private saveDaily (s: Settings) (m: Map<string, string * decimal>) =
     let o = m |> Map.map (fun _ (d, v) -> {| date = d; value = v |})
     File.WriteAllText(dailyFile s, JsonSerializer.Serialize o)
 
+/// The slot of a moment: rounds are stamped with the start of their interval (on the hour by default), not the moment
+/// they are made, so a market's close (FixedPayout V1: one timestamp) is known in advance.
+let slotOf (s: Settings) (t: DateTimeOffset) =
+    let len = int64 s.IntervalMinutes * 60000L
+    (t.ToUnixTimeMilliseconds() / len) * len
+
 let round (s: Settings) (provider: Providers.Provider) =
     let now = DateTimeOffset.UtcNow
-    let daily, closeUtc = Providers.dailyConfig ()
-    let closes = ref (loadDaily s)
-    let today = now.UtcDateTime.ToString "yyyy-MM-dd"
-    if s.Tickers |> List.exists (fun t -> t.Length > 4) then failwith "tickers are at most 4 characters (FixedPayout refuses longer ones)"
-    // a ticker the source cannot give is left out of this round (and said so); no ticker at all fails the round
-    let data =
-        s.Tickers |> List.choose (fun t ->
-            if daily.Contains t then
-                // end-of-day tickers: the close is fetched once a day after the close time; every round carries the last close
-                let last = closes.Value.TryFind t
-                if last.IsNone || Providers.dailyDue now closeUtc (last |> Option.map fst) then
-                    try
-                        let v = provider.Fetch t now
-                        closes.Value <- closes.Value.Add(t, (today, v))
-                    with ex -> eprintfn "ticker %s: close not fetched: %s" t ex.Message
-                match closes.Value.TryFind t with
-                | Some (_, v) -> Some (t, v)
-                | None -> eprintfn "ticker %s skipped: no close yet" t; None
+    let slot = slotOf s now
+    // one round per slot: two roots with the same timestamp would let a market settle on either
+    match Store.all s.Data |> List.tryFind (fun x -> x.Timestamp = slot) with
+    | Some _ -> printfn "slot %d already has a round" slot
+    | None ->
+        let daily, closeUtc = Providers.dailyConfig ()
+        let closes = ref (loadDaily s)
+        let today = now.UtcDateTime.ToString "yyyy-MM-dd"
+        if s.Tickers |> List.exists (fun t -> t.Length > 4) then failwith "tickers are at most 4 characters (FixedPayout refuses longer ones)"
+        // a ticker the source cannot give is left out of this round (and said so); no ticker at all fails the round
+        let data =
+            s.Tickers |> List.choose (fun t ->
+                if daily.Contains t then
+                    // end-of-day tickers: the close is fetched once a day after the close time; every round carries the last close
+                    let last = closes.Value.TryFind t
+                    if last.IsNone || Providers.dailyDue now closeUtc (last |> Option.map fst) then
+                        try
+                            let v = provider.Fetch t now
+                            closes.Value <- closes.Value.Add(t, (today, v))
+                        with ex -> eprintfn "ticker %s: close not fetched: %s" t ex.Message
+                    match closes.Value.TryFind t with
+                    | Some (_, v) -> Some (t, v)
+                    | None -> eprintfn "ticker %s skipped: no close yet" t; None
+                else
+                    try Some (t, provider.Fetch t now)
+                    with ex -> eprintfn "ticker %s skipped: %s" t ex.Message; None)
+        if data.IsEmpty then failwith "no ticker could be fetched"
+        saveDaily s closes.Value
+        let evidence =
+            data |> List.map (fun (t, v) ->
+                let srcs, dropped = match Providers.evidence.TryGetValue t with | true, e -> e | _ -> [], []
+                let asOf = if daily.Contains t then (match closes.Value.TryFind t with Some (d, _) -> d | None -> today) else today
+                t, {| value = v; asOf = asOf; sources = srcs |> List.map (fun (n, x) -> n, x) |> dict; dropped = dropped |})
+            |> dict
+        let root = Leaf.root data
+        let tx =
+            if s.Contract = "" then ""
             else
-                try Some (t, provider.Fetch t now)
-                with ex -> eprintfn "ticker %s skipped: %s" t ex.Message; None)
-    if data.IsEmpty then failwith "no ticker could be fetched"
-    saveDaily s closes.Value
-    let evidence =
-        data |> List.map (fun (t, v) ->
-            let srcs, dropped = match Providers.evidence.TryGetValue t with | true, e -> e | _ -> [], []
-            let asOf = if daily.Contains t then (match closes.Value.TryFind t with Some (d, _) -> d | None -> today) else today
-            t, {| value = v; asOf = asOf; sources = srcs |> List.map (fun (n, x) -> n, x) |> dict; dropped = dropped |})
-        |> dict
-    let root = Leaf.root data
-    let tx =
-        if s.Contract = "" then ""
-        else
-            let ts = uint64 (now.ToUnixTimeMilliseconds())
-            let body = Leaf.commitMessageBody (Leaf.commitHash root ts)
-            NodeClient.commit s.Node s.Contract body s.SignPath s.Password
-    let r : Store.Round =
-        { Timestamp = now.ToUnixTimeMilliseconds(); Root = Leaf.hex root; Tx = tx
-          Tickers = data |> List.map fst |> List.toArray; Values = data |> List.map snd |> List.toArray
-          Evidence = JsonSerializer.Serialize evidence }
-    Store.save s.Data r
-    printfn "round %d root %s tx %s" r.Timestamp r.Root (if tx = "" then "(not sent)" else tx)
+                let ts = uint64 slot
+                let body = Leaf.commitMessageBody (Leaf.commitHash root ts)
+                NodeClient.commit s.Node s.Contract body s.SignPath s.Password
+        let r : Store.Round =
+            { Timestamp = slot; Root = Leaf.hex root; Tx = tx
+              Tickers = data |> List.map fst |> List.toArray; Values = data |> List.map snd |> List.toArray
+              Evidence = JsonSerializer.Serialize evidence }
+        Store.save s.Data r
+        printfn "round %d root %s tx %s" r.Timestamp r.Root (if tx = "" then "(not sent)" else tx)
 
 /// Everything a FixedPayout redeemer needs for one ticker.
 let proof (r: Store.Round) (ticker: string) =
@@ -175,9 +186,14 @@ let main argv =
         printfn "oracle: provider %s, tickers %s, every %d min, contract %s" s.Provider (String.Join(",", s.Tickers)) s.IntervalMinutes (if s.Contract = "" then "(none, dry run)" else s.Contract)
         let t = Thread((fun () -> serve s), IsBackground = true)
         t.Start()
+        // a round at the start of each slot (+ 20 s for the sources); a failed round is tried again every 5 minutes
+        // within its slot, with the slot's timestamp
         while true do
-            (try round s provider with ex -> eprintfn "round failed: %s" ex.Message)
-            Thread.Sleep(TimeSpan.FromMinutes(float s.IntervalMinutes))
+            let ok = (try round s provider; true with ex -> eprintfn "round failed: %s" ex.Message; false)
+            let now = DateTimeOffset.UtcNow
+            let next = slotOf s now + int64 s.IntervalMinutes * 60000L + 20000L
+            let wait = if ok then next - now.ToUnixTimeMilliseconds() else min 300000L (next - now.ToUnixTimeMilliseconds())
+            Thread.Sleep(TimeSpan.FromMilliseconds(float (max 1000L wait)))
         0
     | _ ->
         eprintfn "usage: zen-oracle [run|once|probe|selftest|body]   (settings from ORACLE_* environment variables, see docs/ORACLE.md)"

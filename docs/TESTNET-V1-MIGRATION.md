@@ -253,8 +253,10 @@ path above.
   (`TestnetCGP.fst`, `TestnetVoting.fst`), the new ids in the chain parameters from a fork height, a node image, and a
   plan for the funds and votes held by the old ones (the CGP's balance moves at the fork). Testnet first; mainnet by
   community vote.
-- **FixedPayout (bets) to V1, optional:** needs `Zen.MerkleTree` and `Zen.ContractId.parse`, which Zulib V1 does not
-  realize yet (the V1 session's inventory of interface-only modules).
+- **FixedPayout (bets) to V1:** `Zen.ContractId.parse` is in 87b24e2; `Zen.MerkleTree` and `Zen.Integers.u64ToNat` in
+  zp-contracts-v1 dab00f8 (MerkleProbe passed there, 2026-10-16). Written as Up / Down markets with one close, Settle
+  once and Void after 24 hours (Alon's decision, 2026-10-16): `contracts/v1/FixedPayout.fst`, docs/BETS.md. Waits for
+  the image with dab00f8, then the engine check, tries and activation.
 
 - Custody: one key holds the reserves and the issuing key. Multi-key custody and a pause switch are listed as "not
   done" in `docs/BRIDGE.md`; a V1 contract is the natural place to add them, but not in this move.
