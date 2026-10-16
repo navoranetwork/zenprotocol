@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.31.2 — 2026-10-16
+
+### Changed
+- The zUSDC icon redrawn (Alon): the original ZP cube unchanged, with a coin and a dollar sign at its centre. The
+  bridge page shows it too, with a "zUSDC" wordmark.
+
 ## 0.31.1 — 2026-10-16
 
 ### Changed
