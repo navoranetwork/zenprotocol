@@ -1,7 +1,7 @@
 // Up / Down bets: markets, the best offer, the quote, and the Redeem body.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { marketOf, bestOffer, offerPrice, betQuote, redeemBody, winner, eventFields } from '../src/bets.js';
+import { marketOf, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, eventFields } from '../src/bets.js';
 import { Data, Writer } from '../src/serialize.js';
 
 const Z = 'aa'.repeat(36) + 'bb'.repeat(32), BULL = 'cc'.repeat(36) + '01'.repeat(32), BEAR = 'cc'.repeat(36) + '02'.repeat(32);
@@ -14,6 +14,7 @@ test('a market row: event checked, strike from Price / 1000', () => {
   assert.throws(() => marketOf({ ...row, bull: BEAR }), /position tokens/);
   assert.throws(() => marketOf({ ...row, event: { ...ev, Ticker: 'bitcoin' } }), /ticker/);
   assert.throws(() => marketOf({ ...row, event: { ...ev, OraclePubKey: 'zz' } }), /oracle key/);
+  assert.throws(() => marketOf({ ...row, event: { ...ev, Expiry: ev.Start + 3600000 } }), /both be the close/);
   assert.deepEqual(eventFields(m.event).map(([k]) => k), ['OraclePubKey', 'OracleContractId', 'Ticker', 'Price', 'Start', 'Expiry', 'Collateral']);
 });
 
@@ -29,14 +30,15 @@ test('the best offer is the cheapest token for zUSDC; the quote pays 1 zUSDC per
   assert.equal(bestOffer(orders, BEAR, '00'), null);
 });
 
-test('Redeem: the event, the side and the oracle proof; it serializes', () => {
-  const m = marketOf(row), proof = { valueScaled: 67250000, timestamp: 1792200000000, root: 'ee'.repeat(32), index: 3, auditPath: ['01'.repeat(32), '02'.repeat(32)] };
-  const body = redeemBody(m.event, 'up', proof);
-  const keys = body.v.map(([k]) => k);
-  assert.deepEqual(keys.slice(7), ['Position', 'Timestamp', 'Root', 'Value', 'Index', 'AuditPath']);
-  assert.equal(body.v.find(([k]) => k === 'Position')[1].v, 'Bull');
-  const w = new Writer(); Data.write(w, body); assert.ok(w.len > 200);
-  assert.equal(winner(m.event, proof.valueScaled), 'up'); assert.equal(winner(m.event, 66999999), 'down'); assert.equal(winner(m.event, 67000000), 'up');
-  assert.throws(() => redeemBody(m.event, 'up', { ...proof, timestamp: 1 }), /not for the close/);
-  assert.throws(() => redeemBody(m.event, 'up', { ...proof, auditPath: Array(31).fill('01'.repeat(32)) }), /Bad oracle proof/);
+test('Redeem: the market and the side, no proof; it pays 1 per winning token, 1/2 after a void', () => {
+  const m = marketOf(row), body = redeemBody(m.event, 'up');
+  assert.deepEqual(body.v.map(([k]) => k), ['OraclePubKey', 'OracleContractId', 'Ticker', 'Price', 'Start', 'Expiry', 'Collateral', 'Position']);
+  assert.equal(body.v.at(-1)[1].v, 'Bull'); assert.equal(redeemBody(m.event, 'down').v.at(-1)[1].v, 'Bear');
+  const w = new Writer(); Data.write(w, body); assert.ok(w.len > 100);
+  assert.equal(redeemValue(m, 'up', 5n), null);                                         // open
+  assert.equal(redeemValue({ ...m, status: 'closed' }, 'up', 5n), null);                // waiting for Settle
+  const won = { ...m, status: 'settled', result: 'bull' };
+  assert.deepEqual([redeemValue(won, 'up', 5000000n), redeemValue(won, 'down', 5000000n)], [5000000n, 0n]);
+  const v = { ...m, status: 'void' };
+  assert.deepEqual([redeemValue(v, 'up', 5000001n), redeemValue(v, 'down', 3n)], [2500000n, 1n]);   // rounded down
 });

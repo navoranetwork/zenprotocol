@@ -32,6 +32,8 @@ with sync_playwright() as p:
     ok(pg.query_selector('button[data-act=bet][data-side=up]') is not None and '0.60' in t and '0.42' in t and '0.35' in t, 'Up and Down show the Dex price of a token')
     ok(pg.query_selector_all('.betbtn.off') != [], 'a side with no offer is shown, but cannot be tapped')
     ok('Your bets' in t and 'Collect 5.00 zUSDC' in t, 'Your bets: the settled market\'s Up tokens can be collected (5.00 zUSDC)')
+    ok('Collect 1.50 zUSDC' in t and 'every token pays 0.50' in t, 'a void market: its 3 Down tokens collect 1.50 zUSDC')
+    ok('If the oracle has no close price within 24 hours, every token pays 0.50' in t, 'the void rule is shown with the markets')
     pg.screenshot(path=f'{OUT}/bt1-markets.png', full_page=True)
 
     # a bet: Up on BTC 105,000 at 0.60
@@ -50,15 +52,20 @@ with sync_playwright() as p:
     pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
 
     # collect the winnings of the settled market
-    pg.click('button[data-act=bet-redeem]')
+    pg.click('button[data-act=bet-redeem][data-side=up]')
     try: pg.wait_for_selector('text=Collect winnings', timeout=15000)
     except Exception: print(pg.inner_text('body')[-800:]); pg.screenshot(path=f'{OUT}/bt-err.png'); raise
-    t = pg.inner_text('.sheet'); ok('You get' in t and '5.00 zUSDC' in t and '101,234.5' in t, 'collect: 5.00 zUSDC, with the close price from the oracle')
+    t = pg.inner_text('.sheet'); ok('You get' in t and '5.00 zUSDC' in t and '101,234.5' in t, 'collect: 5.00 zUSDC, with the close price')
     pg.screenshot(path=f'{OUT}/bt4-collect.png')
     pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your winnings are on their way', timeout=15000)
-    ok(get('/__lastbet') == {'command': 'Redeem', 'tokens': '5000000'}, 'sent as a signed Redeem of the 5 Up tokens, proof included')
+    ok(get('/__lastbet') == {'command': 'Redeem', 'position': 'Bull', 'tokens': '5000000', 'paid': '5000000'}, 'sent as a signed Redeem of the 5 Up tokens (market fields and Position only)')
     pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
     ok('Collecting' in pg.inner_text('main'), 'meanwhile Your bets says Collecting…')
+    pg.click('button[data-act=bet-redeem][data-side=down]'); pg.wait_for_selector('text=Collect winnings', timeout=15000)
+    t = pg.inner_text('.sheet'); ok('void market' in t and '1.50 zUSDC' in t and '0.50 per token' in t, 'collect after a void: 1.50 zUSDC for 3 tokens, and why')
+    pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your winnings are on their way', timeout=15000)
+    ok(get('/__lastbet') == {'command': 'Redeem', 'position': 'Bear', 'tokens': '3000000', 'paid': '1500000'}, 'the void Redeem: 3 Down tokens pay 1.50')
+    pg.click('button[data-act=close]'); pg.wait_for_timeout(300)
     ok(not errors, 'no page errors ' + '; '.join(errors))
     b.close()
 print('ALL PASS' if not bad else f'{len(bad)} FAILED')

@@ -3,9 +3,11 @@
 // A market is one event: will TICKER be at or above STRIKE at CLOSE? The contract mints a pair for each unit of
 // collateral (zUSDC): one Bull ("Up") token and one Bear ("Down") token. After the close, each token of the winning side
 // redeems for one unit of collateral. There is no matching in the contract: a bet is a Dex Take of an order that
-// sells Up or Down tokens for zUSDC. The site lists the markets and positions (GET /explorer/api/bets/markets and
-// /bets/positions?address=). The Redeem body follows the oracle/Dex session's description; it is checked byte for
-// byte against their testnet vectors once the contract is active.
+// sells Up or Down tokens for zUSDC. The market service sends Settle (with the oracle's proof) once per market; with
+// no Settle within 24 hours of the close anyone may send Void, and then every token, Up or Down, pays half a unit.
+// Redeem is the market's fields and the Position, signed by the holder (docs/BETS.md). The site lists the markets
+// (GET /explorer/api/bets/markets). The bodies are checked byte for byte against the oracle/Dex session's testnet
+// vectors once the contract is active.
 import { unhex, hex, assetToId } from './serialize.js';
 import { payoutFor } from './dex.js';
 
@@ -25,6 +27,7 @@ export function eventOf(e) {
   if (!HEX(72).test(ev.oracleContractId)) throw new Error('market: bad oracle contract');
   if (!/^[A-Z0-9]{1,4}$/.test(ev.ticker)) throw new Error('market: bad ticker');
   if (!ASSET.test(ev.collateral)) throw new Error('market: bad collateral');
+  if (ev.start !== ev.expiry) throw new Error('market: Start and Expiry must both be the close');
   return ev;
 }
 export const eventFields = ev => [
@@ -67,29 +70,24 @@ export function betQuote(o, stake) {
   return { stake: s, tokens, payout: tokens, profit: tokens - s };
 }
 
-// Redeem: the winning tokens back for collateral, with the oracle's proof of the close price
-// (GET /oracle/auditpath?ticker=&timestamp= -> {valueScaled, timestamp, root, index, auditPath}).
-export function redeemBody(ev, side, proof) {
-  const path = Array.isArray(proof?.auditPath) ? proof.auditPath.map(h => String(h).toLowerCase()) : null;
-  if (!path || path.length > 30 || !path.every(h => HEX(64).test(h))) throw new Error('Bad oracle proof');
-  const root = String(proof.root || '').toLowerCase(); if (!HEX(64).test(root)) throw new Error('Bad oracle proof');
-  if (BigInt(proof.timestamp) !== ev.start) throw new Error('The oracle proof is not for the close of this market');
-  return { t: 'Dict', v: [...eventFields(ev), ['Position', { t: 'String', v: side === 'up' ? 'Bull' : 'Bear' }],
-    ['Timestamp', { t: 'U64', v: u64(proof.timestamp, 'timestamp') }], ['Root', { t: 'Hash', v: unhex(root) }],
-    ['Value', { t: 'U64', v: u64(proof.valueScaled, 'value') }], ['Index', { t: 'U64', v: u64(proof.index, 'index') }],
-    ['AuditPath', { t: 'List', v: path.map(h => ({ t: 'Hash', v: unhex(h) })) }]] };
+// Redeem: N tokens of one side back for collateral, after Settle (N if that side won) or Void (N / 2, rounded down)
+export const redeemBody = (ev, side) => ({ t: 'Dict', v: [...eventFields(ev), ['Position', { t: 'String', v: side === 'up' ? 'Bull' : 'Bear' }]] });
+// what N tokens of a side pay now: null while the market is open or waiting for its Settle
+export function redeemValue(m, side, n) {
+  const k = BigInt(n);
+  if (m.status === 'void') return k / 2n;
+  if (m.status === 'settled' && m.result) return (m.result === 'bull') === (side === 'up') ? k : 0n;
+  return null;
 }
-// who won, from the proof (the contract's rule): Up if the value is at or above the strike
-export const winner = (ev, valueScaled) => BigInt(valueScaled) >= ev.price ? 'up' : 'down';
 
 // What the node may add to a Redeem, checked before signing: the contract pays this wallet `amount` of the collateral
-// (one unit per winning token) and sends nothing to anyone else.
+// (one unit per winning token, half a unit after a void) and sends nothing to anyone else.
 export function expectRedeem(collateral, amount, myHash) {
   return (added, cid) => {
     const isC = l => l.type === 'Contract' && l.contractId.version === cid.version && hex(l.contractId.hash) === hex(cid.hash);
     const toMe = l => l.type === 'PK' && hex(l.hash) === myHash;
     for (const x of added.outputs) if (!isC(x.lock) && !toMe(x.lock) && x.lock.type !== 'Destroy') throw new Error('The contract would pay someone else');
     const got = added.outputs.filter(x => toMe(x.lock) && assetToId(x.spend.asset) === collateral).reduce((a, x) => a + x.spend.amount, 0n);
-    if (got !== BigInt(amount)) throw new Error('The contract would not pay one unit per winning token');
+    if (got !== BigInt(amount)) throw new Error('The contract would not pay what this market owes');
   };
 }

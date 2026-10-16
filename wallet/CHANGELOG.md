@@ -11,6 +11,14 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.32.1 — 2026-10-16
+
+### Changed
+- Bets follow the final FixedPayout V1 design (docs/BETS.md): Collect is one signed Redeem of the market and the side,
+  with no oracle proof (the market service settles each market once). After a void (no close price within 24 hours)
+  every token, Up or Down, collects 0.50; every market and the bet sheet say so. Start and Expiry must both be the
+  close.
+
 ## 0.32.0 — 2026-10-16
 
 ### Added
