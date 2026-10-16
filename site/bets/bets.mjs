@@ -26,7 +26,7 @@
 //   BETS_OFFSETS (0,-0.01,0.01,-0.03,0.03)  BETS_VOL (annual volatility per ticker, TICKER:0.5,…; defaults below)
 //   BETS_SPREAD (0.06: bid to ask)  BETS_MOVE (0.03: requote when an order is this far from its target)
 //   BETS_QUOTE (10000000 = 10 tokens per order)  BETS_MAX_ISSUE (30000000 per market)  BETS_BID_BUDGET (30000000)
-//   BETS_STOP_MIN (20)  BETS_STALE_MIN (150)  BETS_MAX_TX (8 per cycle)  BETS_TX_PAUSE (2 s)
+//   BETS_STOP_MIN (20)  BETS_STALE_MIN (150)  BETS_SEEN_MIN (20: our own Makes count as open this long until listed)  BETS_MAX_TX (8 per cycle)  BETS_TX_PAUSE (2 s)
 //   BETS_DATA (./data)  BETS_LISTEN (127.0.0.1:8097)  BETS_INTERVAL (60 s)  BETS_DRY=1 (only print what it would send)
 import http from 'node:http';
 import fs from 'node:fs';
@@ -77,6 +77,11 @@ const held = async address => new Set((await node('/addressdb/balance', { addres
 const walletBalances = async () => { const b = new Map(); for (const x of (await node('/wallet/balance')) || []) b.set(x.asset, (b.get(x.asset) || 0) + Number(x.balance)); return b; };
 const latestRound = async () => { const r = await (await fetch(ORACLE + '/rounds/latest')).json(); const T = r.tickers ?? r.Tickers, V = r.values ?? r.Values;
   return { ts: Number(r.timestamp ?? r.Timestamp), values: Object.fromEntries(T.map((t, i) => [t, Number(V[i])])) }; };
+// our Makes of the last BETS_SEEN_MIN (20) minutes: counted as open orders until the explorer shows them, so a slot is not
+// made twice while its order travels (seen on the testnet 2026-10-16: a second Issue and copies of each order a minute later)
+const SEEN = Number(env('BETS_SEEN_MIN', '20')) * 60000;
+let recentMakes = [];
+const sameOrder = (a, b) => a.under_asset === b.under_asset && String(a.under_amount) === String(b.under_amount) && a.pair_asset === b.pair_asset && String(a.pair_total) === String(b.pair_total);
 const keyOf = m => `${m.ticker}-${m.close}-${m.price}`;
 const fmt = n => (n / 1e6).toFixed(2);
 
@@ -100,7 +105,9 @@ async function open(now) {
 // 2: quote every open market around its fair price
 async function quote(now, makerKey) {
   const { ts, values } = await latestRound();
-  const mineAll = ((await (await fetch(EXPLORER + '/dex/orders?pending=1')).json()).orders || []).filter(o => (o.maker || '').toLowerCase() === makerKey);
+  const listed = ((await (await fetch(EXPLORER + '/dex/orders?pending=1')).json()).orders || []).filter(o => (o.maker || '').toLowerCase() === makerKey);
+  recentMakes = recentMakes.filter(r => now - r.at < SEEN && !listed.some(o => sameOrder(o, r)));
+  const mineAll = [...listed, ...recentMakes.map(r => ({ ...r, pending: true }))];
   const bal = await walletBalances();
   const has = a => bal.get(a) || 0, take = (a, n) => bal.set(a, has(a) - n), give = (a, n) => bal.set(a, has(a) + n);
   let bidLocked = mineAll.filter(o => o.under_asset === COLLATERAL).reduce((s, o) => s + Number(o.under_amount), 0);
@@ -131,13 +138,14 @@ async function quote(now, makerKey) {
         }
         const size = Math.min(QUOTE, has(k.token)), total = Math.round(size * k.price);
         const tx = await execute(DEX, 'Make', bodies.make(k.token, size, COLLATERAL, total, makerKey), [{ asset: k.token, amount: size }], SIGN);
-        take(k.token, size);
+        take(k.token, size); recentMakes.push({ under_asset: k.token, under_amount: String(size), pair_asset: COLLATERAL, pair_total: String(total), maker: makerKey, at: now, tx });
         log(`ask ${keyOf(m)} ${k.name}: ${fmt(size)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
       } else {
         const cost = Math.round(QUOTE * k.price);
         if (bidLocked + cost > BID_BUDGET || has(COLLATERAL) < cost) { short.add('collateral for bids'); continue; }
         const tx = await execute(DEX, 'Make', bodies.make(COLLATERAL, cost, k.token, QUOTE, makerKey), [{ asset: COLLATERAL, amount: cost }], SIGN);
         take(COLLATERAL, cost); bidLocked += cost;
+        recentMakes.push({ under_asset: COLLATERAL, under_amount: String(cost), pair_asset: k.token, pair_total: String(QUOTE), maker: makerKey, at: now, tx });
         log(`bid ${keyOf(m)} ${k.name}: ${fmt(QUOTE)} at ${k.price.toFixed(2)} (fair Up ${m.fair.toFixed(3)}) -> ${tx}`);
       }
     }
