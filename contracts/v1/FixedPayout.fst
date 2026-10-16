@@ -23,8 +23,8 @@
 // settlement markers it keeps (one unit each).
 //
 // Needs zp-contracts-v1 dab00f8 or later (Zen.MerkleTree, Zen.Integers). The V1 session's check on dab00f8 accepted it
-// (2026-10-16, after positionTag and wonTag were made to return cost values); tries are next. Every command pays the cost of the
-// costliest one (Settle), padded by autoInc: cf below.
+// (2026-10-16, after positionTag and wonTag were made to return cost values); tries are next.
+// Every command pays the cost of the costliest one (Settle), padded by autoInc: cf below.
 
 open Zen.Base
 open Zen.Prelude
