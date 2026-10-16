@@ -40,3 +40,19 @@ let find data (root: string option) (timestamp: int64 option) =
     | Some r, _ -> rounds |> List.tryFind (fun x -> x.Root = r)
     | None, Some t -> rounds |> List.filter (fun x -> x.Timestamp <= t) |> List.tryLast
     | None, None -> rounds |> List.tryLast
+
+/// The slot of a moment (ms since epoch): the start of its interval (on the hour for 60 minutes). Rounds are stamped with
+/// their slot, so a market's close (FixedPayout V1) is a known timestamp.
+let slotOf (intervalMinutes: int) (ms: int64) =
+    let len = int64 intervalMinutes * 60000L
+    (ms / len) * len
+
+/// Whether the slot already has a round: one round per slot (two roots with the same timestamp could settle a market
+/// either way).
+let hasSlot (data: string) (slot: int64) = File.Exists(Path.Combine(dir data, sprintf "%013d.json" slot))
+
+/// How long to wait (ms) before the next attempt: after a round, until 20 s into the next slot; after a failure, 5 minutes,
+/// but never past that point, so a retry stays in its slot and a late one starts the next slot.
+let nextWait (intervalMinutes: int) (nowMs: int64) (ok: bool) =
+    let toNext = slotOf intervalMinutes nowMs + int64 intervalMinutes * 60000L + 20000L - nowMs
+    max 1000L (if ok then toNext else min 300000L toNext)

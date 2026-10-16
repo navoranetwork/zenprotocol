@@ -12,7 +12,27 @@ let run () : bool =
     let data = [ "EURUSD", 1.0832M; "GBPUSD", 1.2711M; "USDJPY", 149.5M; "EURGBP", 0.852M; "USDCHF", 0.9M ]
     let root = Leaf.root data
     let results =
-        [ check "value is scaled x 1000 as the contract's U64" (Leaf.scaled 1.0832M = 1083UL)
+        [ check "slots: a moment's slot is the start of its hour (the edges of 13:00-14:00 UTC)"
+              (let h13 = DateTimeOffset(2026, 10, 20, 13, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
+               Store.slotOf 60 h13 = h13 && Store.slotOf 60 (h13 + 3599999L) = h13 && Store.slotOf 60 (h13 + 3600000L) = h13 + 3600000L
+               && Store.slotOf 60 (h13 - 1L) = h13 - 3600000L)
+          check "slots: one round per slot (a second round in the same slot is not made)"
+              (let dir = IO.Path.Combine(IO.Path.GetTempPath(), "zen-oracle-selftest-" + string (Guid.NewGuid()))
+               let slot = Store.slotOf 60 (DateTimeOffset(2026, 10, 20, 13, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds())
+               let before = Store.hasSlot dir slot
+               Store.save dir { Timestamp = slot; Root = "00"; Tx = ""; Tickers = [||]; Values = [||]; Evidence = "{}" }
+               let after = Store.hasSlot dir slot && not (Store.hasSlot dir (slot + 3600000L))
+               (try IO.Directory.Delete(dir, true) with _ -> ())
+               not before && after)
+          check "slots: after a round, wait until 20 s into the next slot; a retry stays in its slot; a late one starts the next"
+              (let h13 = DateTimeOffset(2026, 10, 20, 13, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
+               let at m = h13 + int64 m * 60000L
+               Store.nextWait 60 (at 10) true = at 60 + 20000L - at 10              // the next round at 14:00:20
+               && Store.nextWait 60 (at 10) false = 300000L                          // a retry at 13:15, same slot
+               && Store.slotOf 60 (at 10 + Store.nextWait 60 (at 10) false) = h13
+               && Store.nextWait 60 (at 58) false = at 60 + 20000L - at 58           // not past 14:00:20
+               && Store.slotOf 60 (at 58 + Store.nextWait 60 (at 58) false) = at 60) // the late retry is the next slot's round
+          check "value is scaled x 1000 as the contract's U64" (Leaf.scaled 1.0832M = 1083UL)
           check "every leaf verifies against the root with its audit path"
               (data |> List.mapi (fun i (t, v) -> Leaf.verify root (Leaf.auditPath data i) i t v) |> List.forall id)
           check "a changed value does not verify"

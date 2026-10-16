@@ -49,19 +49,12 @@ let private saveDaily (s: Settings) (m: Map<string, string * decimal>) =
     let o = m |> Map.map (fun _ (d, v) -> {| date = d; value = v |})
     File.WriteAllText(dailyFile s, JsonSerializer.Serialize o)
 
-/// The slot of a moment: rounds are stamped with the start of their interval (on the hour by default), not the moment
-/// they are made, so a market's close (FixedPayout V1: one timestamp) is known in advance.
-let slotOf (s: Settings) (t: DateTimeOffset) =
-    let len = int64 s.IntervalMinutes * 60000L
-    (t.ToUnixTimeMilliseconds() / len) * len
-
 let round (s: Settings) (provider: Providers.Provider) =
     let now = DateTimeOffset.UtcNow
-    let slot = slotOf s now
+    let slot = Store.slotOf s.IntervalMinutes (now.ToUnixTimeMilliseconds())
     // one round per slot: two roots with the same timestamp would let a market settle on either
-    match Store.all s.Data |> List.tryFind (fun x -> x.Timestamp = slot) with
-    | Some _ -> printfn "slot %d already has a round" slot
-    | None ->
+    if Store.hasSlot s.Data slot then printfn "slot %d already has a round" slot
+    else
         let daily, closeUtc = Providers.dailyConfig ()
         let closes = ref (loadDaily s)
         let today = now.UtcDateTime.ToString "yyyy-MM-dd"
@@ -190,10 +183,8 @@ let main argv =
         // within its slot, with the slot's timestamp
         while true do
             let ok = (try round s provider; true with ex -> eprintfn "round failed: %s" ex.Message; false)
-            let now = DateTimeOffset.UtcNow
-            let next = slotOf s now + int64 s.IntervalMinutes * 60000L + 20000L
-            let wait = if ok then next - now.ToUnixTimeMilliseconds() else min 300000L (next - now.ToUnixTimeMilliseconds())
-            Thread.Sleep(TimeSpan.FromMilliseconds(float (max 1000L wait)))
+            let wait = Store.nextWait s.IntervalMinutes (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) ok
+            Thread.Sleep(TimeSpan.FromMilliseconds(float wait))
         0
     | _ ->
         eprintfn "usage: zen-oracle [run|once|probe|selftest|body]   (settings from ORACLE_* environment variables, see docs/ORACLE.md)"
