@@ -15,9 +15,11 @@ Live at `https://<site domain>/wallet/` (today `https://navora.network/wallet/`;
 | Receive | QR code and address. The first and last characters are highlighted so they can be checked with the sender. |
 | Activity | Received, sent and mining-reward entries with confirmations. |
 | CGP | Current interval, phase (before snapshot, nomination, voting) and time to the next phase, computed from the tip. The current block reward split comes from the node. |
+| One vote per phase | Only the first ballot of a key counts in a phase (the node's tally ignores the rest, `Tally_Handler.fs`). After a ballot is sent, the wallet records which wallets signed it and, for the rest of that phase, shows “already voted” instead of the Review button for the same kind of ballot (allocation, nomination, payout) and refuses a second one. The record is kept in this browser; a ballot sent from another device is not known to it, but still only the first one counts. |
 | Node | Choose the node per network: the community node (default), any `https://` node, or `http://localhost:<port>` for your own. The connection is tested on save. |
 | Mainnet / testnet | Each network keeps its own wallets. Testnet is marked in amber everywhere. There is no public testnet node yet: run one and enter its address. |
 | Markets (testnet) | Read-only: the oracle's latest prices with how many sources agreed and the day of a close, and the open Dex orders. Read from the site that serves the node (`/oracle/`, `/explorer/api/`). Trading from the wallet is the next step: it needs contract execution (`/blockchain/contract/execute` returns the full transaction for a skeleton the wallet builds; the wallet signs). |
+| Up or down? bets (testnet) | Markets → Oracle: Up / Down markets on oracle prices (FixedPayout V1). A bet is a Dex Take of an Up or Down token; a winning side (or any side of a void market, at 0.50) is collected with a signed Redeem, checked before signing. Details: [`BETS.md`](BETS.md), section "The wallet". |
 | Lock | A password unlocks the browser vault. The wallet locks itself after 15 minutes without activity, and "Lock now" is in Settings. |
 | Backup | Shows the 24 words or key of a wallet after the password is entered again. |
 

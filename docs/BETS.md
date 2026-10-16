@@ -139,8 +139,54 @@ no fee per gas; the cost counts toward the block's weight.
   - `BETS_COLLATERAL`: zUSDC.
   Then `docker compose … --profile bets up -d bets`. Never `--remove-orphans`.
 
+## The wallet (ZP Wallet 0.32.2, testnet)
+
+Markets → Oracle shows an **Up or down?** card above the prices, filtered by the same chips as the prices (Crypto,
+Forex, Stocks, Commodities). The wallet computes no ids: everything comes from `GET /explorer/api/bets/markets`.
+Code: `wallet/src/bets.js` (pure parts) and `betsCard`, `yourBets`, `betModal`, `betRedeem` in `wallet/web/app.js`.
+
+- **Before the contract is active** (the markets API does not answer), the card is a short note.
+- **Markets.** Every open market whose close is ahead shows "TICKER at or above LINE", its close in local time with
+  the time left, and two buttons, **▲ Up** and **▼ Down**. Each button shows the price of one token in zUSDC: the
+  cheapest Dex order in `/explorer/api/dex/orders` that sells that token for the collateral, already in a block.
+  Pending orders and orders being taken are skipped. A side with no such order is shown greyed out. The rule is
+  printed under the list: "If the oracle has no close price within 24 hours, every token pays 0.50."
+- **Checks on each row** (`marketOf`): the seven event fields are well formed; Start equals Expiry; the bull and bear
+  ids differ; the collateral is the one at the top of the answer (other rows are dropped); the contract id comes from
+  the top-level `contractId`. Up and Down tokens are named "BTC 81,900 Up" / "… Down" and counted with the
+  collateral's 6 decimals, everywhere in the wallet.
+- **A bet** is a Dex Take of that order. The sheet:
+  - says when you win, for example "BTC is at or above 81,900 at 01:00 18 Oct";
+  - takes a stake in zUSDC, at most the order's total and the wallet's spendable zUSDC;
+  - shows as you type "If right you get N zUSDC (+profit)" and "If not 0". N = floor(order amount × stake / order
+    total), the Dex's rule.
+  
+  Review re-reads the order on the chain ("Someone took it first" if it is gone). The confirmation lists the bet, the
+  close, the stake and the payout. The Take is checked before signing, as every Dex Take: the Dex pays exactly that
+  and nothing goes elsewhere. It is anonymous, as on the Dex tab.
+- **Your bets** lists the wallet's Up and Down tokens per market, read from its own balance:
+  - open: "If right: N zUSDC";
+  - closing or voidable: "waiting for the result" / "being voided (0.50 per token)";
+  - settled and won: **Collect N zUSDC**;
+  - settled and lost: "Lost";
+  - void: **Collect N/2 zUSDC**.
+- **Collect** is a signed `Redeem` to the contract id: the event's seven fields plus `Position` ("Bull" | "Bear"),
+  spending all of that side's tokens. Before signing, the wallet checks that the contract pays the signer's key
+  exactly N (won) or floor(N/2) (void), and nothing to anyone else. The row then shows "Collecting…" until the next
+  block.
+- **Not in the wallet:** Issue and Cancel of pairs, selling a position back before the close (possible today as a
+  limit order on the Dex tab's "Any pair"), and Settle and Void, which the market service sends.
+- **Tests:**
+  - `wallet/test/bets.test.js`: rows, offers, quotes, Redeem values, the explorer answer, and the Redeem body of the
+    live BTC market, compared byte for byte with `bodies.redeem` in `site/bets/core.mjs`.
+  - `wallet/tools/ui-test/run-bets.py`, against `mock-node.mjs` with `bets=1`: the note before activation, markets and
+    prices, a greyed side, a bet sent as a Take of 1.20 zUSDC for 2 tokens, Collect after a win and after a void.
+- **Checked live on the testnet, 2026-10-16:** both first markets with Up and Down at 0.55, once the Issue and the
+  Makes were in a block (2910–2911).
+
 ## Still to build
 
 1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after
-   the close round).
-2. Wallet: the Up / Down flow in the Oracle tab, Redeem after the close, positions under Activity → Trading.
+   the close round). Then a real Collect from the wallet, and its Redeem transaction kept as a vector.
+2. Wallet, later: positions under Activity → Trading, the value now at the best bid (from `/bets/positions`), and
+   selling a position back from the bet card.
