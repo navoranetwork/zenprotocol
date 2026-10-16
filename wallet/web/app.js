@@ -142,10 +142,15 @@ function betsCard(m, cat) {
   return `<div class="card"><h2>Up or down?</h2><div class="list">${rows || '<p class="muted small">No open bets in this group now.</p>'}</div>
     <p class="muted small" data-s="mt10">The number is the price of one token in zUSDC. A token pays 1 zUSDC if you are right at the close, nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
 }
+// how long an order sent from here has waited for its block (a block takes about 4 minutes; Cancel needs it in a block)
+const waitText = at => { const m = Math.floor((Date.now() - at) / 60000);
+  return m < 1 ? 'sent just now: waiting for its block (about 4 min), then you can cancel it'
+    : m < 10 ? `sent ${m} min ago: waiting for its block (about 4 min), then you can cancel it`
+    : `sent ${m} min ago and not in a block yet: the network is slow now; Cancel shows once it is in a block`; };
 // my own sell orders of a token: in the book, or sent from here and waiting for their block
 function mySells(asset) {
   const me = myPub(), listed = betOrders().filter(o => o.underAsset === asset && myOrder(o, me)), seen = new Set(listed.map(o => o.tx));
-  const waiting = dexMade().filter(x => x.under_asset === asset && !seen.has(x.tx)).map(x => { try { return { ...orderOf(x), waiting: true }; } catch { return null; } }).filter(Boolean);
+  const waiting = dexMade().filter(x => x.under_asset === asset && !seen.has(x.tx)).map(x => { try { return { ...orderOf(x), waiting: true, at: x.at }; } catch { return null; } }).filter(Boolean);
   return [...listed, ...waiting];
 }
 function yourBets(m) {
@@ -161,7 +166,7 @@ function yourBets(m) {
       const state = b.status === 'void' ? 'void: no close price, every token pays 0.50' : b.status === 'voidable' ? 'no close price in 24 hours: being voided (0.50 per token)'
         : b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : b.status === 'closing' ? 'closed, waiting for the result' : 'closes ' + esc(closeText(b.close));
       const onSale = sells.map(o => { const p = dexPending.get(o.tx);
-        return `<div class="muted small onsale">On sale: ${esc(tokenAmount(unit, o.underAmount))} at ${(Number(o.pairTotal) / Number(o.underAmount)).toFixed(4)} = ${esc(withUnit(unit, o.pairTotal))}${o.waiting ? ' · <span class="spin"></span> waiting for its block' : p ? ' · ' + (p === 'taking' ? 'being bought…' : 'being cancelled…') : spendable ? ` <button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div>`; }).join('');
+        return `<div class="muted small onsale">On sale: ${esc(tokenAmount(unit, o.underAmount))} at ${(Number(o.pairTotal) / Number(o.underAmount)).toFixed(4)} = ${esc(withUnit(unit, o.pairTotal))}${o.waiting ? `<br><span class="spin"></span> ${esc(waitText(o.at))}` : p ? ' · ' + (p === 'taking' ? 'being bought…' : 'being cancelled…') : spendable ? ` <button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div>`; }).join('');
       const sell = n && pay === null && open && spendable ? `<button class="btn sellbtn" data-act="bet-sell" data-id="${esc(b.bull)}" data-side="${side}">Sell ${side === 'up' ? '▲ Up' : '▼ Down'} tokens</button>` : '';
       return `<div class="betpos"><div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>${sell}</div>`;
     };
@@ -2266,7 +2271,9 @@ setInterval(() => { if (S.key && S.screen === 'vote' && !S.modal) refreshVotes()
 // the ZP ⇄ BTC tab follows the market as the site's page does (reservations, payments, a sent offer, a take-back)
 setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'swap' && !S.modal && !document.hidden) loadSwap(); }, 30000);
 // the Dex tab follows the book (the site's index is fresh to one block)
-setInterval(() => { if (S.key && S.screen === 'markets' && S.settings.mtab === 'dex' && !S.modal && !document.hidden && !$app.querySelector('form[data-form=dex-limit] input:focus')) loadMarkets(); }, 20000);
+// bets: the wallet's own Up/Down tokens change when an order is taken or mined, so its balance is read again too (each minute)
+setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'oracle' && S.markets?.bets?.length && !S.modal && !document.hidden) refreshWallet(active().id).then(render).catch(() => {}); }, 60000);
+setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') !== 'swap' && !S.modal && !document.hidden && !$app.querySelector('form[data-form=dex-limit] input:focus')) loadMarkets(); }, 20000);
 setInterval(() => { if (S.key && S.screen === 'markets' && (S.settings.mtab || 'oracle') === 'swap' && !S.modal && !document.hidden && myBuy() && !myBuy().paid) loadSwap(); }, 10000);   // a purchase in progress
 ['keydown', 'pointerdown'].forEach(ev => addEventListener(ev, () => { S.lastActivity = Date.now(); }, { passive: true }));
 

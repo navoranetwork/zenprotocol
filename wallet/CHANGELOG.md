@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.33.3 — 2026-10-16
+
+### Fixed
+- The Oracle tab read the markets and the Dex orders only when opened, so a sell order stayed "waiting for its block"
+  after it was mined. The tab now reads them every 20 seconds and the wallet's balance every minute, as the Dex tab.
+- A sell order waiting for its block says how long ago it was sent, and that Cancel comes once it is in a block.
+
 ## 0.33.2 — 2026-10-16
 
 ### Changed

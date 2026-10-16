@@ -75,7 +75,7 @@ with sync_playwright() as p:
     pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your order is on its way', timeout=15000)
     ok(get('/__lastdex') == {'command': 'Make', 'signed': True}, 'sent as a Dex Make signed by this wallet')
     pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
-    ok('On sale: 1.818181 at 0.7000' in pg.inner_text('main') and 'waiting for its block' in pg.inner_text('main'), 'Your bets shows the order on sale, waiting for its block')
+    ok('On sale: 1.818181 at 0.7000' in pg.inner_text('main') and 'sent just now: waiting for its block (about 4 min), then you can cancel it' in pg.inner_text('main'), 'Your bets shows the order on sale, how long it has waited, and when Cancel comes')
     pg.screenshot(path=f'{OUT}/bt6-onsale.png', full_page=True)
     # sell now to the bid
     pg.click('button[data-act=bet-sell][data-side=up]'); pg.wait_for_selector('form[data-form=bet-sell]')
