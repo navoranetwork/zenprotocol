@@ -1,0 +1,27 @@
+== node: 3d291af7 lab-testnet-v1.sh: publish with --allow-unproven (make does not prove by default since 469ddeb; nodes never prove); toolchain: dab00f8 Zen.Integers.u8/u16/u32/u64ToNat, i32/i64ToInt (F*'s machine-integer v does not extract); rule 4.9 refuses v in code
+== node at block 171 (V1 from 5)
+11:26:32 Bitcoin block 971692 (2461 transactions), transaction 5114da00e288e64dde30c3625a8d342381f0a4055cc06a5b222c5363f8186e31 at position 1, output 0: 84771 sat to a91475c99265718f8c4e2219755ff9ae53dae4a4d69c87
+11:26:32 BitZenChain.fst: activation sent, 000000012381250f80f6501d4d09bde5a7a37720d9bed556e2f0bb21387591682d7b07a8
+11:26:51 BitZenChain.fst: active
+11:26:53 PASS checkpoint at Bitcoin block 971692 
+11:26:55 PASS add block 971693 
+11:26:57 PASS add block 971694 
+11:26:59 PASS add block 971695 
+11:27:01 PASS add block 971696 
+11:27:01 PASS pay at 5 confirmations refused (the block has fewer confirmations than asked)
+11:27:03 PASS add block 971697 
+11:27:05 PASS pay at 6 confirmations accepted in ZP transaction ab017d565e7f4efce78f6c8fa130135be9db7a8be1c9736ff0d8c2d502628217
+11:27:05 PASS amount above the output refused (the output pays less than the amount)
+11:27:05 PASS another script refused (the output pays another script)
+11:27:06 BitZenSwap.fst: activation sent, 000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20
+11:27:24 BitZenSwap.fst: active
+11:27:26 PASS swap init 
+11:27:28 PASS swap offer o1: 100000 ZP units for 84771 sat 
+11:27:31 PASS swap reserve o1 
+11:27:33 PASS pay with notify = swap, ref o1 in 94bdfa8c0ee70b8f0c18ed84eec96e8695ffa8f36a410f6da651f9065d9e89a0
+11:27:33 PASS the buyer received 100000 ZP units in the same transaction
+11:27:33 PASS the same payment again (offer closed) refused (paid needs a reserved offer (ref) and the payment)
+11:27:33 RESULT: PASS
+[11:27:22 INF] End building V1 contract 000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20. Duration: 0ms
+[11:27:23 INF] Begin building V1 contract 000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20
+[11:27:23 INF] End building V1 contract 000000015841b86a8cbf153edc849e3abc9109457794177f50573f90ef2c06548ad60e20. Duration: 0ms
