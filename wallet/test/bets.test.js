@@ -1,7 +1,7 @@
 // Up / Down bets: markets, the best offer, the quote, and the Redeem body.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { marketOf, marketsOf, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, eventFields } from '../src/bets.js';
+import { marketOf, marketsOf, bestBid, bidPrice, sellOrder, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, eventFields } from '../src/bets.js';
 import { Data, Writer } from '../src/serialize.js';
 
 const Z = 'aa'.repeat(36) + 'bb'.repeat(32), BULL = 'cc'.repeat(36) + '01'.repeat(32), BEAR = 'cc'.repeat(36) + '02'.repeat(32);
@@ -64,4 +64,17 @@ test('the live testnet BTC market: the wallet Redeem body is byte for byte the m
     const w = new Writer(); Data.write(w, redeemBody(m.event, side));
     assert.equal(Buffer.from(w.out()).toString('hex'), bodies.redeem(svc, pos));
   }
+});
+
+test('selling back: the best bid, and a sell order at a price per token', () => {
+  const bid = (u, p, extra = {}) => ({ underAsset: Z, underAmount: BigInt(u), pairAsset: BULL, pairTotal: BigInt(p), tx: u + ':' + p, ...extra });
+  const b = bestBid([bid(4e6, 10e6), bid(5e6, 10e6), bid(9e6, 10e6, { pending: true }), { ...bid(6e6, 10e6), pairAsset: BEAR }], BULL, Z);
+  assert.equal(b.tx, '5000000:10000000'); assert.equal(bidPrice(b), 0.5);
+  assert.deepEqual(sellOrder('0.70', 1818181n), { tokens: 1818181n, total: 1272726n, price: 0.7 });
+  assert.deepEqual(sellOrder('.6', 2000000n), { tokens: 2000000n, total: 1200000n, price: 0.6 });
+  assert.throws(() => sellOrder('1', 2000000n), /at most 1/);
+  assert.throws(() => sellOrder('0', 2000000n), /above 0/);
+  assert.throws(() => sellOrder('0.001', 2000000n), /like 0.70|At least 0.01/);
+  assert.throws(() => sellOrder('abc', 2000000n), /like 0.70/);
+  assert.throws(() => sellOrder('0.5', 10000n), /At least 0.01/);
 });

@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.33.0 — 2026-10-16
+
+### Added
+- Sell a bet back before the close, from Your bets: **Sell** opens a sheet with your price per token (below 1 zUSDC)
+  and how many tokens; it shows what you get when it sells and places a Dex sell order (a signed Make). When someone
+  is buying, **Sell now** takes the best bid at once. Your orders on sale show under the position with Cancel.
+
 ## 0.32.3 — 2026-10-16
 
 ### Fixed

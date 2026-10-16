@@ -7,7 +7,7 @@ import { createVault, unlockVault, seal, open, storage } from '../src/vault.js';
 import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationBallot, payoutBallot, candidateBallot, phaseAt, snapshotBlock, phasesOf } from '../src/cgp.js';
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall, prepareCombine } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel, bookRow, bookFromOrders, levels, parsePrice, limitOrder } from '../src/dex.js';
-import { marketOf, marketsOf, sideAsset, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, expectRedeem } from '../src/bets.js';
+import { marketOf, marketsOf, sideAsset, bestBid, bidPrice, sellOrder, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, expectRedeem } from '../src/bets.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
@@ -142,22 +142,47 @@ function betsCard(m, cat) {
   return `<div class="card"><h2>Up or down?</h2><div class="list">${rows || '<p class="muted small">No open bets in this group now.</p>'}</div>
     <p class="muted small" data-s="mt10">The number is the price of one token in zUSDC. A token pays 1 zUSDC if you are right at the close, nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
 }
+// my own sell orders of a token: in the book, or sent from here and waiting for their block
+function mySells(asset) {
+  const me = myPub(), listed = betOrders().filter(o => o.underAsset === asset && myOrder(o, me)), seen = new Set(listed.map(o => o.tx));
+  const waiting = dexMade().filter(x => x.under_asset === asset && !seen.has(x.tx)).map(x => { try { return { ...orderOf(x), waiting: true }; } catch { return null; } }).filter(Boolean);
+  return [...listed, ...waiting];
+}
 function yourBets(m) {
-  const rows = m.bets.map(b => [b, betHeld(b)]).filter(([, h]) => h.up > 0n || h.down > 0n).map(([b, h]) => {
-    const unit = b.collateral, line = side => {
-      const n = h[side]; if (!n) return '';
-      const pay = redeemValue(b, side, n), key = b.bull + side, sent = S.redeemed?.[key] && Date.now() - S.redeemed[key] < 10 * 60e3;
-      const right = pay === null ? `<span class="muted small">${b.status === 'open' ? 'If right: ' : 'Waiting for the result · '}${esc(withUnit(unit, n))}</span>`
+  const spendable = canSpend(S.open.get(active().id));
+  const rows = m.bets.map(b => {
+    const h = betHeld(b), unit = b.collateral, line = side => {
+      const n = h[side], sells = mySells(sideAsset(b, side)); if (!n && !sells.length) return '';
+      const pay = n ? redeemValue(b, side, n) : null, key = b.bull + side, sent = S.redeemed?.[key] && Date.now() - S.redeemed[key] < 10 * 60e3, open = b.status === 'open' && b.close > Date.now();
+      const right = !n ? '' : pay === null ? `<span class="muted small">${b.status === 'open' ? 'If right: ' : 'Waiting for the result · '}${esc(withUnit(unit, n))}</span>${open && spendable ? `<button class="chip mini" data-act="bet-sell" data-id="${esc(b.bull)}" data-side="${side}">Sell</button>` : ''}`
         : pay === 0n ? '<span class="muted small">Lost</span>'
         : sent ? '<span class="muted small"><span class="spin"></span> Collecting…</span>'
-        : canSpend(S.open.get(active().id)) && b.contract ? `<button class="btn primary mini" data-act="bet-redeem" data-id="${esc(b.bull)}" data-side="${side}">Collect ${esc(withUnit(unit, pay))}</button>` : `<span class="small">${esc(withUnit(unit, pay))} to collect</span>`;
+        : spendable && b.contract ? `<button class="btn primary mini" data-act="bet-redeem" data-id="${esc(b.bull)}" data-side="${side}">Collect ${esc(withUnit(unit, pay))}</button>` : `<span class="small">${esc(withUnit(unit, pay))} to collect</span>`;
       const state = b.status === 'void' ? 'void: no close price, every token pays 0.50' : b.status === 'voidable' ? 'no close price in 24 hours: being voided (0.50 per token)'
         : b.status === 'settled' ? 'closed at ' + esc(b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })) : b.status === 'closing' ? 'closed, waiting for the result' : 'closes ' + esc(closeText(b.close));
-      return `<div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${esc(tokenAmount(unit, n))} tokens · ${state}</div></div><div>${right}</div></div>`;
+      const onSale = sells.map(o => { const p = dexPending.get(o.tx);
+        return `<div class="muted small onsale">On sale: ${esc(tokenAmount(unit, o.underAmount))} at ${(Number(o.pairTotal) / Number(o.underAmount)).toFixed(4)} = ${esc(withUnit(unit, o.pairTotal))}${o.waiting ? ' · <span class="spin"></span> waiting for its block' : p ? ' · ' + (p === 'taking' ? 'being bought…' : 'being cancelled…') : spendable ? ` <button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div>`; }).join('');
+      return `<div class="item"><div><div>${side === 'up' ? '▲ Up' : '▼ Down'} · <b>${esc(b.ticker)}</b> ${esc(strikeText(b))}</div><div class="muted small">${n ? esc(tokenAmount(unit, n)) + ' tokens · ' : ''}${state}</div>${onSale}</div><div class="betright">${right}</div></div>`;
     };
     return line('up') + line('down');
   }).join('');
   return rows ? `<div class="card"><h2>Your bets</h2><div class="list">${rows}</div>${S.modal ? '' : errBox()}</div>` : '';
+}
+function sellModal(md) {
+  const b = (S.markets?.bets || []).find(x => x.bull === md.id), up = md.side === 'up';
+  if (!b) return `<div class="modal" role="dialog" aria-modal="true"><div class="sheet"><h2>Sell</h2><p class="muted">This market is gone.</p><button class="btn primary big" data-act="close">OK</button></div></div>`;
+  const asset = sideAsset(b, md.side), n = betHeld(b)[md.side], orders = betOrders(), bid = bestBid(orders, asset, b.collateral), ask = bestOffer(orders, asset, b.collateral);
+  const nowN = bid ? (n < bid.pairTotal ? n : bid.pairTotal) : 0n, nowGet = bid ? payoutFor(bid, nowN) : 0n;
+  const amt = S.draft.sellAmt ?? tokenAmount(b.collateral, n).replace(/,/g, ''), price = S.draft.sellPrice ?? '';
+  let get = ''; try { const o = sellOrder(price, parseUnits(amt, decimalsOf(asset))); get = withUnit(b.collateral, o.total); } catch { /* not yet */ }
+  return `<div class="modal" role="dialog" aria-modal="true"><form class="sheet" data-form="bet-sell"><h2>Sell ${up ? '▲ Up' : '▼ Down'}: ${esc(b.ticker)} ${up ? '≥' : '<'} ${esc(strikeText(b))}</h2>
+    <div class="card small">You hold <b>${esc(tokenAmount(b.collateral, n))}</b> tokens. Each pays 1 zUSDC if ${esc(b.ticker)} is ${up ? 'at or above' : 'below'} ${esc(strikeText(b))} at ${esc(closeText(b.close))}.</div>
+    ${bid ? `<div class="card small"><div class="between"><span>Someone buys now at <b>${bidPrice(bid).toFixed(4)}</b></span><button type="button" class="btn primary mini" data-act="bet-sellnow" ${S.busy ? 'disabled' : ''}>Sell ${esc(tokenAmount(b.collateral, nowN))} for ${esc(withUnit(b.collateral, nowGet))}</button></div></div>` : '<p class="muted small">Nobody is buying these tokens right now: set your price, and your tokens wait in the Dex until someone buys them.</p>'}
+    <label class="field">Your price per token (zUSDC)<input name="price" inputmode="decimal" autocomplete="off" placeholder="${ask ? offerPrice(ask).toFixed(2) : '0.60'}" value="${esc(price)}"></label>
+    <label class="field"><span class="row" data-s="between"><span>Tokens to sell</span><span data-s="right">You hold ${esc(tokenAmount(b.collateral, n))}</span></span><input name="amount" inputmode="decimal" autocomplete="off" value="${esc(amt)}"></label>
+    <div class="kv"><span class="muted">You get when it sells</span><span class="amt ok" id="sell-get">${get ? esc(get) : '–'}</span></div>
+    <p class="muted small">Your tokens wait in the Dex until someone buys them, and you can cancel any time under Your bets. Buyers take the cheapest offer first${ask ? `: now ${offerPrice(ask).toFixed(2)}` : ''}.</p>
+    ${errBox()}<div class="row"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : 'Review sell order'}</button></div></form></div>`;
 }
 function betModal(md) {
   const b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral);
@@ -228,7 +253,7 @@ async function dexPrepare(kind, o, extra = {}) {
     lines = extra.lines ? extra.lines(payout) : [['You give', withUnit(o.pairAsset, extra.provided)], ['You get', withUnit(o.underAsset, payout)], ...(extra.provided < o.pairTotal ? [['Left in the order', withUnit(o.underAsset, o.underAmount - payout) + ' for ' + withUnit(o.pairAsset, o.pairTotal - extra.provided)]] : [])];
   } else if (kind === 'make') {
     prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Make', body: makeBody({ ...o, maker: me }), spends: [{ asset: o.underAsset, amount: o.underAmount }], signer, expect: expectMake(o) });
-    lines = [['You give', withUnit(o.underAsset, o.underAmount)], ['You want', withUnit(o.pairAsset, o.pairTotal)]];
+    lines = extra.lines ? extra.lines() : [['You give', withUnit(o.underAsset, o.underAmount)], ['You want', withUnit(o.pairAsset, o.pairTotal)]];
   } else {
     prepared = await prepareContractCall({ w, state: d.state, node: node(), contractId: dex, command: 'Cancel', body: cancelBody(o), signer, expect: expectCancel(o, pkHashOf(o.maker)) });
     lines = [['Back to you', withUnit(o.underAsset, o.underAmount)]];
@@ -1426,6 +1451,7 @@ function modalHtml() {
     ${errBox()}<div class="row"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="buy-reserve" data-id="${esc(o.id)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span>' : oneClick ? 'Reserve and pay' : 'Reserve'}</button></div></div></div>`;
   }
   if (m.type === 'bet') return betModal(m);
+  if (m.type === 'bet-sell') return sellModal(m);
   if (m.type === 'dex-take') {
     const o = m.o, have = S.data.get(active().id)?.state?.assets.find(x => x.asset === o.pairAsset)?.spendable || 0n, v = S.draft.dtake ?? '';
     let get = ''; try { const p = o.pairAsset === '00' ? parseZP(v) : parseUnits(v, decimalsOf(o.pairAsset)); if (p > 0n && p <= o.pairTotal) get = withUnit(o.underAsset, payoutFor(o, p)); } catch { /* not yet */ }
@@ -1933,6 +1959,15 @@ $app.addEventListener('click', async e => {
     if (act === 'dex-cancel') { const o = (S.markets?.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).find(x => x && x.tx === t.dataset.tx); if (!o) return; S.busy = true; render(); try { await dexPrepare('cancel', o); } finally { S.busy = false; render(); } return; }
     if (act === 'dex-pick') { const f = $app.querySelector('[data-form=dex-make]'); S.draft = { ...S.draft, [t.dataset.name]: t.dataset.asset, dgamt: f?.give.value || '', dwamt: f?.want.value || '' }; S.error = ''; return render(); }
     if (act === 'bet') { S.draft.bstake = ''; S.modal = { type: 'bet', id: t.dataset.id, side: t.dataset.side }; S.error = ''; return render(); }
+    if (act === 'bet-sell') { S.draft.sellAmt = undefined; S.draft.sellPrice = undefined; S.modal = { type: 'bet-sell', id: t.dataset.id, side: t.dataset.side }; S.error = ''; return render(); }
+    if (act === 'bet-sellnow') {
+      const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id); if (!b) return;
+      const asset = sideAsset(b, md.side), n = betHeld(b)[md.side], bid = bestBid(betOrders(), asset, b.collateral); if (!bid || !n) return;
+      const give = n < bid.pairTotal ? n : bid.pairTotal, up = md.side === 'up';
+      S.busy = true; render();
+      try { await dexPrepare('take', bid, { provided: give, lines: payout => [['Sell', `${up ? '▲ Up' : '▼ Down'}: ${b.ticker} ${up ? '≥' : '<'} ${strikeText(b)}`], ['Tokens', tokenAmount(b.collateral, give)], ['You get now', withUnit(b.collateral, payout)]] }); }
+      finally { S.busy = false; } return render();
+    }
     if (act === 'bet-redeem') { const b = (S.markets?.bets || []).find(x => x.bull === t.dataset.id); if (!b) return; S.busy = true; render(); try { await betRedeem(b, t.dataset.side); } finally { S.busy = false; } return render(); }
     if (act === 'dex-send') {
       S.busy = true; render();
@@ -1977,6 +2012,11 @@ $app.addEventListener('click', async e => {
 $app.addEventListener('toggle', e => { const d = e.target; if (d?.dataset?.keep) (S.keep ||= {})[d.dataset.keep] = d.open; }, true);
 $app.addEventListener('input', e => {
   const t = e.target; S.lastActivity = Date.now();
+  if ((t.name === 'price' || t.name === 'amount') && t.closest('[data-form=bet-sell]') && S.modal?.type === 'bet-sell') {   // the total as you type
+    const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), el = $app.querySelector('#sell-get'), f = t.closest('form'); S.draft.sellPrice = f.price.value; S.draft.sellAmt = f.amount.value;
+    let txt = '–'; try { txt = withUnit(b.collateral, sellOrder(f.price.value, parseUnits(f.amount.value.trim(), decimalsOf(sideAsset(b, md.side)))).total); } catch { /* not yet */ }
+    if (el) el.textContent = txt; return;
+  }
   if (t.name === 'stake' && t.closest('[data-form=bet]') && S.modal?.type === 'bet') {   // the winnings as you type
     const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral), el = $app.querySelector('#bet-win'); S.draft.bstake = t.value;
     let txt = '–'; try { const q = betQuote(o, parseUnits(t.value, decimalsOf(b.collateral))); txt = withUnit(b.collateral, q.payout) + ' (+' + tokenAmount(b.collateral, q.profit) + ')'; } catch (e) { if (/More than/.test(e.message)) txt = 'more than this offer'; }
@@ -2028,6 +2068,16 @@ $app.addEventListener('submit', async e => {
         S.vault.wallets.push(rec); storage.save(S.vault); S.open.set(rec.id, opened);
         S.settings.active = rec.id; saveSettings(); S.draft = {};
         go('home'); return refreshAll(true);
+      }
+      case 'bet-sell': {
+        const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id); if (!b) throw new Error('This market is gone');
+        S.draft.sellPrice = v.price; S.draft.sellAmt = v.amount;
+        const asset = sideAsset(b, md.side), held = betHeld(b)[md.side], up = md.side === 'up';
+        let o; try { o = sellOrder(v.price, parseUnits(String(v.amount).trim(), decimalsOf(asset))); } catch (e) { throw fieldError(e.message, /price/i.test(e.message) || /at most 1/.test(e.message) ? 'price' : 'amount'); }
+        if (o.tokens > held) throw fieldError(`You hold ${tokenAmount(b.collateral, held)} tokens`, 'amount');
+        S.busy = true; render();
+        try { await dexPrepare('make', { underAsset: asset, underAmount: o.tokens, pairAsset: b.collateral, pairTotal: o.total }, { lines: () => [['Sell', `${up ? '▲ Up' : '▼ Down'}: ${b.ticker} ${up ? '≥' : '<'} ${strikeText(b)}`], ['Tokens', tokenAmount(b.collateral, o.tokens)], ['Price per token', o.price.toFixed(4) + ' zUSDC'], ['You get when it sells', withUnit(b.collateral, o.total)]] }); }
+        finally { S.busy = false; } return render();
       }
       case 'bet': {
         const md = S.modal, b = (S.markets?.bets || []).find(x => x.bull === md.id), o = b && bestOffer(betOrders(), sideAsset(b, md.side), b.collateral);

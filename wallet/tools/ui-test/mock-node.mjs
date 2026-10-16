@@ -28,7 +28,8 @@ const fund = () => [...(st.split ? Array.from({ length: st.split }, (_, i) => ({
   ...(st.tokens ? [{ outpoint: { txHash: 'ac'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: TOKEN, amount: '250' } }] : []),
   ...(st.zusdc ? [{ outpoint: { txHash: 'ad'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: ZUSDC, amount: '2000000' } }] : []),
   ...(st.bets ? [{ outpoint: { txHash: 'af'.repeat(32), index: 0 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: BT('3', '1'), amount: '5000000' } },
-    { outpoint: { txHash: 'af'.repeat(32), index: 1 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: BT('4', '2'), amount: '3000000' } }] : [])];
+    { outpoint: { txHash: 'af'.repeat(32), index: 1 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: BT('4', '2'), amount: '3000000' } },
+    { outpoint: { txHash: 'af'.repeat(32), index: 2 }, lock: { PK: { hash: hex(key0.pkHash) } }, spend: { asset: BT('1', '1'), amount: '1818181' } }] : [])];
 const ZUSDC = '000000015ab27aa3af287880c1853e3b2e948349ce27cae9e533fd27fbf6520ddad0d577';   // the testnet's V1 zUSDC (6 decimals)
 // Up / Down bets (bets=1): the bet contract, two open markets with Dex offers of their tokens, a settled market whose
 // Up tokens this wallet holds (5 tokens, won) and a void one (no close price within 24 h) whose Down tokens it holds (3)
@@ -73,7 +74,8 @@ http.createServer((req, res) => {
               { tx: 'b2'.repeat(32), block: 2092, under_asset: ZU, under_amount: '9850000', pair_asset: '00', pair_total: '10000000000', maker: MM_PUB }] : []),
             ...(st.bets ? [{ tx: 'e1'.repeat(32), block: 2093, under_asset: BT('1', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '6000000', maker: MM_PUB },
               { tx: 'e2'.repeat(32), block: 2093, under_asset: BT('1', '2'), under_amount: '10000000', pair_asset: ZU, pair_total: '4200000', maker: MM_PUB },
-              { tx: 'e3'.repeat(32), block: 2093, under_asset: BT('2', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '3500000', maker: MM_PUB }] : []),
+              { tx: 'e3'.repeat(32), block: 2093, under_asset: BT('2', '1'), under_amount: '10000000', pair_asset: ZU, pair_total: '3500000', maker: MM_PUB },
+              { tx: 'e4'.repeat(32), block: 2093, under_asset: ZU, under_amount: '500000', pair_asset: BT('1', '1'), pair_total: '1000000', maker: MM_PUB }] : []),   // a bid: 0.50 zUSDC per BTC 105,000 Up, for 1 token
             ...(st.dexmine ? [{ tx: 'c1'.repeat(32), block: 2092, under_asset: '00', under_amount: '200000000', pair_asset: ZU, pair_total: '300000', maker: hex(key0.publicKey) }] : [])]
             .filter(o => !(st.dexGone || []).includes(o.tx)).map(o => ({ ...o, confirmations: st.tip - o.block + 1, pending: false }));
           if (u.pathname.endsWith('/orders')) return send(res, 200, { tip: st.tip, dex: DEX, orders: all.filter(o => o.tx !== st.goneLive) });

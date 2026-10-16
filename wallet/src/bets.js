@@ -69,6 +69,32 @@ export function bestOffer(orders, asset, collateral) {
 }
 export const offerPrice = o => o ? Number(o.pairTotal) / Number(o.underAmount) : null;
 
+// The best Dex order buying this side's token with the collateral (selling now takes it): the highest
+// underAmount / pairTotal, i.e. collateral paid per token.
+export function bestBid(orders, asset, collateral) {
+  let best = null;
+  for (const o of orders) {
+    if (o.pending || o.busy || o.underAsset !== collateral || o.pairAsset !== asset) continue;
+    if (!best || o.underAmount * best.pairTotal > best.underAmount * o.pairTotal) best = o;
+  }
+  return best;
+}
+export const bidPrice = o => o ? Number(o.underAmount) / Number(o.pairTotal) : null;
+
+// A sell order of `tokens` at `price` (text, collateral per token, up to 4 decimals): the collateral asked in total.
+// A token never pays more than 1, so the price must be below 1; the total must be at least 0.01 (10,000 units).
+export function sellOrder(text, tokens) {
+  const m = String(text).trim().match(/^0?\.(\d{1,4})$|^(0|1)(?:\.(\d{1,4}))?$/);
+  if (!m) throw new Error('Enter a price per token, like 0.70');
+  const p4 = m[1] !== undefined ? BigInt(m[1].padEnd(4, '0')) : BigInt(m[2]) * 10000n + BigInt((m[3] || '').padEnd(4, '0'));
+  if (p4 <= 0n) throw new Error('Enter a price above 0');
+  if (p4 >= 10000n) throw new Error('A token pays at most 1 zUSDC: ask less than 1');
+  const n = BigInt(tokens); if (n <= 0n) throw new Error('Enter how many tokens');
+  const total = n * p4 / 10000n;
+  if (total < 10000n) throw new Error('At least 0.01 zUSDC in total');
+  return { tokens: n, total, price: Number(p4) / 10000 };
+}
+
 // A bet of `stake` collateral units against one order: the tokens bought (= the payout if right), at most the order.
 export function betQuote(o, stake) {
   const s = BigInt(stake);

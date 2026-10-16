@@ -139,7 +139,7 @@ no fee per gas; the cost counts toward the block's weight.
   - `BETS_COLLATERAL`: zUSDC.
   Then `docker compose … --profile bets up -d bets`. Never `--remove-orphans`.
 
-## The wallet (ZP Wallet 0.32.2, testnet)
+## The wallet (ZP Wallet 0.33.0, testnet)
 
 Markets → Oracle shows an **Up or down?** card above the prices, filtered by the same chips as the prices (Crypto,
 Forex, Stocks, Commodities). The wallet computes no ids: everything comes from `GET /explorer/api/bets/markets`.
@@ -174,8 +174,11 @@ Code: `wallet/src/bets.js` (pure parts) and `betsCard`, `yourBets`, `betModal`, 
   spending all of that side's tokens. Before signing, the wallet checks that the contract pays the signer's key
   exactly N (won) or floor(N/2) (void), and nothing to anyone else. The row then shows "Collecting…" until the next
   block.
-- **Not in the wallet:** Issue and Cancel of pairs, selling a position back before the close (possible today as a
-  limit order on the Dex tab's "Any pair"), and Settle and Void, which the market service sends.
+- **Sell** (0.33.0), on an open position in Your bets: a sheet with the holding, the best bid if someone is buying
+  (**Sell now** = a Take of that bid, for as many tokens as it takes), and a price per token (below 1, at most 4
+  decimals; total at least 0.01 zUSDC) with how many tokens. Review places a signed Dex Make of the tokens for the
+  total. The order shows under the position as "On sale: N at P" with Cancel (or "waiting for its block").
+- **Not in the wallet:** Issue and Cancel of pairs, and Settle and Void, which the market service sends.
 - **Tests:**
   - `wallet/test/bets.test.js`: rows, offers, quotes, Redeem values, the explorer answer, and the Redeem body of the
     live BTC market, compared byte for byte with `bodies.redeem` in `site/bets/core.mjs`.
@@ -188,5 +191,4 @@ Code: `wallet/src/bets.js` (pure parts) and `betsCard`, `yourBets`, `betModal`, 
 
 1. The first real Settle: the BTC and ETH markets of 2026-10-17 22:00 UTC (Attest, then Settle, about two blocks after
    the close round). Then a real Collect from the wallet, and its Redeem transaction kept as a vector.
-2. Wallet, later: positions under Activity → Trading, the value now at the best bid (from `/bets/positions`), and
-   selling a position back from the bet card.
+2. Wallet, later: positions under Activity → Trading, and the value now at the best bid (from `/bets/positions`).

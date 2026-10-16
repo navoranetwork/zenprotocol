@@ -54,6 +54,31 @@ with sync_playwright() as p:
     ok(get('/__lastdex') == {'command': 'Take', 'provided': '1200000', 'payout': '2000000', 'signed': False}, 'sent as a Dex Take: 1.20 zUSDC for 2 Up tokens')
     pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
 
+    # sell back: the BTC 105,000 Up tokens this wallet holds (1.818181)
+    pg.click('button[data-act=bet-sell][data-side=up]'); pg.wait_for_selector('form[data-form=bet-sell]')
+    t = pg.inner_text('.sheet'); ok('You hold 1.818181' in t and 'Someone buys now at 0.5000' in t and 'Sell 1.00 for 0.50 zUSDC' in t, 'sell sheet: holdings, the best bid and a sell-now button for what it takes (1 token for 0.50)')
+    pg.screenshot(path=f'{OUT}/bt5-sell.png')
+    pg.fill('form[data-form=bet-sell] input[name=price]', '0.70'); pg.wait_for_timeout(200)
+    ok(pg.inner_text('#sell-get') == '1.272726 zUSDC', 'as you type: 1.818181 tokens at 0.70 ask 1.272726 zUSDC')
+    pg.fill('form[data-form=bet-sell] input[name=price]', '1.2'); pg.click('form[data-form=bet-sell] .row button.primary')
+    try: pg.wait_for_selector('.sheet .err', timeout=8000)
+    except Exception: print(pg.inner_text('body')[-700:]); raise
+    ok('at most 1 zUSDC' in pg.inner_text('.sheet'), 'a price of 1 or more is refused')
+    pg.fill('form[data-form=bet-sell] input[name=price]', '0.70'); pg.click('form[data-form=bet-sell] .row button.primary'); pg.wait_for_selector('text=Confirm order', timeout=15000)
+    t = pg.inner_text('.sheet'); ok('Price per token' in t and '0.7000 zUSDC' in t and 'You get when it sells' in t, 'confirm: the sell order with its price per token')
+    pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your order is on its way', timeout=15000)
+    ok(get('/__lastdex') == {'command': 'Make', 'signed': True}, 'sent as a Dex Make signed by this wallet')
+    pg.click('button[data-act=close]'); pg.wait_for_timeout(500)
+    ok('On sale: 1.818181 at 0.7000' in pg.inner_text('main') and 'waiting for its block' in pg.inner_text('main'), 'Your bets shows the order on sale, waiting for its block')
+    pg.screenshot(path=f'{OUT}/bt6-onsale.png', full_page=True)
+    # sell now to the bid
+    pg.click('button[data-act=bet-sell][data-side=up]'); pg.wait_for_selector('form[data-form=bet-sell]')
+    pg.click('button[data-act=bet-sellnow]'); pg.wait_for_selector('text=Confirm take', timeout=15000)
+    ok('You get now' in pg.inner_text('.sheet') and '0.50 zUSDC' in pg.inner_text('.sheet'), 'sell now: 1 token to the bid for 0.50 zUSDC')
+    pg.click('button[data-act=dex-send]'); pg.wait_for_selector('text=Your take is on its way', timeout=15000)
+    ok(get('/__lastdex') == {'command': 'Take', 'provided': '1000000', 'payout': '500000', 'signed': False}, 'sent as a Take of the bid: 1 token for 0.50')
+    pg.click('button[data-act=close]'); pg.wait_for_timeout(300)
+
     # collect the winnings of the settled market
     pg.click('button[data-act=bet-redeem][data-side=up]')
     try: pg.wait_for_selector('text=Collect winnings', timeout=15000)
