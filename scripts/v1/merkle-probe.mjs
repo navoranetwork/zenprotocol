@@ -5,7 +5,9 @@
 // the probe under rule 4.9 until then, and says so).
 //
 // usage: node scripts/v1/merkle-probe.mjs [engine url]      env: ORACLE (http://127.0.0.1:8085), TICKER (BTC),
-//        ORACLE_ID (the V1 Oracle contract id on the testnet)
+//        ORACLE_ID (the V1 Oracle contract id on the testnet),
+//        VECTORS (a file as zp-contracts-v1 tests/merkle/vectors.txt: "leaves index leaf root path,path,…" per line;
+//        each vector is tried too, right and against another root; ORACLE=none skips the oracle round)
 // On the testnet server, from a zenprotocol checkout on node-upgrade-script:
 //   docker run --rm --network host -v "$PWD":/b -w /b node:22-alpine node scripts/v1/merkle-probe.mjs
 import { readFileSync } from 'node:fs';
@@ -48,26 +50,37 @@ async function job(path, body) {
 let failures = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${cond || !detail ? '' : '\n      ' + detail}`); if (!cond) failures++; };
 
-// a real round of the oracle service
-const p = await (await fetch(`${ORACLE}/auditpath?ticker=${encodeURIComponent(TICKER)}`)).json();
-if (!p || !p.root || !Array.isArray(p.auditPath)) { console.error('oracle /auditpath: ' + JSON.stringify(p).slice(0, 300)); process.exit(2); }
-console.log(`oracle round ${p.timestamp}: ${TICKER} = ${p.valueScaled} / 1000, index ${p.index}, path of ${p.auditPath.length}, root ${p.root}`);
-const body = root => dict({ ticker: D.string(TICKER), value: D.u64(p.valueScaled), root: D.hash(root), path: D.list(p.auditPath.map(D.hash)),
-  index: D.u64(p.index), oracle: D.string(ORACLE_ID) });
+// a real round of the oracle service (ORACLE=none: only the vectors)
+let p = null;
+if (process.env.ORACLE !== 'none') {
+  p = await (await fetch(`${ORACLE}/auditpath?ticker=${encodeURIComponent(TICKER)}`)).json();
+  if (!p || !p.root || !Array.isArray(p.auditPath)) { console.error('oracle /auditpath: ' + JSON.stringify(p).slice(0, 300)); process.exit(2); }
+  console.log(`oracle round ${p.timestamp}: ${TICKER} = ${p.valueScaled} / 1000, index ${p.index}, path of ${p.auditPath.length}, root ${p.root}`);
+}
+const common = (root, path, index) => ({ root: D.hash(root), path: D.list(path.map(D.hash)), index: D.u64(index), oracle: D.string(ORACLE_ID) });
+const body = root => dict({ ...common(root, p.auditPath, p.index), ticker: D.string(TICKER), value: D.u64(p.valueScaled) });
+const vectors = process.env.VECTORS ? readFileSync(process.env.VECTORS, 'utf8').split('\n').map(l => l.trim().split(/\s+/)).filter(v => v.length >= 4 && /^\d+$/.test(v[0]))
+  .map(([n, index, leaf, root, path]) => ({ n, index, leaf, root, path: path ? path.split(',').filter(Boolean) : [] })) : [];
+const another = h => h.slice(0, -2) + (h.endsWith('00') ? '01' : '00');
 
 console.log(`engine ${ENGINE}\nMerkleProbe.fst: ${Buffer.byteLength(source)} bytes, id 00000001${contractHash}`);
 const chk = (await job('check', { source })).check || {};
 ok('check: a node would accept the probe', chk.verdict === 'accepted', `verdict ${chk.verdict}; refusal ${JSON.stringify(chk.refusal)}; node: ${chk.nodeMessage}`);
 if (chk.verdict !== 'accepted') { console.log('\nStopped: Zen.MerkleTree is not realized in this toolchain yet, or the probe has an error (above).'); process.exit(1); }
 
-async function tryIt(name, root, expectOk) {
-  const s = await job('try', { sourceId: contractHash, call: { command: 'probe', context: { blockNumber: 3000, timestamp: '1791900000000' }, wallet: [], bodyHex: body(root) } });
+async function tryIt(name, bodyHex, expectOk) {
+  const s = await job('try', { sourceId: contractHash, call: { command: 'probe', context: { blockNumber: 3000, timestamp: '1791900000000' }, wallet: [], bodyHex } });
   const r = s.try?.result || {};
   ok(name, expectOk ? r.ok === true : r.ok === false && r.error === 'merkle check failed', `ok=${r.ok} error=${JSON.stringify(r.error)}; declared ${r.declaredCost}, used ${r.gasUsed}`);
   if (r.ok) console.log(`      gas used ${r.gasUsed} (declared ${r.declaredCost})`);
 }
-await tryIt(`the real ${TICKER} proof verifies (and value + 1 does not, and the oracle id parses)`, p.root, true);
-const otherRoot = p.root.slice(0, -2) + (p.root.endsWith('00') ? '01' : '00');
-await tryIt('the same proof against another root is refused', otherRoot, false);
+if (p) {
+  await tryIt(`the real ${TICKER} proof verifies (and value + 1 does not, and the oracle id parses)`, body(p.root), true);
+  await tryIt('the same proof against another root is refused', body(another(p.root)), false);
+}
+for (const v of vectors) {
+  await tryIt(`vector: ${v.n} leaves, index ${v.index}, path of ${v.path.length} verifies`, dict({ ...common(v.root, v.path, v.index), leaf: D.hash(v.leaf) }), true);
+  await tryIt(`vector: ${v.n} leaves, index ${v.index}, against another root is refused`, dict({ ...common(another(v.root), v.path, v.index), leaf: D.hash(v.leaf) }), false);
+}
 console.log(failures ? `\n${failures} FAILED` : '\nall passed: V1 contracts can prove oracle prices as FixedPayout does');
 process.exit(failures ? 1 : 0);
