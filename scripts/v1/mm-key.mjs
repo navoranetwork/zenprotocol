@@ -6,7 +6,8 @@
 // It asks the node wallet for a new address (/wallet/getnewaddress: key m/44'/258'/0'/2/N, which the wallet tracks and
 // spends from), finds N by deriving the wallet's public keys, checks that it is neither the bridge's address nor the
 // bridge's key (m/44'/258'/0'/3/0), and prints MM_SIGN for testnet-stack.env.
-// usage: node scripts/v1/mm-key.mjs [node api] [wallet password] [testnet|mainnet]     env ADDRESS: check that address, make none
+// usage: node scripts/v1/mm-key.mjs [node api] [wallet password] [testnet|mainnet]     env ADDRESS: check that address, make none;
+//        env KEY_PATH: print that key's address, make none
 import { createHash } from 'node:crypto';
 
 const API = process.argv[2] || 'http://127.0.0.1:31567', PW = process.argv[3] || 'testnet', HRP = (process.argv[4] || 'testnet') === 'mainnet' ? 'zen' : 'tzn';
@@ -29,6 +30,8 @@ const bridgeZp = await get('/wallet/address');
 const k00 = await key("m/44'/258'/0'/0/0");
 if (address(k00) !== bridgeZp) { console.error(`address encoding check failed: ${address(k00)} vs the wallet's ${bridgeZp}`); process.exit(2); }
 const bridgeKeyAddr = address(await key("m/44'/258'/0'/3/0"));
+// KEY_PATH=m/44'/258'/0'/2/N: print the address of a key made earlier (e.g. BETS_SIGN) and stop
+if (process.env.KEY_PATH) { console.log(address(await key(process.env.KEY_PATH))); process.exit(0); }
 // ADDRESS=<tzn1…>: check an address made earlier instead of making a new one
 let fresh = process.env.ADDRESS || await post('/wallet/getnewaddress', {});
 try { const j = JSON.parse(fresh); if (j && j.address) fresh = j.address; } catch { /* a plain address */ }   // the node answers {address, index}
