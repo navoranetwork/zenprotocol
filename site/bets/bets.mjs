@@ -117,7 +117,9 @@ const LIVE_ON = env('BETS_LIVE', '1') === '1', LIVE_STALE = Number(env('BETS_LIV
 const history = {}, noLive = {};                                      // ticker -> [{ at, p }] of the last 15 minutes
 const getJson = async url => { try { const r = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'zp-bets' } }); return r.ok ? await r.json() : null; } catch { return null; } };
 async function livePrices(now) {
-  const want = TICKERS.filter(t => LIVE[t]); if (!LIVE_ON || !want.length) return;
+  // the tickers of the markets still open (BETS_TICKERS only says which ones to open: it may be empty)
+  const want = [...new Set(markets.filter(m => m.close > now && !m.result).map(m => m.ticker))].filter(t => LIVE[t]);
+  if (!LIVE_ON || !want.length) return;
   const gecko = await getJson(`https://api.coingecko.com/api/v3/simple/price?ids=${want.map(t => LIVE[t][2]).join(',')}&vs_currencies=usd`);
   for (const t of want) {
     const [cb, bn, cg] = LIVE[t];
