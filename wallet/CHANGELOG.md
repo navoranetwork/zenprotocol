@@ -11,6 +11,19 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.36.0 — 2026-10-16
+
+### Added
+- CGP screen:
+  - **Timeline** of the interval: before the snapshot, nominations, voting, with the block ranges, what is open now,
+    the blocks left and about when it ends.
+  - **Results so far** (from the site's cgp-history.json): how many wallets voted, each allocation value with its
+    share of the weight, the result if voting ended now (the weighted median, as the node counts it), and the
+    leading payout.
+  - **Proposals**: each payout asked for, with its share of the fund, the weight behind its nomination against the
+    3% needed to become a candidate, its votes, and which one leads. **Support** (in the nominations) and **Vote for
+    this** (in the voting) send the same ballot without copying addresses.
+
 ## 0.35.1 — 2026-10-16
 
 ### Changed

@@ -8,6 +8,7 @@ import { CGP_PARAMS, VOTING_CONTRACT, CGP_CONTRACT, allocationRange, allocationB
 import { openWallet, prepareVote, checkInfo, discover, readState, readHistory, prepareSend, prepareExtend, extendCost, MAX_EXTEND_BLOCKS, publish, receiveAddress, canSpend, addresses, prepareOffer, prepareCancel, signerOf, prepareActivateV1, prepareContractCall, prepareCombine } from '../src/wallet.js';
 import { orderOf, makeBody, cancelBody, takeBody, payoutFor, pkHashOf, mine as myOrder, expectTake, expectMake, expectCancel, bookRow, bookFromOrders, levels, parsePrice, limitOrder } from '../src/dex.js';
 import { marketOf, marketsOf, sideAsset, bestBid, bidPrice, sellOrder, bestOffer, offerPrice, betQuote, redeemBody, redeemValue, expectRedeem } from '../src/bets.js';
+import { timeline, tallyInterval, thresholdOf, share, zpOfKal } from '../src/cgptally.js';
 import { btcScript, parseBTC, formatBTC, newOfferId, MAX_SCRIPTS, totalFromPerZp, checkFresh, BTC_API } from '../src/swap.js';
 import { BLOCK_MIN, PROOF_MIN, holdOf, payOf, confsFor, afterPayMin, buyMin, payCheck, bip21, findBtcWallets, connectBtcWallet, payWithWallet, parseAccount, freshAddresses, fetchFeeRate } from '../src/btc.js';
 import { EngineClient, checkParam, v1ContractId, activationCost, engineAsset, tryAsset, commandsOf, bodyHexOf, kalapasOf, formatAmount, assetLabel, holdings, sendsAsset, windowsOf } from '../src/engine.js';
@@ -1071,7 +1072,7 @@ const views = {
     const c = cgpInfo(), sel = new Set(voters().map(w => w.id)), signers = walletsHere().filter(w => w.kind !== 'watch');
     return `${top()}<div class="screen"><h1>CGP vote</h1>
       ${c ? `<div class="card cgp"><div class="row k"><span>INTERVAL ${c.community} <span class="muted">(node ${c.interval})</span></span><span data-s="right">${esc(c.phase)}</span></div>
-        <div data-s="mt6">${esc(c.next)} in ${c.blocksLeft.toLocaleString('en-US')} blocks · around ${esc(c.eta)}</div>
+        ${timelineHtml(c)}
         <div class="kv" data-s="mt6"><span class="muted">Each block reward</span><span>${zpStr(c.reward - c.cgpPerBlock)} ZP to the miner · ${zpStr(c.cgpPerBlock)} ZP to the fund</span></div>
         <div class="kv"><span class="muted">Split in force</span><span>miners ${100 - alloc()}% · CGP fund ${alloc()}%</span></div>
         <div class="kv"><span class="muted">CGP fund</span><span title="${esc(S.stats?.cgp?.balance ? 'at block ' + S.stats.cgp.balance.block : '')}">${cgpBalance()}</span></div>
@@ -1083,7 +1084,7 @@ const views = {
           <span class="amt" data-s="fixed">${formatZP(zpOf(w.id))} ZP</span></button>`).join('') || '<p class="muted small">Add a wallet with its 24 words or key to vote. Watch-only wallets cannot sign a ballot.</p>'}</div>
         ${signers.length > 1 ? `<div class="row" data-s="mt10"><button class="btn" data-act="vote-all">All</button><button class="btn" data-act="vote-none">None</button></div>` : ''}
         <div class="kv" data-s="mt10"><span>Vote weight now</span><span class="amt">${formatZP(voteWeight())} ZP</span></div></div>
-      ${ballotsCard(c)}${sentCard(c)}
+      ${tallyCard(c)}${proposalsCard(c)}${ballotsCard(c)}${sentCard(c)}
       <div class="card"><h2>Protocol upgrade vote</h2><p class="muted small">Inactive: the Repo voting contract has been inactive since block 233,874.</p></div></div>${nav('vote')}`;
   },
 
@@ -1263,6 +1264,64 @@ function activityRow(h, w) {
 }
 
 // ---------------------------------------------------------------- CGP ballots
+// ---------------------------------------------------------------- CGP: the interval's timeline, the tally so far, the proposals
+const BLOCK_MS = 236682;
+const whenText = blocks => { const ms = blocks * BLOCK_MS, d = new Date(Date.now() + ms), h = Math.floor(ms / 3600e3), m = Math.round((ms % 3600e3) / 60e3);
+  return `${h ? h + ' h ' : ''}${m} min · ${d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`; };
+function timelineHtml(c) {
+  const t = timeline(CGP_PARAMS[net()], c.interval, (S.tip || 0) + 1), now = t.parts.find(x => x.state === 'now') || t.parts[t.parts.length - 1];
+  // three equal parts (each fills as its blocks pass), so the short ones stay readable
+  const seg = x => `<div class="tlseg ${x.state}" data-w="33.3"><div class="tlbar"><span class="tlfill" data-w="${x.state === 'done' ? 100 : x.state === 'now' ? Math.round((1 - x.left / x.blocks) * 100) : 0}"></span></div>
+    <div class="tllabel" title="${esc(x.label)}">${x.state === 'now' ? '● ' : x.state === 'done' ? '✓ ' : ''}${esc(x.short)}</div><div class="muted small">${x.from.toLocaleString('en-US')}–${x.to.toLocaleString('en-US')}</div></div>`;
+  const nextPart = t.parts[t.parts.indexOf(now) + 1];
+  return `<div class="timeline" role="img" aria-label="Interval timeline">${t.parts.map(seg).join('')}</div>
+    <div class="small" data-s="mt6"><b>${esc(now.label)}</b>: ${now.left.toLocaleString('en-US')} block${now.left === 1 ? '' : 's'} left (about ${esc(whenText(now.left))})${nextPart ? ` · then ${esc(nextPart.label.toLowerCase())}` : ' · then the next interval'}</div>`;
+}
+// what the votes add up to so far (site/chain-index.mjs keeps cgp-history.json, every 5 minutes)
+const histRow = c => (S.cgpHist?.intervals || []).find(x => x.interval === c.interval);
+const tallyNow = c => { const row = histRow(c); return row ? tallyInterval(row, { range: allocationRange(CGP_PARAMS[net()], alloc()), threshold: thresholdOf(S.totalZp) }) : null; };
+const bar = pct => `<span class="tbar"><span class="tfill" data-w="${pct}"></span></span>`;
+const zpW = k => zpStr(zpOfKal(k)) + ' ZP';
+const propName = a => contractNames[a] || walletsHere().find(w => receiveAddress(S.open.get(w.id)) === a)?.name || null;
+const spendText = sp => sp.map(([a, n]) => a === '00' ? formatZP(BigInt(n)) + ' ZP' : withUnit(a, BigInt(n))).join(' + ');
+function tallyCard(c) {
+  if (!c) return '';
+  if (!S.cgpHist) return siteBase() ? '<div class="card"><h2>Results so far</h2><p class="muted small">Loading…</p></div>' : '';
+  const t = tallyNow(c), ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1);
+  if (!t || (!t.allocation.rows.length && !t.proposals.length)) return `<div class="card"><h2>Results so far</h2><p class="muted small">${ph.phase === 'before' ? `No ballots yet: they open after the snapshot block (${c.snapshot.toLocaleString('en-US')}).` : 'No ballots in this interval yet.'}</p></div>`;
+  const cur = alloc(), a = t.allocation;
+  const allocRows = a.rows.map(r => `<div class="trow"><span>${r.pct}%${r.pct === cur ? ' <span class="muted small">keep</span>' : ''}</span>${bar(share(r.weight, a.total))}<span class="amt">${share(r.weight, a.total)}% · ${esc(zpW(r.weight))}</span></div>`).join('');
+  return `<div class="card"><h2>Results so far</h2>
+    <p class="muted small">${t.voters} wallet${t.voters === 1 ? '' : 's'} voted. Weight = ZP held at the snapshot block.${t.weightsKnown ? '' : ' Some weights are still being counted.'} Updated every few minutes.</p>
+    ${a.rows.length ? `<h3>CGP share of the block reward</h3><div class="tally">${allocRows}</div>
+      <div class="kv"><span class="muted">Result if voting ended now</span><span class="nw"><b>CGP ${a.result}%</b> · miners ${100 - a.result}%</span></div>
+      <p class="muted small">The result is the weighted middle vote (the median), as the node counts it; only values from ${allocationRange(CGP_PARAMS[net()], cur).min}% to ${allocationRange(CGP_PARAMS[net()], cur).max}% count.</p>` : ''}
+    ${t.proposals.some(p => p.votes > 0n) ? `<div class="kv" data-s="mt6"><span class="muted">Payout if voting ended now</span><span>${t.leader?.tie ? 'nobody: a tie' : (() => { const p = t.proposals.find(x => x.key === t.leader?.key); return p ? `<b>${esc(spendText(p.spends))}</b> to ${esc(propName(p.recipient) || p.recipient.slice(0, 12) + '…')}` : '–'; })()}</span></div>` : ''}</div>`;
+}
+function proposalsCard(c) {
+  if (!c || !S.cgpHist) return '';
+  const t = tallyNow(c); if (!t || !t.proposals.length) return '';
+  const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), none = !voters().length, fund = S.stats?.cgp?.balance?.zp, thr = thresholdOf(S.totalZp);
+  const pNom = priorVote('Nomination', ph.interval, ph.phase), pPay = priorVote('Payout', ph.interval, ph.phase);
+  const rows = t.proposals.map((p, i) => {
+    const zpOnly = p.spends.length === 1 && p.spends[0][0] === '00', amt = zpOnly ? Number(BigInt(p.spends[0][1])) / 1e8 : null, nm = propName(p.recipient);
+    const lead = t.leader?.key === p.key, nomPct = thr ? Math.min(100, share(p.nominated, thr)) : null;
+    const act = ph.phase === 'Nomination' && zpOnly && !pNom ? `<button class="btn mini" data-act="prop-nom" data-i="${i}" ${none ? 'disabled' : ''}>Support</button>`
+      : ph.phase === 'Vote' && zpOnly && p.candidate !== false && !pPay ? `<button class="btn primary mini" data-act="prop-vote" data-i="${i}" ${none ? 'disabled' : ''}>Vote for this</button>` : '';
+    return `<div class="prop${lead ? ' lead' : ''}"><div class="between"><div><b>${esc(spendText(p.spends))}</b>${amt != null && Number.isFinite(fund) && fund > 0 ? ` <span class="muted small">${Math.round(amt * 1000 / fund) / 10}% of the fund</span>` : ''}${lead ? ' <span class="ok small">● leading</span>' : ''}</div>${act}</div>
+      <div class="small">to ${nm ? `<b>${esc(nm)}</b> · ` : ''}<span class="mono" title="${esc(p.recipient)}">${esc(p.recipient.slice(0, 14))}…${esc(p.recipient.slice(-6))}</span></div>
+      <div class="trow small"><span class="muted">Nominated</span>${thr ? bar(nomPct) : ''}<span>${esc(zpW(p.nominated))}${thr ? ` · ${p.candidate ? '<span class="ok">✓ a candidate</span>' : `${nomPct}% of the 3% needed`}` : ''}</span></div>
+      ${p.votes > 0n || ph.phase === 'Vote' ? `<div class="trow small"><span class="muted">Votes</span>${bar(share(p.votes, t.payTotal))}<span>${esc(zpW(p.votes))} · ${share(p.votes, t.payTotal)}%</span></div>` : ''}</div>`;
+  }).join('');
+  return `<div class="card"><h2>Proposals</h2><p class="muted small">Payouts from the CGP fund asked for in this interval. A proposal needs 3% of all ZP behind it in the nominations to become a candidate; in the voting the candidate with the most weight is paid (a tie pays nobody).</p>
+    ${pNom && ph.phase === 'Nomination' ? votedBox(pNom) : ''}${pPay && ph.phase === 'Vote' ? votedBox(pPay) : ''}<div class="props">${rows}</div>${errBox()}</div>`;
+}
+async function loadCgpHist() {
+  const base = siteBase(); if (!base) return;
+  try { const r = await fetch(base + '/cgp-history.json', { cache: 'no-cache' }); if (r.ok) { const j = await r.json(); if (Array.isArray(j?.intervals)) S.cgpHist = j; } } catch { /* the index is optional */ }
+  try { const z = await node()?.request('/blockchain/totalzp'); if (Number.isFinite(Number(z))) S.totalZp = Number(z) / 1e8; } catch { /* threshold unknown */ }
+}
+
 function ballotsCard(c) {
   if (!c) return '';
   const ph = phaseAt(CGP_PARAMS[net()], (S.tip || 0) + 1), none = !voters().length;
@@ -1652,6 +1711,7 @@ function rememberVote(v) { (S.myVotes ||= loadVotes()).push({ ...v, net: net(), 
 async function refreshVotes() {
   const n = node(); if (!n || S.screen !== 'vote') return;
   let changed = false;
+  if (!S.cgpHistAt || Date.now() - S.cgpHistAt > 60000) { S.cgpHistAt = Date.now(); const before = JSON.stringify(S.cgpHist?.intervals?.[0] || null); await loadCgpHist(); if (JSON.stringify(S.cgpHist?.intervals?.[0] || null) !== before) changed = true; }
   // follow the chain: when a new phase opens (nominations, voting) the forms open without leaving the screen
   try {
     const before = S.tip ? phaseAt(CGP_PARAMS[net()], S.tip + 1) : null;
@@ -2014,6 +2074,14 @@ $app.addEventListener('click', async e => {
     if (act === 'do-remove') { S.vault.wallets = S.vault.wallets.filter(w => w.id !== t.dataset.id); storage.save(S.vault); S.open.delete(t.dataset.id); S.modal = null; return render(); }
     if (act === 'reset') { S.modal = { type: 'confirm', title: 'Remove all wallets from this browser?', text: 'Only do this if you have the 24 words or keys of every wallet. Then add them again with a new password.', ok: 'Remove all', act: 'do-reset' }; return render(); }
     if (act === 'do-reset') { storage.clear(); S.vault = null; S.modal = null; return go('welcome'); }
+    if (act === 'prop-nom' || act === 'prop-vote') {
+      const c = cgpInfo(), p = c && tallyNow(c)?.proposals[Number(t.dataset.i)]; if (!p) return;
+      const amount = BigInt(p.spends[0][1]), ballot = payoutBallot(p.recipient, [{ asset: ZP, amount }]);
+      S.busy = true; render();
+      try { if (act === 'prop-nom') await reviewVote('nomination', 'Nomination', ballot, `Pay ${formatZP(amount)} ZP`, [['To', p.recipient, true]]); else await reviewVote('payout vote', 'Payout', ballot, `Pay ${formatZP(amount)} ZP`, [['To', p.recipient, true]]); }
+      finally { S.busy = false; render(); }
+      return;
+    }
     if (act === 'load-cands') { S.cands = await node().candidates(); if (!Array.isArray(S.cands)) S.cands = []; return render(); }
     if (act === 'vote-cand') { const x = S.cands[+t.dataset.i]; return await reviewVote('payout vote', 'Payout', candidateBallot(x), `Pay ${x.spendlist.map(s => s.asset === '00' ? formatZP(BigInt(s.amount)) + ' ZP' : 'asset').join(' + ')}`, [['To', x.recipient, true]]); }
     if (act === 'confirm-vote') {

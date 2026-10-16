@@ -283,3 +283,23 @@ form[data-form=dex-limit] { display: grid; gap: 12px; }
 .betpos .item { border-bottom: 0; }
 .btn.sellbtn { width: 100%; justify-content: center; color: #F08A8A; border: 1px solid rgba(240, 138, 138, .55); background: rgba(240, 138, 138, .08); font-weight: 600; }
 .btn.sellbtn:hover { background: rgba(240, 138, 138, .16); }
+
+/* CGP: timeline, tally, proposals */
+.timeline { display: flex; gap: 4px; margin-top: 10px; }
+.tlseg { min-width: 0; }
+.tlbar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.tlfill { display: block; height: 100%; background: var(--accent); }
+.tlseg.next .tlbar { opacity: .6; }
+.tllabel { font-size: 12px; font-weight: 600; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tlseg.now .tllabel { color: var(--accent); }
+.tlseg .small { font-size: 11px; }
+.tally { display: grid; gap: 6px; margin: 8px 0; }
+.trow { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.tbar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; min-width: 40px; }
+.tfill { display: block; height: 100%; background: var(--accent); }
+.props { display: grid; gap: 10px; margin-top: 8px; }
+.prop { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.prop.lead { border-color: rgba(63, 193, 160, .6); }
+.prop .between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+h3 { font-size: 14px; margin: 10px 0 2px; }
+.nw { white-space: nowrap; }

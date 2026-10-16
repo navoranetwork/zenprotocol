@@ -61,7 +61,7 @@ http.createServer((req, res) => {
       if (req.method === 'OPTIONS') return send(res, 204, '');
       if (u.pathname.startsWith('/engine/job/')) { const j = st.jobs?.[u.pathname.slice(12)]; if (!j) return send(res, 404, { error: 'unknown job' }); return send(res, 200, j.polls++ < 1 ? { job: u.pathname.slice(12), status: 'running' } : j.done); }
       switch (u.pathname) {
-        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; st.hist = false; st.bets = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bets') st.bets = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'hist') st.hist = v === '1'; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
+        case '/__set': for (const [k, v] of u.searchParams) { if (k === 'tip') st.tip = +v; if (k === 'alloc') st.alloc = +v; if (k === 'zp') st.zp = BigInt(v) * 100000000n; if (k === 'cands') st.cands = v === '1'; if (k === 'utxo') st.utxo = +v; if (k === 'tokens') st.tokens = v === '1'; if (k === 'reset') { st.published = []; st.asked = {}; st.known = new Set(); st.tokens = false; st.buy = null; st.dexGone = []; st.book = false; st.pendingTake = null; st.goneLive = null; st.split = 0; st.hist = false; st.bets = false; st.cgphist = false; } if (k === 'askLeft') st.askLeft = +v; if (k === 'loose') st.loose = v === '1'; if (k === 'zusdc') st.zusdc = v === '1'; if (k === 'bets') st.bets = v === '1'; if (k === 'cgphist') st.cgphist = v === '1'; if (k === 'bridge') st.bridge = v === '1'; if (k === 'dexmine') st.dexmine = v === '1'; if (k === 'book') st.book = v === '1'; if (k === 'goneLive') st.goneLive = v; if (k === 'split') st.split = +v; if (k === 'hist') st.hist = v === '1'; if (k === 'pendingTake') st.pendingTake = v; if (k === 'buystage' && st.buy) st.buy.stage = +v; } return send(res, 200, { tip: st.tip, alloc: st.alloc });
         case '/__addr': return send(res, 200, { wallet: addr0, other });
         case '/explorer/api/dex/orders':
         case '/explorer/api/dex/book':
@@ -87,6 +87,19 @@ http.createServer((req, res) => {
           const rows = [...all, pend].map(row);
           return send(res, 200, { tip: st.tip, indexedTo: st.tip - 10, base: '00', quote: ZU, asks: rows.filter(r => r.order.under_asset === '00').sort((a, b) => a.price - b.price), bids: rows.filter(r => r.order.under_asset !== '00').sort((a, b) => b.price - a.price), last: { side: 'buy', price: 0.101, size: '1000000000' } });
         }
+        case '/cgp-history.json': {   // as site/chain-index.mjs (cgphist=1): interval 30 with allocation votes, a candidate and a nomination short of 3%
+          if (!st.cgphist) return send(res, 404, {});
+          const sp = z => [['00', String(z * 100000000)]], A = 'tzn1qvoterA', B = 'tzn1qvoterB', C = 'tzn1qvoterC';
+          return send(res, 200, { updated: Date.now(), indexedTo: st.tip - 10, tip: st.tip, complete: true, intervals: [{ interval: 30, communityInterval: 30, start: 2901, snapshot: 2970, nominationEnd: 2980, end: 3000, complete: false, allocationInForce: st.alloc,
+            votes: [
+              { command: 'Allocation', voter: A, counted: true, weight: 500, ballot: { allocation: 10 } },
+              { command: 'Allocation', voter: B, counted: true, weight: 300, ballot: { allocation: 12 } },
+              { command: 'Allocation', voter: C, counted: true, weight: 100, ballot: { allocation: 9 } },
+              { command: 'Nomination', voter: A, counted: true, weight: 600, ballot: { recipient: other, spends: sp(1000) } },
+              { command: 'Nomination', voter: C, counted: true, weight: 100, ballot: { recipient: 'tzn1qsmallrequest0000000000000000000000000000000000000000000', spends: sp(50) } },
+              { command: 'Payout', voter: B, counted: true, weight: 300, ballot: { recipient: other, spends: sp(1000) } }], payouts: [] }] });
+        }
+        case '/blockchain/totalzp': return send(res, 200, 2000000000000);   // 20,000 ZP: the 3% threshold is 600 ZP
         case '/assets.json': return st.bets ? send(res, 200, { assets: [{ asset: ZUSDC, name: 'zUSDC' }] }) : send(res, 404, {});   // as the site's index: it names what it knows, not the bet tokens
         case '/explorer/api/bets/markets': return st.bets ? send(res, 200, { tip: st.tip, contract: BETC_ADDR, contractId: BETC, collateral: ZUSDC, graceMs: 86400000, markets: BETS().map(m => ({ ...m, ticker: m.event.Ticker, line: m.event.Price / 1000, price: m.event.Price, close: m.event.Start, book: { up: { ask: null, bid: null }, down: { ask: null, bid: null } } })) }) : send(res, 404, { error: 'unknown path' });
         case '/bridge/status': return st.bridge ? send(res, 200, { bridgeZp: other, asset: ZUSDC, zpConfirmations: 2, autoWithdraw: true }) : send(res, 404, { error: 'no bridge' });
