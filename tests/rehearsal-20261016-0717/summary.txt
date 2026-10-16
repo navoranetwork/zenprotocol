@@ -2,3 +2,11 @@
   Chain.fs:142:        v1ContractsHeight=System.UInt32.MaxValue // not active: set by the upgrade vote
   Chain.fs:189:        v1ContractsHeight=2050ul
   Chain.fs:217:        v1ContractsHeight=localV1Height
+[2026-10-16 07:17] toolchain: zp-contracts-v1 81b25f0 Zen.MerkleTree.verify realized (V0's val, the node's Consensus
+[2026-10-16 07:17] image build: start (Zulib verification and the token DLL check run inside)
+[2026-10-16 07:27] image built: sha256:09198f6d2d22; Zulib: 50 of 50 modules verify;token template DLL: c1c61688e1596e285e32ddb8f65152c07308270c99ee0752c44b68c3b6fe5f96;
+[2026-10-16 07:27] saved: 39063287389358c9ac2d4bbaacbf45f37cc528df2d9969795682c3ccff7da816 (676M)
+[2026-10-16 07:27] node started (seed 91.98.3.17); syncing
+[2026-10-16 07:28] SYNCED at block 2814, tip 7408037b0ef539c0a41b4241d0f603f9460669dd82ffba183328c8b32c9045a9
+[2026-10-16 07:28] [07:27:26 INF] V1 libsecp256k1 self-test passed: /zen/libsecp256k1.so (sha256 2889daf967e2d1297034c5fbe04ca80f6337f7da569049b633376139f271ac9b)
+[2026-10-16 07:28] Dex build in the image: exit 0 (0 = built)
