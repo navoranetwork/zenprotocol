@@ -16,3 +16,6 @@ V1 libsecp256k1 self-test: NO LINE
 [2026-10-16 09:17] following: 2840 blocks, headers 2840
 [2026-10-16 09:32] following: 2846 blocks, headers 2846
 [2026-10-16 09:32] node: 2846 blocks; error/rejected lines in log: 0
+[2026-10-16 09:32] lab testnet on testnet-v1: start
+[2026-10-16 09:35] lab testnet: exit 0 ([2026-10-16 09:32] lab testnet on 1f237686 rehearsal: sed instead of head (no early pipe close) [2026-10-16 09:34] lab-testnet-v1.sh: exit 1; [09:34:21] FAIL: activation after the fork: zp-engine: the cost bound is not proven (make/verify --prove); nodes accept it and gas enforces the cost, but users cannot check the proof. --allow-unproven to publish anyway [2026-10-16 09:35] T5b: 09:35:54 RESULT: PASS )
+[2026-10-16 09:35] done; node zp-rehearsal keeps running
