@@ -7,3 +7,5 @@
 [2026-10-16 09:34] lab-testnet-v1.sh: exit 1; [09:34:21] FAIL: activation after the fork: zp-engine: the cost bound is not proven (make/verify --prove); nodes accept it and gas enforces the cost, but users cannot check the proof. --allow-unproven to publish anyway
 [2026-10-16 09:34] 
 [2026-10-16 09:34] token template DLL (build-contract.sh): 1ddea871886b5565e4680e9e7a81251929606e3d37d7af3323f701c3c421c82e
+[2026-10-16 09:34] T5b (BitZen f3d87cd docs/PRODUCT.md: holds 80 min / 2 h / 4 h, take-back): start
+[2026-10-16 09:35] T5b: 09:35:54 RESULT: PASS
