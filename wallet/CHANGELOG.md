@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.37.1 — 2026-10-16
+
+### Changed
+- Oracle prices no longer say "Live prices": the oracle publishes one round an hour, on the hour, and the tab says
+  which round is shown and about when the next one comes.
+
 ## 0.37.0 — 2026-10-16
 
 ### Changed

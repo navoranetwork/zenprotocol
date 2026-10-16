@@ -148,6 +148,9 @@ const strikeText = b => b.strike.toLocaleString('en-US', { maximumFractionDigits
 const betOrders = () => (S.markets?.orders || []).map(r => { try { return { ...orderOf(r), pending: !!r.pending, busy: dexPending.has(r.tx) }; } catch { return null; } }).filter(Boolean);
 const betHeld = b => { const as = S.data.get(active().id)?.state?.assets || []; const h = a => { const x = as.find(y => y.asset === a); return x ? x.spendable + x.maturing : 0n; }; return { up: h(b.bull), down: h(b.bear) }; };
 const VOID_NOTE = 'If the oracle has no close price within 24 hours, every token pays 0.50.';
+// the oracle stamps one round per hour, on the hour (docs/BETS.md, the oracle's slots): say when the next one comes
+const nextRound = m => { if (!m?.round?.timestamp) return ''; const next = new Date(Math.floor(Date.now() / 3600e3) * 3600e3 + 3600e3);
+  return `The oracle publishes one round an hour, on the hour: this one is from ${new Date(m.round.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}, the next about ${next.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`; };
 function betsCard(m, cat) {
   if (!m) return '';
   if (!m.bets) return `<div class="card"><h2>Up or down?</h2><p class="muted small">Bets on these prices open when the bet contract is active on this network. You will pick a market, say Up or Down, and get 1 zUSDC for each token if you are right.</p></div>`;
@@ -1138,7 +1141,7 @@ const views = {
         return `<div class="item" title="${esc(tip)}"><div class="tname">${tickerBadge(t, 28)}<div><div><b>${esc(t)}</b>${TICKER_NAMES[t] ? ` <span class="muted small">${esc(TICKER_NAMES[t])}</span>` : ''}</div><div class="muted small">${esc(src)}${day ? ' · ' + esc(day) : ''}</div></div></div><div class="amt">${esc(Number(m.round.values[i]).toLocaleString('en-US', { maximumFractionDigits: 6 }))}</div></div>`;
       }).join('');
       body = `${errCard}${loading ? '' : betsCard(m, cat)}<div class="card"><h2>Prices in USD${m?.round ? ' <span class="muted small">· ' + esc(ago(m.round.timestamp)) + '</span>' : ''}</h2>${chips}<div class="list">${loading ? '<p class="muted small">Loading…</p>' : rows || '<p class="muted small">No prices in this group yet.</p>'}</div>
-        <p class="muted small" data-s="mt10">${cat === 'forex' ? 'US dollars for one unit of each currency.' : cat === 'stocks' || cat === 'commodities' ? 'End-of-day closes.' : 'Live prices.'} Several sources must agree.</p></div>`;
+        <p class="muted small" data-s="mt10">${cat === 'forex' ? 'US dollars for one unit of each currency.' : cat === 'stocks' || cat === 'commodities' ? 'End-of-day closes.' : ''} ${nextRound(m)} Several sources must agree.</p></div>`;
     } else if (tab === 'dex') {
       body = errCard + dexView(m, base, loading);
     } else body = swapCard();
