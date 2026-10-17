@@ -117,11 +117,12 @@ The state of a market is qUp, qDown and pool.
     CGP 15%.
   - It is switched on through a new contract version, for new markets, once the operator's fee income has covered
     the running costs for **3 consecutive calendar months**.
-  - **The running-cost budget is published and fixed: €600 a month.** It covers servers and upkeep. It is revised at
-    most once a year, publicly, in this document.
+  - **The running-cost budget is published and fixed: $650 a month,** in US dollars (about €600 when set). It covers
+    servers and upkeep. It is revised at most once a year, publicly, in this document.
   - **The check:**
     - The operator's monthly fee income is the sum of the operator payouts in the per-market log, in zUSDC.
-    - It is compared with the budget converted at the month's average ECB EUR/USD rate.
+    - It is compared with the budget directly, 1 zUSDC = $1, with no exchange rate, so anyone can check it from the
+      chain.
     - The trigger is met in the month after 3 consecutive months above the budget.
 - **What users see:**
   - the rules text, below;
@@ -916,8 +917,8 @@ For each market:
 - the service's own result: its 1 + 1 back, minus 2;
 - the fee: the total, each signer's share, the operator's and the CGP's.
 
-**Monthly lines** in the same endpoint: the operator's fee income for the month, in zUSDC and in euros at the month's
-average ECB rate, next to the €600 budget, with the count of consecutive months above it. Anyone can see how far the
+**Monthly lines** in the same endpoint: the operator's fee income for the month in zUSDC, next to the $650 budget, with
+the count of consecutive months above it. Anyone can see how far the
 CGP trigger is.
 
 ## Notes for mainnet
