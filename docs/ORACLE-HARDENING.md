@@ -4,7 +4,9 @@ Status 2026-10-17:
 - **(a) is approved by Alon**, as a requirement before any mainnet market. It is scheduled after Sunday's wallet move
   and option A, alongside DPM, and starts with 5 servers we run. Independent members can replace them later through a
   new committee contract.
-- **(b) is obsolete** (below).
+- **(b) is obsolete and not viable** (below). Pyth's pricing: the free tier has no API access, Starter ($500 a month)
+  has no redistribution rights, and Pro (from $2,500 a month) has limited ones. Publishing prices on-chain is
+  redistribution. The terms of every current source are in docs/ORACLE-SOURCES-TERMS.md.
 - **(c) is for later.**
 - Nothing is built yet.
 
