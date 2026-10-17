@@ -1,6 +1,12 @@
 # Hardening the oracle before mainnet: a proposal
 
-Status 2026-10-17: a proposal for Alon. **Nothing is built.**
+Status 2026-10-17:
+- **(a) is approved by Alon**, as a requirement before any mainnet market. It is scheduled after Sunday's wallet move
+  and option A, alongside DPM, and starts with 5 servers we run. Independent members can replace them later through a
+  new committee contract.
+- **(b) is obsolete** (below).
+- **(c) is for later.**
+- Nothing is built yet.
 
 Today one key signs each round's commit (the oracle's m/44'/258'/0'/3/0), and every market trusts it. Whoever holds
 that key, or breaks into its server, settles every market. That is a larger risk than the choice of pricing
@@ -42,7 +48,27 @@ that key, or breaks into its server, settles every market. That is a larger risk
 The variant without a contract change (a1), where each member commits its own root and Settle requires m attestations
 of the same root, puts the work in every consumer contract instead. It is not recommended.
 
-## (b) Verifying Pyth's prices in a V1 contract
+## (b) Verifying Pyth's prices in a V1 contract: OBSOLETE (2026-10-17)
+
+**Checked on 2026-10-17: the Wormhole-signed path this section was written for is no longer how Pyth publishes.**
+- Pyth's "Core upgrade" cut over on **2026-08-26, 16:00 UTC**.
+- Since then, updates are signed by **5 independently operated routers, via Pyth Pro, with a quorum of 3 of 5**
+  (secp256k1 ECDSA), not by the 19 Wormhole guardians.
+- Pythnet is listed only for the old Pyth Core.
+- **Hermes needs an API key** for every caller.
+
+So ZP would not gain prices signed by a large independent network. It would gain a permissioned service of 5 signers,
+reachable with a key, which is no stronger than our own 3-of-5 committee (a). **Keccak256 is not to be added to an
+image for this.**
+
+Sources:
+- [Pyth: how the Core upgrade works](https://docs.pyth.network/price-feeds/core/upgrade/how-it-works)
+- [Pyth: completing the Core upgrade](https://docs.pyth.network/price-feeds/core/upgrade/preparing)
+- [CryptoSlate on the Hermes migration](https://cryptoslate.com/pyth-networks-api-overhaul-threatens-to-freeze-unpatched-smart-contracts-across-300-defi-protocols/)
+
+The analysis below is kept for the record. It describes the Wormhole path as it was before the upgrade.
+
+### As written before the check
 
 The question: can ZP settle on prices signed by Pyth's large independent network instead of only our own?
 
@@ -88,8 +114,6 @@ wins. The difference is a fraction of a second of movement, but it should be sta
 - the Hermes relayer in the bets service: 1 day.
 - **About 6–8 days, plus the image.**
 
-**Then:** our own committee (a) for the tickers Pyth lacks, and Pyth (b) for the rest. Or Pyth plus our committee
-together, requiring agreement within a tolerance.
 
 ## (c) An optimistic oracle for non-price markets (outline only)
 
@@ -111,10 +135,11 @@ For questions with no price feed ("will X happen by date Y").
 **Work:** contracts (propose, dispute, lock-and-vote, payout) and tries, about 2–3 weeks; the UI is extra. **Not
 before the price markets are proven on mainnet.**
 
-## Order, if Alon agrees
+## Order (decided 2026-10-17)
 
-1. (a) the committee, before any mainnet market.
-2. (b) Pyth as a second source, after Keccak256 is in an image.
+1. (a) the committee: after Sunday's wallet move and option A, alongside DPM. It is required before any mainnet
+   market. It starts with 5 servers we run.
+2. (b) obsolete.
 3. (c) later.
 
 Sources:
