@@ -48,7 +48,16 @@ that key, or breaks into its server, settles every market. That is a larger risk
     consensus client, e.g. Lighthouse.
   - Base and Arbitrum come through Helios or an RPC only after the legal review (docs/ORACLE-SOURCES-TERMS.md).
     Until then the round uses Ethereum pools only, with at least 2 of them qualifying.
-- **Each member's server:** estimates for 2026, to check with the provider.
+- **The layout per member** (decided 2026-10-17): two servers.
+  - **A small one:** a Hetzner CX33, 4 vCPU, 8 GB, 80 GB, about €8.49 a month. It holds the ZP node, the committee
+    service and **the signing key**.
+  - **A dedicated Ethereum server**, below. Its RPC is open only to its member's small server, through a firewall or
+    WireGuard. It holds no keys.
+  - **The testnet:** the 5 small servers only, since the testnet uses no Ethereum node. **Mainnet:** 10 servers,
+    about €80–140 a month per member.
+  - None of them runs the public services (explorer, bridge, Dex index, BitZen, bets). Those stay on the ZP services
+    server.
+- **The Ethereum server per member:** estimates for 2026, to check with the provider.
   - **Hardware:** 8 cores, 32 GB RAM, **4 TB NVMe** (a full node needs about 1.5–2 TB today and grows), and
     1 Gbit/s with no tight traffic cap. The committee service, its keys and a small database fit beside the node.
   - **Cost:** a dedicated server of that size is about €70–130 a month (e.g. a Hetzner AX-line or an OVH Advance,
