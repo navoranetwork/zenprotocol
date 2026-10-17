@@ -206,3 +206,103 @@ Agreed, with three notes:
 | D, LMSR | FPMM + 3–5 days (fixed-point exp/ln and their bounds) | 1 day | 7–11 days |
 | C, pool | 1½–2 days | ½ day | 2–2½ days |
 | B, signed quotes | 1–2 days | 2 days (quote service, operator) | 3–4 days |
+
+## 9. Option E: a dynamic pari-mutuel market (DPM, Pennock 2004), reviewed 2026-10-17
+
+A pool in which each buyer gets **shares** at a price that rises with what is already on their side. At Settle, the
+whole pool goes to the winning side's shares pro rata. There is no seeder and no operator money at risk. A late buyer
+with fresh information takes from the other bettors, never from us.
+
+### 1. The variant: share-ratio, with an integer square root
+
+- **Share-ratio** (κ = 1): the cost of the state is C(q₁, q₂) = √(q₁² + q₂²), where q is the shares sold on each side.
+  - The pool M (the collateral the contract holds for the market) is always at least C.
+  - The price of side 1 is p₁ = q₁ / √(q₁² + q₂²).
+  - Buying side 1 with x: s = √((M + x)² − q₂²) − q₁.
+  - In integers: `s = isqrt((M + x)² − q₂²) − q₁`, with isqrt rounding down. So the new state's cost
+    √((q₁ + s)² + q₂²) ≤ M + x: the pool still covers it.
+- **Money-ratio** (p₁ / p₂ = M₁ / M₂) needs a logarithm: s = M₂ · ln((M₁ + x) / M₁). Zulib has none. **Share-ratio
+  only.**
+- **Solvency does not depend on the rounding.** Settle pays M / q_win per winning share, rounded down, so the
+  contract can never owe more than the pool. Rounding decides only fairness, and it always goes against the trader.
+- **Winners never lose money.** The final payout per winning share, √(q₁² + q₂²) / q_win, is at least 1. Every price
+  paid along the way is at most 1. A winning share therefore always returns at least what it cost.
+
+### 2. Square root: yes, with a uniform cost
+
+- `isqrt` of a U64, bit by bit: 32 fixed steps, each a multiply, a compare and a shift.
+- No loop depends on the data, so the cost is the same on every path, as the padding rule wants. That is about
+  1,000–2,000 gas.
+- It needs nothing new in Zulib, only U64 arithmetic.
+- The same testnet cap as FPMM applies: M + x at most 4 × 10⁹ units (4,000 zUSDC), so the squares fit a U64. Mainnet
+  needs U128.
+
+### 3. Exit: yes, along the same curve, before the cutoff
+
+- **Selling s shares of side 1 pays** `out = M − ceil(√((q₁ − s)² + q₂²))`. That is the cost-function difference,
+  rounded so that the pool keeps covering the new state.
+- **It is path-independent:** buying and selling straight back returns what was paid, minus the rounding.
+- **Nobody is debited:** the pool always equals what is left of the money paid in. But a sale moves the payout per
+  share of everyone else, as every buy does. It is a market, not a guarantee.
+- **What a seller gets depends on the moment.** If the other side has filled up since the buy, the shares sell back
+  for less than they cost. The contract never makes that up.
+
+### 4. Edge cases
+
+- **The first buy:**
+  - With an empty pool, s = x: price 1.
+  - The first buyer on the other side gets many shares per zUSDC (price near 0). That is the DPM's incentive to take
+    the other side.
+  - Proposal: the service opens each market with 1 zUSDC on each side, so prices start near 0.71 / 0.71. That is
+    2 zUSDC of service money per market, which comes back pro rata like anyone's.
+- **Void, and one side empty at Settle** (no winning shares): refund the money paid.
+  - Shares cannot do that: a share's price depends on when it was bought. So each Buy also mints a receipt token,
+    "Paid", equal to x.
+  - A Sell burns as many Paid as it pays out.
+  - Σ Paid outstanding then always equals the pool M exactly, and Void redeems Paid 1:1.
+  - The same rule applies to a settled market whose winning side has no shares.
+- **Settle** pays `floor(M × s / q_win)` per Redeem. Any dust left after the last Redeem stays in the contract. It
+  is at most one unit per Redeem.
+
+### 5. What the wallet can show per buy (from q₁, q₂ and M, read from the contract's wallet)
+
+- the shares received s, and the average price x / s;
+- the payout per share if it closed now: `(M + x) / (q_side + s)`, and so "your x would return y";
+- the price before and after, and "the other side would pay z per share".
+
+For example, a pool opened with 1 + 1, then Up 10, then Down 10, then Up 10 (zUSDC):
+
+| Buy | Shares per zUSDC | Pool after | If its side won now, per share | x returns |
+| --- | --- | --- | --- | --- |
+| Up 10 (A) | 1.087 | 12 | 1.0106 | 10.99 |
+| Down 10 (B) | 1.679 | 22 | 1.1879 | 19.94 |
+| Up 10 (C) | 1.422 | 32 | 1.2262 | 17.44 |
+
+At the end:
+- if Up wins: 1.2262 per Up share, so A gets 13.33 and C gets 17.44;
+- if Down wins: 1.7278 per Down share.
+
+A buyer gets more shares when the other side is heavier, so coming early pays only if you are early on your side
+before the others arrive. The pool does not reward early buyers by itself.
+
+### 6. Cost, guards, work
+
+- **A trade:** about 25,000–35,000 gas. That is FPMM's walk of the contract's wallet, plus isqrt, plus one more token
+  (Paid).
+- **Guards:** `MinShares` on Buy and `MinOut` on Sell. A transaction that lands after the pool moved is refused and
+  nothing moves, the same risk as FPMM's MinOut. The same cutoff at close − 30 min applies.
+- **Work:** the contract 3–4 days (Buy, Sell, Settle/Void, Redeem by shares and by Paid, isqrt, about 40 tries),
+  plus the service and API 1 day. **4–5 days**, against FPMM's 4–6 and the plain pool's 2–2½.
+
+### Compared with FPMM and the pool
+
+| | Who carries the risk | Price per buyer | Exit before close | Payout known when buying | Capital |
+| --- | --- | --- | --- | --- | --- |
+| FPMM | the seeder (loses on decisive markets; fees must cover) | yes | yes, at the curve | yes: 1 per winning token | a seed per market |
+| DPM | the other bettors only | yes, in shares | yes, at the curve | no: it moves until the cutoff | none (2 zUSDC to open) |
+| Pool | the other bettors only | no (one ratio for all) | no | no | none |
+
+**My view:** if the operator should carry no risk on mainnet, DPM is the better of the two no-capital options. It
+has a price per buyer and an exit, and the pool has neither. Its cost to users is a payout that is not known when
+buying. FPMM gives a fixed 1 per winning token but needs seed money. The testnet numbers from FPMM (fees against the
+seeder's losses) are what decide between the two.
