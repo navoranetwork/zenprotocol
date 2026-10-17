@@ -8,3 +8,7 @@
 [2026-10-17 10:49] A: node up, block 221, senders 1 and 2 funded
 [2026-10-17 10:49] A: load, 18 steps of 6 min
 [2026-10-17 12:43] A: done at block 383
+[2026-10-17 12:47] B: blocks near 10 s (6 in the last minute, block 215)
+[2026-10-17 12:47] B: node up, block 215, senders 1 and 2 funded
+[2026-10-17 12:47] B: load, 18 steps of 6 min
+[2026-10-17 14:38] B: done at block 700
