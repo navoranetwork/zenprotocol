@@ -1,2 +1,4 @@
 [2026-10-17 07:33] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
 [2026-10-17 07:33] B: dfa48608 docs/THROUGHPUT.md: blocks/headers on mainnet, 3.6-5.3 s -> 3; load tool: zenprotocol 1d28ea9a ZP Wallet 0.38.1: contract names fix (fro
+[2026-10-17 07:34] build A (upstream, Mono, Release+LOCALCHAIN)
+[2026-10-17 07:34] STOPPED: A build (A-build.txt)

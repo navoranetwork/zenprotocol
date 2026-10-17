@@ -1,0 +1,608 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tput
+#1 transferring dockerfile: 2.37kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/mono:6.12
+#3 DONE 0.6s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 DONE 0.6s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [certs 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#5 resolve docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 0.0s done
+#5 DONE 0.0s
+
+#6 [stage-1  1/12] FROM docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5
+#6 resolve docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 994.09kB 0.0s done
+#7 DONE 0.0s
+
+#8 [stage-1  4/12] RUN cert-sync /etc/ssl/certs/ca-certificates-current.crt > /dev/null  && cp /etc/ssl/certs/ca-certificates-current.crt /etc/ssl/certs/ca-certificates.crt
+#8 CACHED
+
+#9 [stage-1  2/12] RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g; s|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g; /buster-updates/d' /etc/apt/sources.list  && apt-get -o Acquire::Check-Valid-Until=false update  && apt-get install -y --no-install-recommends libgomp1 libstdc++6 liblmdb0 curl unzip  && rm -rf /var/lib/apt/lists/*  && command -v msbuild && command -v fsharpc
+#9 CACHED
+
+#10 [certs 2/2] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [stage-1  3/12] COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates-current.crt
+#11 CACHED
+
+#12 [stage-1  5/12] WORKDIR /src
+#12 CACHED
+
+#13 [stage-1  6/12] COPY src ./src
+#13 DONE 0.2s
+
+#14 [stage-1  7/12] COPY .paket ./.paket
+#14 DONE 0.0s
+
+#15 [stage-1  8/12] COPY paket.dependencies paket.lock ./
+#15 DONE 0.0s
+
+#16 [stage-1  9/12] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/
+#16 2.504 paket.exe is deprecated and will no longer be published from Paket 12.0 onwards. The .NET tool is now the only supported way to run Paket: dotnet tool install paket
+#16 2.510 Paket version 11.0.1+2a2b5bc904ab6ba68497d7ba5079266bf5c45384
+#16 2.930 Starting full restore process.
+#16 3.013 Downloading Argu 5.1
+#16 3.013 Downloading FSharp.Control.Reactive 4.1
+#16 3.013 Downloading NetMQ 4.0.0.207-pre
+#16 3.013 Downloading System.Security.Cryptography.Encoding 4.3
+#16 3.013 Downloading System.Reactive.Compatibility 4.1.2
+#16 3.584 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='system.security.cryptography.encoding',Version='4.3')'
+#16 3.584 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='netmq',Version='4.0.0.207-pre')'
+#16 3.584 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='system.reactive.compatibility',Version='4.1.2')'
+#16 3.584 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='argu',Version='5.1')'
+#16 3.584 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='fsharp.control.reactive',Version='4.1')'
+#16 3.811 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='fsharp.control.reactive',Version='4.1.0')'
+#16 3.818 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='system.security.cryptography.encoding',Version='4.3.0')'
+#16 3.818 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='argu',Version='5.1.0')'
+#16 4.049 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='FSharp.Control.Reactive',Version='4.1.0')'
+#16 4.281 Possible Performance degradation, ignore '1_https://www.nuget.org/api/v2/Packages(Id='Argu',Version='5.1')'
+#16 4.541 Possible Performance degradation, ignore '2_https://www.nuget.org/api/v2/Packages?$filter=(Id eq 'NetMQ') and (NormalizedVersion eq '4.0.0.207-pre')'
+#16 4.773 Possible Performance degradation, ignore '2_https://www.nuget.org/api/v2/Packages?$filter=(tolower(Id) eq 'system.security.cryptography.encoding') and (NormalizedVersion eq '4.3.0')'
+#16 5.005 Possible Performance degradation, ignore '2_https://www.nuget.org/api/v2/Packages?$filter=(Id eq 'System.Reactive.Compatibility') and (Version eq '4.1.2')'
+#16 5.233 Possible Performance degradation, ignore '2_https://www.nuget.org/api/v2/Packages?$filter=(tolower(Id) eq 'fsharp.control.reactive') and (Version eq '4.1')'
+#16 5.473 Possible Performance degradation, ignore '2_https://www.nuget.org/api/v2/Packages?$filter=(tolower(Id) eq 'argu') and (Version eq '5.1.0')'
+#16 5.715 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.715   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.715   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.715   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Reactive.Compatibility'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.715   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.715   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.715   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='Argu'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.715   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.715   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.715   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Security.Cryptography.Encoding'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.715   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.715   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.715   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.715   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715    --- End of inner exception stack trace ---
+#16 5.715   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.715   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='NetMQ'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.716   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.716   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.716   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.716   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.716   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.716   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.716    --- End of inner exception stack trace ---
+#16 5.716   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.716   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716    --- End of inner exception stack trace ---
+#16 5.716   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.716   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716    --- End of inner exception stack trace ---
+#16 5.716   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.716   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.728 Something failed in GetPackageDetails, trying again with force: Couldn't get package details for package FSharp.Control.Reactive 4.1 on https://www.nuget.org/api/v2.
+#16 5.728 Something failed in GetPackageDetails, trying again with force: Couldn't get package details for package System.Reactive.Compatibility 4.1.2 on https://www.nuget.org/api/v2.
+#16 5.728 Something failed in GetPackageDetails, trying again with force: Couldn't get package details for package NetMQ 4.0.0.207-pre on https://www.nuget.org/api/v2.
+#16 5.728 Something failed in GetPackageDetails, trying again with force: Couldn't get package details for package System.Security.Cryptography.Encoding 4.3 on https://www.nuget.org/api/v2.
+#16 5.728 Something failed in GetPackageDetails, trying again with force: Couldn't get package details for package Argu 5.1 on https://www.nuget.org/api/v2.
+#16 5.955 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='NetMQ'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.955   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.955   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.955   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.955   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.955   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.955   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.955    --- End of inner exception stack trace ---
+#16 5.955   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.955   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955    --- End of inner exception stack trace ---
+#16 5.955   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.955   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955    --- End of inner exception stack trace ---
+#16 5.955   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.955   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='Argu'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.959   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.959   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.959   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.959   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.959   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.959   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.959    --- End of inner exception stack trace ---
+#16 5.959   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.959   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959    --- End of inner exception stack trace ---
+#16 5.959   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.959   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959    --- End of inner exception stack trace ---
+#16 5.959   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.959   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Reactive.Compatibility'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.965   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.965   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.965   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 5.965   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 5.965   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 5.965   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 5.965   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 5.965   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965    --- End of inner exception stack trace ---
+#16 5.965   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.965   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 5.983 Something went wrong while downloading Argu 5.1
+#16 5.983 Message: Could not download Argu 5.1.
+#16 5.983   ==> Trying again
+#16 5.983 Something went wrong while downloading FSharp.Control.Reactive 4.1
+#16 5.983 Message: Could not download FSharp.Control.Reactive 4.1.
+#16 5.983   ==> Trying again
+#16 5.983 Something went wrong while downloading System.Reactive.Compatibility 4.1.2
+#16 5.983 Message: Could not download System.Reactive.Compatibility 4.1.2.
+#16 5.983   ==> Trying again
+#16 5.983 Something went wrong while downloading NetMQ 4.0.0.207-pre
+#16 5.983 Message: Could not download NetMQ 4.0.0.207-pre.
+#16 5.983   ==> Trying again
+#16 5.984 Downloading System.Reactive.Compatibility 4.1.2
+#16 5.984 Downloading Argu 5.1
+#16 5.984 Downloading NetMQ 4.0.0.207-pre
+#16 5.984 Downloading FSharp.Control.Reactive 4.1
+#16 6.056 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Security.Cryptography.Encoding'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.056   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.056   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.056   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.056   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.056   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.056   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.056    --- End of inner exception stack trace ---
+#16 6.056   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.056   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056    --- End of inner exception stack trace ---
+#16 6.056   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.056   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056    --- End of inner exception stack trace ---
+#16 6.056   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.056 Something went wrong while downloading System.Security.Cryptography.Encoding 4.3
+#16 6.056 Message: Could not download System.Security.Cryptography.Encoding 4.3.
+#16 6.056   ==> Trying again
+#16 6.057 Downloading System.Security.Cryptography.Encoding 4.3
+#16 6.214 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Reactive.Compatibility'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.214   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.214   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.214   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.214   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.214   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.214   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.214    --- End of inner exception stack trace ---
+#16 6.214   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.214   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214    --- End of inner exception stack trace ---
+#16 6.214   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.214   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214    --- End of inner exception stack trace ---
+#16 6.214   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.214   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.216 Something went wrong while downloading System.Reactive.Compatibility 4.1.2
+#16 6.216 Message: Could not download System.Reactive.Compatibility 4.1.2.
+#16 6.216   ==> Last trial
+#16 6.217 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.217   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.217   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.217   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217 Downloading System.Reactive.Compatibility 4.1.2
+#16 6.217 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='NetMQ'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.217   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.217   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.217   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.217   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.217   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217    --- End of inner exception stack trace ---
+#16 6.217   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.217   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.218 Something went wrong while downloading FSharp.Control.Reactive 4.1
+#16 6.218 Message: Could not download FSharp.Control.Reactive 4.1.
+#16 6.218   ==> Last trial
+#16 6.218 Something went wrong while downloading NetMQ 4.0.0.207-pre
+#16 6.218 Message: Could not download NetMQ 4.0.0.207-pre.
+#16 6.218   ==> Last trial
+#16 6.218 Downloading NetMQ 4.0.0.207-pre
+#16 6.218 Downloading FSharp.Control.Reactive 4.1
+#16 6.222 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='Argu'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.222   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.222   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.222   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.222   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.222   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.222   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.222    --- End of inner exception stack trace ---
+#16 6.222   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.222   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222    --- End of inner exception stack trace ---
+#16 6.222   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.222   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222    --- End of inner exception stack trace ---
+#16 6.222   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.222   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.223 Something went wrong while downloading Argu 5.1
+#16 6.223 Message: Could not download Argu 5.1.
+#16 6.223   ==> Last trial
+#16 6.223 Downloading Argu 5.1
+#16 6.291 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='System.Security.Cryptography.Encoding'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.291   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.291   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.291   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.291   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.291   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.291   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.291    --- End of inner exception stack trace ---
+#16 6.291   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.291   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291    --- End of inner exception stack trace ---
+#16 6.291   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.291   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291    --- End of inner exception stack trace ---
+#16 6.291   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.291   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.292 Something went wrong while downloading System.Security.Cryptography.Encoding 4.3
+#16 6.292 Message: Could not download System.Security.Cryptography.Encoding 4.3.
+#16 6.292   ==> Last trial
+#16 6.292 Downloading System.Security.Cryptography.Encoding 4.3
+#16 6.443 Source 'https://www.nuget.org/api/v2' exception: System.Exception: Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive'' ---> System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception. ---> System.Security.Authentication.AuthenticationException: Authentication failed, see inner exception. ---> Mono.Btls.MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.443   at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 6.443   at Mono.Btls.MonoBtlsContext.ProcessHandshake () [0x00048] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.443   at Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake (Mono.Net.Security.AsyncOperationStatus status, System.Boolean renegotiate) [0x000da] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.443   at (wrapper remoting-invoke-with-check) Mono.Net.Security.MobileAuthenticatedStream.ProcessHandshake(Mono.Net.Security.AsyncOperationStatus,bool)
+#16 6.443   at Mono.Net.Security.AsyncHandshakeRequest.Run (Mono.Net.Security.AsyncOperationStatus status) [0x00006] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.443   at Mono.Net.Security.AsyncProtocolRequest.ProcessOperation (System.Threading.CancellationToken cancellationToken) [0x000fc] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.443    --- End of inner exception stack trace ---
+#16 6.443   at Mono.Net.Security.MobileAuthenticatedStream.ProcessAuthentication (System.Boolean runSynchronously, Mono.Net.Security.MonoSslAuthenticationOptions options, System.Threading.CancellationToken cancellationToken) [0x00262] in <33b19a7ad5234d94abf4fd9b47566616>:0 
+#16 6.443   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x000c3] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443    --- End of inner exception stack trace ---
+#16 6.443   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsyncCore (System.IO.Stream stream, System.Net.Security.SslClientAuthenticationOptions sslOptions, System.Threading.CancellationToken cancellationToken) [0x00102] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.HttpConnectionPool.CreateConnectionAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x00322] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.HttpConnectionPool.WaitForCreatedConnectionAsync (System.Threading.Tasks.ValueTask`1[TResult] creationTask) [0x000a2] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.HttpConnectionPool.SendWithRetryAsync (System.Net.Http.HttpRequestMessage request, System.Boolean doRequestAuth, System.Threading.CancellationToken cancellationToken) [0x00089] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.AuthenticationHelper.SendWithAuthAsync (System.Net.Http.HttpRequestMessage request, System.Uri authUri, System.Net.ICredentials credentials, System.Boolean preAuthenticate, System.Boolean isProxyAuth, System.Boolean doRequestAuth, System.Net.Http.HttpConnectionPool pool, System.Threading.CancellationToken cancellationToken) [0x00112] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.RedirectHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ba] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.DecompressionHandler.SendAsync (System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) [0x000ca] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at System.Net.Http.HttpClient.FinishSendAsyncBuffered (System.Threading.Tasks.Task`1[TResult] sendTask, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationTokenSource cts, System.Boolean disposeCts) [0x0017e] in <58d2f9f618534cba97faacbe0f54503d>:0 
+#16 6.443   at Paket.NetUtils.catchHandler@1-1[a] (Paket.NetUtils+AuthProvider auth, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] doRequest, System.Exception _arg1) [0x00071] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Paket.NetUtils+resolveAuth@489-4[a].Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443    --- End of inner exception stack trace ---
+#16 6.443   at Paket.NetUtils.catchHandler@1-3 (System.String url, System.Exception exn) [0x00027] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Paket.NetUtils+getFromUrl@541-4.Invoke (System.Exception x) [0x00000] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Microsoft.FSharp.Control.AsyncPrimitives.CallFilterThenInvoke[T] (Microsoft.FSharp.Control.AsyncActivation`1[T] ctxt, Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] filterFunction, System.Runtime.ExceptionServices.ExceptionDispatchInfo edi) [0x0000c] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.443   at Microsoft.FSharp.Control.Trampoline.Execute (Microsoft.FSharp.Core.FSharpFunc`2[T,TResult] firstAction) [0x00017] in <7f60fe87f8ba4e6c841078fd8e4c17b2>:0 
+#16 6.499 Total time taken: 3 seconds
+#16 6.501 Paket omitted 2 warnings. You can see them in verbose mode.
+#16 6.501 Paket failed with
+#16 6.506 -> Could not download FSharp.Control.Reactive 4.1.
+#16 6.507 -> Couldn't get package details for package FSharp.Control.Reactive 4.1 on https://www.nuget.org/api/v2.
+#16 6.507 -> Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive''
+#16 6.507 -> HttpRequestException: The SSL connection could not be established, see inner exception.
+#16 6.508 -> AuthenticationException: Authentication failed, see inner exception.
+#16 6.509 -> MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+#16 6.509      at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+#16 ERROR: process "/bin/sh -c mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/" did not complete successfully: exit code: 1
+------
+ > [stage-1  9/12] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/:
+6.499 Total time taken: 3 seconds
+6.501 Paket omitted 2 warnings. You can see them in verbose mode.
+6.501 Paket failed with
+6.506 -> Could not download FSharp.Control.Reactive 4.1.
+6.507 -> Couldn't get package details for package FSharp.Control.Reactive 4.1 on https://www.nuget.org/api/v2.
+6.507 -> Could not retrieve data from 'https://www.nuget.org/api/v2/FindPackagesById()?semVerLevel=2.0.0&id='FSharp.Control.Reactive''
+6.507 -> HttpRequestException: The SSL connection could not be established, see inner exception.
+6.508 -> AuthenticationException: Authentication failed, see inner exception.
+6.509 -> MonoBtlsException: Ssl error:1000007d:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILED
+6.509      at /build/mono-6.12.0.182/external/boringssl/ssl/handshake_client.c:1132
+------
+Dockerfile.tput:27
+--------------------
+  26 |     COPY paket.dependencies paket.lock ./
+  27 | >>> RUN mono .paket/paket.exe restore \
+  28 | >>>  && chmod +x packages/zen_z3_linux/output/z3-linux \
+  29 | >>>  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal \
+  30 | >>>  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/ \
+  31 | >>>  && test -f src/Node/bin/Release/zen-node.exe \
+  32 | >>>  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/
+  33 |     COPY devnet-entrypoint.sh /entrypoint.sh
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/" did not complete successfully: exit code: 1
