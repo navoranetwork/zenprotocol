@@ -25,8 +25,8 @@
 # SEED (1), ONLY=A|B, PROFILE=1.
 # VARIANTS="t0s0 t0 t1000s0 t1000": run B once per variant, tN = ZP_TEMPLATE_INTERVAL_MS=N, s0 = ZP_VERIFIED_SIGNATURES=0
 #   (t0s0 = the node as before both changes; results in B-<variant>; default: one
-#   run of B as built). REALISTIC=1: the local chain's easiest target is POW_LIMIT (default 0x1f0bfbd5: easy enough for A's Mono miner,
-#   which did not reach 40 blocks in 30 min at 0x1e0bfbd5, 2026-10-17) in both trees, so blocks come from real hashing;
+#   run of B as built). REALISTIC=1: the difficulty rule's easiest target on the local chain is POW_LIMIT (default 0x1f0bfbd5) in both trees,
+#   so blocks come from real hashing;
 #   each node's difficulty rule then raises it until its blocks come near BLOCK_S, and the load waits for that.
 # PROFILE=1 (PROFILE_RATE, PROFILE_ENV) also takes the finalizer queue (dotnet-dump), a heap report (dotnet-gcdump) and GC counters (dotnet-counters).
 set -uo pipefail
@@ -63,8 +63,15 @@ patch_tree() {  # $1: tree, $2: the local chain's blockInterval line pattern (se
   find "$t/src" -name '*.fs' ! -path '*Tests*' ! -name 'Log.fs' -print0 | xargs -0 sed -i 's/^\(\s*\)#if DEBUG\s*$/\1#if DEBUG || LOCALCHAIN/'
   sed -i "s/$2/blockInterval=${BLOCK_S}000UL;   \/\/ throughput comparison (lab-throughput.sh)/" "$t/src/Consensus/Chain.fs"
   grep -q "blockInterval=${BLOCK_S}000UL;   // throughput comparison" "$t/src/Consensus/Chain.fs" || return 1
-  if [ -n "$REALISTIC" ]; then   # the local chain's easiest target (it occurs only there in Chain.fs, in both trees)
-    sed -i "s/0x20fffffful/${POW_LIMIT}ul/" "$t/src/Consensus/Chain.fs"; grep -q "${POW_LIMIT}ul" "$t/src/Consensus/Chain.fs"
+  if [ -n "$REALISTIC" ]; then
+    # the easiest target the difficulty rule may reach on the local chain. Not proofOfWorkLimit: the genesis block's
+    # difficulty must equal the first EMA (0x20ffffff), so a lower limit rejects genesis ("incorrect proof of work",
+    # 2026-10-17). The EMA clamp, upstream: chain.proofOfWorkLimit; ours: (powEpochAt chain blockNumber).powLimit.
+    # Block 1 keeps genesis' difficulty (the first block does not change it), the clamp holds from block 2.
+    local lim="(if chain.name = \"local\" then Difficulty.uncompress ${POW_LIMIT}ul else"
+    sed -i -E "s/\(Hash\.toBigInt <\| (chain\.proofOfWorkLimit|\(powEpochAt chain blockNumber\)\.powLimit)\)/(Hash.toBigInt <| $lim \1))/" \
+      "$t/src/Consensus/EMA.fs"
+    grep -q "Difficulty.uncompress ${POW_LIMIT}ul" "$t/src/Consensus/EMA.fs" || return 1
   fi
 }
 
