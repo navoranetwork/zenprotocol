@@ -14,6 +14,15 @@ Today one key signs each round's commit (the oracle's m/44'/258'/0'/3/0), and ev
 that key, or breaks into its server, settles every market. That is a larger risk than the choice of pricing
 (FPMM, DPM or pool).
 
+## Trust (per docs/VISION.md)
+
+- **The committee is a trusted party.** 3 of 5 keys decide every market. It is **scaffolding**, temporary, because
+  ZP cannot yet check Ethereum's state itself.
+- **What replaces it:** EthZen (docs/ETHZEN.md). A ZP contract verifies the TWAP against Ethereum's sync committee and
+  storage proofs, and the committee becomes a set of relayers that anyone can join. Until then:
+  - independent members replace ours through new committee versions;
+  - which members signed each round is public.
+
 ## (a) A committee: m of n signers on separate servers
 
 **The recommended design (a2): one commit, signed by m of n, checked by a committee Oracle contract.**

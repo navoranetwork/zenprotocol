@@ -12,6 +12,18 @@ build order is:
 **Mainnet needs an outside review of the contract** before any real money, as well as the oracle hardening
 (docs/ORACLE-HARDENING.md).
 
+## Trust (per docs/VISION.md)
+
+- **The contract** holds the pools and pays by fixed rules. No one can move the money.
+- **Trusted for now:**
+  1. **The oracle committee:** it decides the result. Its replacement is EthZen (docs/ORACLE-HARDENING.md, "Trust").
+  2. **The operator's role:** the bets service opens markets (the 1 + 1 opening), sends Settle and Void, and runs the
+     API.
+     - Anyone can do each of these: Settle and Void are open to anyone, and a market is only its fields. So this
+       is convenience, not custody.
+     - The operator's fee share is fixed in the contract source. The CGP share grows by the published rule.
+     - What replaces it: market creation and settling by anyone, with the wallet able to open a market itself.
+
 ## The idea
 
 Bettors buy **shares** of Up or Down into one pool per market.
