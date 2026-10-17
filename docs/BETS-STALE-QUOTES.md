@@ -128,3 +128,81 @@ updates anything.
 - The direction for mainnet: D (FPMM/LMSR), C (pool), or B (operator).
 - The fee and who receives it.
 - One line per ticker and close (deeper markets), or several lines as today.
+
+## 8. Review by the Oracle/Dex session (2026-10-17)
+
+### Answers to section 6
+
+1. **FPMM in a V1 contract is feasible.** It is what FixedPayout already does (mint pairs against collateral, Redeem
+   after Settle) plus a reserve.
+   - **Commands:**
+     - `Seed`: the seeder locks N zUSDC; the contract mints N pairs into its own wallet as the reserve and gives the
+       seeder a share token.
+     - `Buy` (side, zUSDC in, minimum out).
+     - `Sell` (side, tokens in, minimum zUSDC out).
+     - `Withdraw` (share tokens, after Settle or Void).
+     - `Redeem` and `Cancel` stay.
+   - **The minimum in Buy and Sell is the slippage guard.** The wallet computes it from the reserves it reads, so a
+     trade that lands after a price move is refused rather than filled worse.
+   - **State:** V1 contracts keep none besides their wallet, so the reserves are the contract's Up/Down coins of that
+     market.
+     - Each trade spends that market's reserve coins and locks one coin of each back, so their number stays two per
+       market.
+     - The cost grows with the whole wallet (cf = base + 512 per coin, as FixedPayout), so many open markets in one
+       contract make every call dearer.
+     - For mainnet: one line per ticker and close, and markets closed out after Settle. Or one contract per day if
+       it grows.
+   - **Cost:** of the order of 25,000–40,000 gas a trade, padded to the costliest command as today. That is a weight
+     of 10–16 M against 8,000 M per block. V1 has no fee per gas.
+   - **Rounding:** every division rounds against the trader. Up out = reserveUp − ceil(k / reserveDown'), and Sell
+     the mirror image. The contract then holds at least what it owes: pairs minted = zUSDC locked, always.
+   - **To be proved by tries:** after any sequence of trades, Redeem plus Withdraw never pays more than the contract
+     holds. Tries cover sequences ending settled Up, settled Down and void.
+2. **LMSR:** Zulib has no exp or ln. A fixed-point series or table in F* is possible, but its cost must be uniform
+   across branches (the padding rule), and its rounding must provably never overpay. That is days of work for a bound
+   (b · ln 2) that FPMM gives through the seed anyway. **FPMM only.**
+3. **Yes.** The context has `blockNumber` (U32) and `timestamp` (the block's, U64 ms); FixedPayout already uses
+   `timestamp` for the 24-hour grace. A miner sets the timestamp within the consensus limits, so a cutoff should sit
+   well inside the window, e.g. no trades after close − 30 min. `blockNumber` is exact but block times vary (~4 min).
+4. **Not today:** the V1 Dex has no expiry field. Adding one (`LastBlock`: Take refused after it) means a new Dex
+   contract, with its orders moved: a contract change plus a migration of the ZP/zUSDC market maker. For the testnet,
+   jump detection without expiry is enough.
+5. **Fees:**
+   - Charge a percentage on Buy and Sell, staying in the reserve (Omen-style), so the seeder earns it.
+   - Shape: proportional to min(p, 1 − p), Polymarket-style, about 2% at 50% and less near 0 or 1. Near 0 or 1 the
+     price impact already protects the seeder, and a flat fee hurts buyers of long shots.
+   - It goes to the seeder.
+   - A CGP cut is a later decision and only adds a payout.
+6. **Seed:**
+   - Whoever runs the markets (the foundation or Alon at first), e.g. 100–300 zUSDC per market, with one line per
+     ticker and close so the money is not spread thin.
+   - **The caveat:** on a binary market the reserve drifts towards the losing side as traders buy the winner, so on
+     a decisive market much of the seed is lost at Settle. Fees must pay for it.
+   - Treat the seed as the cost of the market. This is what bounds the stale-quote loss: never more than the seed.
+7. **Yes.** The oracle round at the close settles the market. With no Settle within 24 h, Void, and every token pays
+   0.50. The seeder's Withdraw after Settle redeems the reserve's winning tokens, or after Void both sides at 0.50.
+
+### On the recommendation (section 5)
+
+Agreed, with three notes:
+- **A on the testnet:** only the cheap part.
+  - Poll every ~5 s, and on a jump cancel every quote of that ticker at once.
+  - An exposure cap per side.
+  - No new Dex for an expiry: with one user on the testnet it is not worth the migration.
+- **D (FPMM) for mainnet,** with a trading cutoff in the contract (close − 30 min), the fee above, and one line per
+  ticker and close.
+- **C (pool) as the fallback:** it needs no capital and is the least work. It also suits markets where an exit
+  before the close does not matter.
+- **B:** agreed, only if a central operator is acceptable. Zulib's `verify` (800 gas) makes the contract side easy.
+  The cost is the operator, not the code.
+
+### Work, roughly (code, tests, and lab or testnet runs; the wallet's own work not included)
+
+| | Contract | Service and API | Total |
+|---|---|---|---|
+| A, jump detection and exposure cap (no Dex change) | none | ½ day | ½ day |
+| A with an order expiry (new Dex, orders moved) | 1–2 days | ½ day | 2–3 days |
+| D, FPMM | 3–5 days (commands, cost padding, rounding, ~40 tries) | 1 day (seeding, API: reserves, prices, quotes for a size) | 4–6 days |
+| D, LMSR | FPMM + 3–5 days (fixed-point exp/ln and their bounds) | 1 day | 7–11 days |
+| C, pool | 1½–2 days | ½ day | 2–2½ days |
+| B, signed quotes | 1–2 days | 2 days (quote service, operator) | 3–4 days |
