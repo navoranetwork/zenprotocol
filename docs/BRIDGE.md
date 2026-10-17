@@ -2,6 +2,23 @@
 
 ZP has no value of its own, so markets and bets need a unit that has. This prototype shows how USDC (on an EVM chain such as Base) can be used on ZP as the token **zUSDC**, 1:1, in 6 decimals like USDC. It runs on the ZP testnet with the USDC of an EVM *test* network (Circle's faucet gives free test USDC on Base Sepolia and Ethereum Sepolia). Nothing here holds real money.
 
+## Trust (per docs/VISION.md)
+
+- **The operator is a trusted party.** One key holds the USDC reserves and is the only key that can issue or destroy
+  zUSDC. It can refuse a withdrawal, issue zUSDC without a deposit, or move the reserves. This is **scaffolding**,
+  temporary, because ZP cannot yet check Ethereum's state, and an EVM chain cannot yet check ZP's.
+- **Reserve top-ups (`BRIDGE_FUNDERS`) are operator trust too:** the operator decides which addresses only add to the
+  reserves. They issue nothing, so they can only raise the backing, never lower it.
+- **What replaces it**, in the order of VISION.md's interim table:
+  1. an M-of-N bridge committee holding the reserves and the issuing key, with per-withdrawal, daily and total limits,
+     a pause switch and timelocks;
+  2. deposits: a ZP contract verifies the USDC lock on Ethereum L1 through EthZen's light client;
+  3. withdrawals: an EVM contract follows ZP headers (SPV with SHA3 proof of work; with RandomX, open research).
+- **Limits stay in every stage**, including the trustless ones: the reserves must stay below the cost of rewriting
+  ZP's confirmation depth (VISION.md, "The limit no design removes").
+- **Anyone can check today:** `/bridge.html` shows the bridge's USDC balance read from the EVM chain next to zUSDC
+  issued minus destroyed, and turns red when the first is lower.
+
 ## How it works
 
 | Step | EVM chain | ZP testnet |

@@ -160,7 +160,7 @@
   <p class="sub tm"><img class="inl" src="/shell/icons/usdc.svg" alt="" width="24" height="24">USDC and the USDC logo are trademarks of Circle Internet Financial.<br><picture><source srcset="/shell/icons/zusdc-lockup.png" media="(prefers-color-scheme: dark)"><img class="inl" src="/shell/icons/zusdc-lockup-dark.png" alt="zUSDC" width="75" height="24"></picture> is this test bridge's token, not issued or endorsed by Circle.</p>
 </details>
 <details><summary>Is this real money?</summary><p>No. Base Sepolia and the ZP testnet are test networks; their USDC, ETH and ZP have no value. Never use a wallet or key that holds real funds here.</p></details>
-<details><summary>Who holds the USDC?</summary><p>One operator key holds the reserves and is the only key that can issue or destroy zUSDC. Fine for a prototype, not for real money: before any real use the plan is multi-signature custody decided by a community vote, limits, a pause switch and an independent audit.</p></details>
+<details><summary>Who holds the USDC?</summary><p>For now, one operator key: it holds the reserves and is the only key that can issue or destroy zUSDC, so you trust the operator. That is a temporary step. Next comes a committee of several keys with limits, a pause switch and timelocks; the goal is no operator at all, with ZP verifying Ethereum deposits itself and an Ethereum contract verifying ZP for withdrawals. Limits on the amounts stay in every stage. See <a href="https://github.com/navoranetwork/zenprotocol/blob/node-upgrade-script/docs/VISION.md">VISION.md</a>.</p></details>
 <details><summary>I deposited before linking</summary><p>Nothing is lost. The deposit waits and is issued as soon as the sending wallet is linked.</p></details>
 </div>
 <p class="sub" id="live"></p>
