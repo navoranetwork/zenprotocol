@@ -81,7 +81,8 @@ with sync_playwright() as p:
     pg.click('button[data-act=dex-side][data-v=buy]'); pg.fill('form[data-form=dex-limit] input[name=price]', '0.5'); pg.fill('form[data-form=dex-limit] input[name=amount]', '0.5')
     pg.click('form[data-form=dex-limit] button.primary'); pg.wait_for_timeout(400); ok('At least 1 ZP' in pg.inner_text('main'), 'less than 1 ZP is refused')
     # any pair: give 1 ZP for 0.5 zUSDC
-    pg.click('details.how summary >> text=All orders and other pairs'); pg.wait_for_timeout(100)
+    pg.click('details.how summary >> text=Other pairs'); pg.wait_for_timeout(100)
+    ok(pg.query_selector('details.how .list [data-act=dex-take]') is None and 'order book above' in pg.inner_text('details.how .list'), 'Other pairs leaves ZP / zUSDC orders to the order book (no duplicates)')
     pg.click('form[data-form=dex-make] button[data-name=dgive][data-asset="00"]'); pg.wait_for_timeout(100)
     pg.fill('form[data-form=dex-make] input[name=give]', '1'); pg.fill('form[data-form=dex-make] input[name=want]', '0.5')
     pg.click('form[data-form=dex-make] button.primary'); pg.wait_for_selector('text=Confirm order', timeout=15000)

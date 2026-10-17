@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.40.1 — 2026-10-17
+
+### Changed
+- Dex: the list under the order book is now Other pairs: ZP / zUSDC orders are only in the order book, Up / Down orders
+  only in the Oracle tab, so no order shows twice.
+
 ## 0.40.0 — 2026-10-17
 
 ### Changed

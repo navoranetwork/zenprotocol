@@ -255,7 +255,9 @@ function dexView(m, base, loading) {
   const me = myPub(), spendable = canSpend(S.open.get(active().id));
   const list = (m.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).filter(Boolean);
   // Up / Down orders are bought and sold in the Oracle tab (the markets table): not repeated here
-  const isBet = o => !!(S.betInfo?.[o.underAsset] || S.betInfo?.[o.pairAsset]), others = list.filter(o => !isBet(o)), betCount = list.length - others.length;
+  // ZP / zUSDC orders are in the order book above: not repeated here either
+  const q = quoteId(), inBook = o => !!q && ((o.underAsset === '00' && o.pairAsset === q) || (o.underAsset === q && o.pairAsset === '00'));
+  const isBet = o => !!(S.betInfo?.[o.underAsset] || S.betInfo?.[o.pairAsset]), others = list.filter(o => !isBet(o) && !inBook(o)), betCount = list.filter(isBet).length;
   const shown = S.keep?.dexallFull ? others : others.slice(0, DEX_FIRST);
   const rows = shown.map(o => {
     const p = dexPending.get(o.tx), mineO = myOrder(o, me), who = mineO ? 'Your order' : (() => { const n = contractNames[encodeAddress(Uint8Array.from(pkHashOf(o.maker).match(/../g).map(h => parseInt(h, 16))), net())]; return n ? esc(n) : 'Another trader'; })();
@@ -274,7 +276,7 @@ function dexView(m, base, loading) {
   const mineRows = waitingMine + list.filter(o => myOrder(o, me)).map(o => { const p = dexPending.get(o.tx); return `<div class="item"><div class="tname">${tokenIcon(o.underAsset) || ''}<div>${orderLine(o)}</div></div><div>${p ? `<span class="muted small">${p === 'taking' ? 'Being taken…' : 'Being cancelled…'}</span>` : spendable ? `<button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : ''}</div></div>`; }).join('');
   return `${loading ? '<div class="card"><p class="muted small">Loading…</p></div>' : bookView(m, me, spendable)}
     ${mineRows ? `<div class="card"><h2>Your orders</h2><div class="list">${mineRows}</div></div>` : ''}
-    <details class="card how" data-keep="dexall" ${S.keep?.dexall ? 'open' : ''}><summary>All orders and other pairs</summary><div class="list" data-s="mt10">${rows || '<p class="muted small">No open orders.</p>'}</div>
+    <details class="card how" data-keep="dexall" ${S.keep?.dexall ? 'open' : ''}><summary>Other pairs</summary><div class="list" data-s="mt10">${rows || '<p class="muted small">No orders in other pairs. ZP / zUSDC orders are in the order book above.</p>'}</div>
       ${others.length > shown.length ? `<button class="btn small" data-act="dexall-more" data-s="mt10">Show all ${others.length} orders</button>` : ''}
       ${betCount ? `<p class="muted small" data-s="mt10">${betCount} Up / Down bet order${betCount === 1 ? '' : 's'}: bought and sold in the Oracle tab <button type="button" class="chip mini" data-mtab="oracle">Open</button></p>` : ''}
       <p class="muted small" data-s="mt10">Taking needs no signature from the maker; you can take part of an order.</p>
