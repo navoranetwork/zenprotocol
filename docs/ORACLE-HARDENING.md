@@ -37,6 +37,26 @@ that key, or breaks into its server, settles every market. That is a larger risk
   3. If all agree, the member signs the commit hash and sends the signature back.
   4. The proposer publishes the Commit with m signatures.
   5. If a member disagrees, the round waits for the next proposer within the slot, as the retry does today.
+- **The price source for crypto (approved 2026-10-17, docs/ORACLE-DEX-PRICES.md):**
+  - a 15-minute Uniswap v3 TWAP via `observe()` at the last block at or before the close;
+  - Ethereum as the anchor, with Base and Arbitrum as confirmation within 0.5%;
+  - pools with at least $5M of in-range liquidity, and WBTC and cbBTC that must agree;
+  - the round after Ethereum finality, about 15 minutes after the close.
+  - Forex: the ECB, daily.
+- **The nodes:**
+  - At first each member runs its own **full Ethereum node**: an execution client, e.g. Geth or Nethermind, plus a
+    consensus client, e.g. Lighthouse.
+  - Base and Arbitrum come through Helios or an RPC only after the legal review (docs/ORACLE-SOURCES-TERMS.md).
+    Until then the round uses Ethereum pools only, with at least 2 of them qualifying.
+- **Each member's server:** estimates for 2026, to check with the provider.
+  - **Hardware:** 8 cores, 32 GB RAM, **4 TB NVMe** (a full node needs about 1.5–2 TB today and grows), and
+    1 Gbit/s with no tight traffic cap. The committee service, its keys and a small database fit beside the node.
+  - **Cost:** a dedicated server of that size is about €70–130 a month (e.g. a Hetzner AX-line or an OVH Advance,
+    with 2 × 2 TB or 4 TB NVMe). Cloud VMs with 4 TB of SSD cost 2–4 times more. **5 members: about €350–650 a
+    month.**
+  - **First sync:** about 1–2 days per node (snap sync), so set up the servers a week before they are needed.
+  - **Spread:** different providers and countries, no shared operator account, and each member's keys on its own
+    machine only.
 - **Servers:** 5 machines at different providers and in different countries, each with its own keys and its own API
   keys for the sources. No two members share a host or an operator account.
 - **Cost:** Commit is about 2,650 + m × 800 + list parsing, so about 5,000–6,000 gas for 3 of 5. That is once per

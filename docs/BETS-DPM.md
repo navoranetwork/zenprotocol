@@ -87,6 +87,22 @@ The state of a market is qUp, qDown and pool.
   a marginal share is a fair bet.
 - **The payout per share if it closed now** is `pool / q_side`.
 
+## Market rules (the text users read; the wallet shows it)
+
+**Mainnet, BTC and ETH:**
+> **How this market settles.** The settlement price is the **15-minute time-weighted average price (TWAP) of BTC (or
+> ETH) in USDC on Uniswap**, up to the close. It is read from the deepest Uniswap v3 pools on Ethereum, confirmed by
+> pools on Base and Arbitrum within 0.5%. It is **not** the price on an exchange such as Coinbase or Binance at one
+> second, so it can differ from it slightly, more so when the price moves fast just before the close. BTC is priced
+> through wrapped BTC (WBTC and cbBTC must agree within 1%). Prices are in USDC, not US dollars.
+> **Up wins** if the settlement price is at or above the line; **Down wins** if it is below.
+> The result is published about 15 minutes after the close, once Ethereum has finalized it. If no valid settlement
+> price is published within 24 hours, the market is void and every bettor gets back what they paid.
+> Trading stops 30 minutes before the close.
+
+**Testnet:** the same, except that the settlement price is the hourly round of the testnet oracle, the median of
+Coinbase, Binance and CoinGecko, at the close.
+
 ## The explorer API
 
 `GET /explorer/api/bets/markets`: each market of the new contract has a `pool` object. Amounts are strings in base
@@ -98,9 +114,16 @@ units; the other numbers are floats:
   "payoutPerShare": { "up": 1.2262, "down": 1.7278 },
   "cutoff": 1792272600000, "trading": true, "volume": "41000000", "refundable": false
 },
+"dexPrice": { "value": 81962.41, "kind": "twap15", "block": 23581234, "time": 1792270800000, "chain": "ethereum",
+              "source": "Uniswap v3 WBTC/USDC, cbBTC/USDC; 15-min TWAP" },
 "tokens": { "bull": "<asset>", "bear": "<asset>", "paid": "<asset>", "bullWon": "<asset>", "bearWon": "<asset>",
             "void": "<asset>", "qBull": "<asset>", "qBear": "<asset>", "pool": "<asset>" }
 ```
+- **`dexPrice`** is the price to show on **mainnet**: the Uniswap 15-minute TWAP the committee would compute now
+  (`kind: "twap15"`), or the latest Uniswap spot (`kind: "spot"`). It comes with its block, time and chain, and a
+  `source` line to display. On mainnet the wallet and the site show **no CEX prices**: Coinbase, Binance and
+  CoinGecko do not allow redistribution (docs/ORACLE-SOURCES-TERMS.md). On the testnet `dexPrice` is null and the
+  oracle's current sources stay.
 - The example is the state after C (the vectors). The quote is C's buy itself: Up 10 after the opening, A and B.
 - **The wallet shows:** Bull and Bear as shares, and Paid as "refundable if void". It hides the records and markers.
 - **`cutoff` is as is:** the wallet stops offering trades 5 minutes earlier.

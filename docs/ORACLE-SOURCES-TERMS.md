@@ -55,6 +55,33 @@ with attribution.
 - Pro (from $2,500 a month) has limited ones.
 - Publishing on-chain is redistribution (docs/ORACLE-HARDENING.md, (b)).
 
+## Open questions for the lawyer (Alon's legal review, before any mainnet market)
+
+1. **RPC and light-client terms.**
+   - Alchemy (v2.0, 2025-06-27): "solely for your internal business purposes", no resale, no automated
+     downloading or scraping, no competing products. Do a few `eth_call`s an hour that feed a published oracle
+     value fall within that? The same question for Infura, QuickNode and any other provider.
+   - Helios: its licence, and the terms of the RPC it verifies against.
+   - Until answered: Ethereum from each member's own node only.
+2. **Publishing derived prices.**
+   - The committee publishes Uniswap TWAPs computed from public chain state: the oracle API, the explorer, and the
+     wallet and site labelled "Uniswap TWAP / spot". Is there any right in such data (database rights in the EU,
+     terms of the pools' front ends) that needs a licence or an attribution?
+   - Is it a "benchmark" under the EU Benchmarks Regulation (BMR) or a similar rule once markets settle on it, and
+     what follows (administrator, methodology publication)?
+3. **ECB forex.** Is "Source: ECB statistics" next to each rate enough? The ECB says the reference rates are for
+   information only, and its statistics "must not be modified": may we round them, or store them as integers × 1000?
+   May markets settle on them, given the information-only purpose?
+4. **Chainlink.** Read chain.link/terms. May a Chainlink feed be used as a private cross-check, or as an input that
+   never enters the committed value?
+5. **The testnet today.** It shows and commits CEX prices (Coinbase, Binance, CoinGecko, Twelve Data, Yahoo), with
+   no value at stake. Is that acceptable as is, or should the testnet move to the same sources as mainnet now?
+6. **The markets themselves** (outside the data question, but for the same review): whether Up/Down markets on
+   prices are betting or financial instruments in the jurisdictions the service is offered in, what that requires,
+   and which users must be excluded.
+7. **Attribution in the product:** the exact source lines the wallet, the site and the explorer must show for each
+   ticker.
+
 ## For the review
 1. For each source we keep: the licence, its scope (display, redistribution, derived data, benchmark use), the price,
    and the attribution text.
