@@ -1,3 +1,9 @@
 [2026-10-17 15:14] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
 [2026-10-17 15:14] A: packages from the previous A image (zen-tput-a-packages)
 [2026-10-17 15:14] B: dfa48608 docs/THROUGHPUT.md: blocks/headers on mainnet, 3.6-5.3 s -> 3; load tool: zenprotocol 354f64e7 docs: SITE-MARKETS.md (from pow-bitzen c7
+[2026-10-17 15:14] build B (ours, .NET 10, Release+LOCALCHAIN)
+[2026-10-17 15:15] schedule (total per minute): 6000,15000,6000,15000,3000,300,3000,1500,3000,300,15000,600,300,600,600,1500,1500,6000
+[2026-10-17 15:19] B: blocks near 10 s (7 in the last minute, block 217)
+[2026-10-17 15:19] B: node up, block 217, senders 1 and 2 funded
+[2026-10-17 15:19] B: load, 18 steps of 6 min
+[2026-10-17 17:08] B: done at block 873
