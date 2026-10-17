@@ -25,8 +25,9 @@
 # SEED (1), ONLY=A|B, PROFILE=1.
 # VARIANTS="t0s0 t0 t1000s0 t1000": run B once per variant, tN = ZP_TEMPLATE_INTERVAL_MS=N, s0 = ZP_VERIFIED_SIGNATURES=0
 #   (t0s0 = the node as before both changes; results in B-<variant>; default: one
-#   run of B as built). REALISTIC=1: the local chain's easiest target is POW_LIMIT (default 0x1e0bfbd5: ~2 s of one miner
-#   thread; the difficulty rule then holds blocks near BLOCK_S) in both trees, so blocks come from real hashing.
+#   run of B as built). REALISTIC=1: the local chain's easiest target is POW_LIMIT (default 0x1f0bfbd5: easy enough for A's Mono miner,
+#   which did not reach 40 blocks in 30 min at 0x1e0bfbd5, 2026-10-17) in both trees, so blocks come from real hashing;
+#   each node's difficulty rule then raises it until its blocks come near BLOCK_S, and the load waits for that.
 # PROFILE=1 (PROFILE_RATE, PROFILE_ENV) also takes the finalizer queue (dotnet-dump), a heap report (dotnet-gcdump) and GC counters (dotnet-counters).
 set -uo pipefail
 : "${GH_TOKEN:?}"
@@ -34,7 +35,7 @@ DIR=/opt/zp-lab; REPO=navoranetwork/zenprotocol; GH="https://x-access-token:$GH_
 UPSTREAM=a0191cbc; BRANCH_B=${BRANCH_B:-testnet-v1}
 RATES=${RATES:-300,600,1500,3000,6000,15000}; RUNS=${RUNS:-3}; STEP_MIN=${STEP_MIN:-6}; BLOCK_S=${BLOCK_S:-10}; SEED=${SEED:-1}
 PROFILE=${PROFILE:-}; PROFILE_RATE=${PROFILE_RATE:-3000}
-VARIANTS=${VARIANTS:-}; REALISTIC=${REALISTIC:-}; POW_LIMIT=${POW_LIMIT:-0x1e0bfbd5}; NODE_ENV=""
+VARIANTS=${VARIANTS:-}; REALISTIC=${REALISTIC:-}; POW_LIMIT=${POW_LIMIT:-0x1f0bfbd5}; NODE_ENV=""
 STAMP=$(date -u +%Y%m%d-%H%M); RUN="$([ -n "$PROFILE" ] && echo profile || echo throughput)-$STAMP"
 OUT="$DIR/replay-out/$RUN"; mkdir -p "$OUT"; W=/opt/zp-tput; mkdir -p "$W"
 M1="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
@@ -124,6 +125,12 @@ start_node() {  # $1: A or B (or B-<variant>), $2: result folder. A fresh chain,
   echo "send to sender 1 ($a1) and sender 2 ($a2): $r" > "$D/fund.txt"
   # both wallets need >= 20 ZP mature (coinbase maturity 10): wait 40 more blocks
   for i in $(seq 360); do sleep 5; h2=$(height); [ -n "$h2" ] && [ "$h2" -ge $((h + 40)) ] && break; done
+  if [ -n "$REALISTIC" ]; then  # the difficulty starts at POW_LIMIT: wait until a minute holds at most 60/BLOCK_S + 2 blocks
+    local h0 hn ok=""; for i in $(seq 120); do h0=$(height); sleep 60; hn=$(height)
+      [ -n "$h0" ] && [ -n "$hn" ] && [ $((hn - h0)) -le $((60 / BLOCK_S + 2)) ] && { ok=1; break; }; done
+    [ -n "$ok" ] || stop "$K: blocks did not slow to ${BLOCK_S} s in 120 min"
+    log "$K: blocks near ${BLOCK_S} s ($((hn - h0)) in the last minute, block $hn)"
+  fi
   log "$K: node up, block $(height), senders 1 and 2 funded"
 }
 
