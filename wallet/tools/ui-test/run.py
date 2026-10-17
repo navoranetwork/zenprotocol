@@ -93,6 +93,11 @@ with sync_playwright() as p:
     pg.click('button[data-act=paste-to]'); pg.wait_for_timeout(300); ok(pg.input_value('input[name=to]') == ADDR['other'] and '✓' in pg.inner_text('#to-note'), 'Paste fills the field and validates it')
     pg.fill('input[name=to]', ''); pg.click('button[data-act=use-addr]'); ok(pg.input_value('input[name=to]').startswith(('tzn1', 'zen1')) and 'your wallet' in pg.inner_text('#to-note'), 'a wallet button fills the address: ' + pg.inner_text('#to-note'))
     pg.fill('input[name=amount]', 'abc'); ok('✗' not in pg.inner_text('#amt-note') and 'positive' in pg.inner_text('#amt-note'), 'a bad amount is explained')
+    pg.evaluate("t => navigator.clipboard.writeText(t)", '1,234.5 ZP'); pg.click('button[data-act=paste-amt]'); pg.wait_for_timeout(300)
+    ok(pg.input_value('form[data-form=vote-nom] input[name=amount]') == '1234.5', 'Paste fills the amount (commas and "ZP" dropped): ' + pg.input_value('form[data-form=vote-nom] input[name=amount]'))
+    if pg.locator('button[data-act=fund-all]').count():
+        pg.click('button[data-act=fund-all]'); v = pg.input_value('form[data-form=vote-nom] input[name=amount]')
+        ok(v and 'ask for less' not in pg.inner_text('#amt-note'), 'The whole fund fills the fund balance: ' + v)
     pg.fill('input[name=to]', ADDR['other'])
     pg.fill('input[name=amount]', '1.5'); pg.screenshot(path=f'{OUT}/9-nomination.png', full_page=True)
     pg.click('form[data-form=vote-nom] button.primary'); pg.wait_for_timeout(1500)

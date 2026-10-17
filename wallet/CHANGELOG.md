@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.39.0 — 2026-10-17
+
+### Added
+- Payout nomination: Paste and The whole fund buttons under the amount (Paste drops commas, spaces and "ZP").
+
 ## 0.38.1 — 2026-10-17
 
 ### Fixed

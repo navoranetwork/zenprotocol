@@ -1406,6 +1406,7 @@ function ballotsCard(c) {
       <div class="row wrapchips"><button type="button" class="chip" data-act="paste-to">Paste</button>${mine.map(x => `<button type="button" class="chip" data-act="use-addr" data-addr="${esc(x.addr)}" title="${esc(x.addr)}">${esc(x.name)}</button>`).join('')}</div>
       <div class="small" id="to-note" aria-live="polite"></div>
       <label class="field">Amount (ZP)<input name="amount" inputmode="decimal" autocomplete="off" value="${esc(S.draft.namount || '')}" data-fund="${fundZp === null ? '' : fundZp}" required></label>
+      <div class="row wrapchips"><button type="button" class="chip" data-act="paste-amt">Paste</button>${fundZp ? `<button type="button" class="chip" data-act="fund-all" data-v="${Number(fundZp.toFixed(8))}">The whole fund</button>` : ''}</div>
       <div class="small muted" id="amt-note" aria-live="polite">${fundZp === null ? '' : `The CGP fund holds ${zpStr(fundZp)} ZP: a larger request cannot be paid.`}</div>
       ${openNom ? (pNom ? votedBox(pNom) : `<button class="btn primary" ${none ? 'disabled' : ''}>Review</button>`) : ''}</fieldset></form>`;
   // the node always lists one candidate that pays the CGP fund 1 kalapa back to itself: a vote for it is a vote for no payout
@@ -1936,6 +1937,13 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'alloc-pick') return syncAlloc(t.dataset.v);
     if (act === 'use-addr') { const i = $app.querySelector('input[name=to]'); i.value = t.dataset.addr; return syncTo(); }
+    if (act === 'fund-all') { $app.querySelector('[data-form=vote-nom] input[name=amount]').value = t.dataset.v; return syncAmt(); }
+    if (act === 'paste-amt') {
+      const i = $app.querySelector('[data-form=vote-nom] input[name=amount]'), note = $app.querySelector('#amt-note');
+      try { i.value = (await navigator.clipboard.readText()).replace(/,|\s|ZP/gi, ''); syncAmt(); }
+      catch { note.className = 'small bad'; note.textContent = 'This browser did not allow reading the clipboard: press and hold in the field, then choose Paste'; }
+      return;
+    }
     if (act === 'paste-to') {
       const i = $app.querySelector('input[name=to]'), note = $app.querySelector('#to-note');
       try { i.value = (await navigator.clipboard.readText()).trim(); syncTo(); }
