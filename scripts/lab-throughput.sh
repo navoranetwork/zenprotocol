@@ -76,6 +76,14 @@ patch_tree "$W/a" 'blockInterval=1000UL \* 60UL;' || stop "A patch"
 cp "$DIR/Docker/devnet-entrypoint.sh" "$W/a/"
 sed -e 's|msbuild src/zenprotocol.sln /p:Configuration=Debug|msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN|' \
     -e 's|bin/Debug|bin/Release|g' "$DIR/Docker/Dockerfile.upstream-devnet" > "$W/a/Dockerfile.tput"
+# Mono 6.12's TLS no longer verifies nuget.org (CERTIFICATE_VERIFY_FAILED, 2026-10-17, also after cert-sync), and a
+# patched src (REALISTIC=1) reruns paket restore: take the packages from an A image built before, so restore has
+# nothing to download (paket.lock is upstream's, so the packages are the same)
+if docker image inspect zen-tput-a > /dev/null 2>&1 && docker run --rm --entrypoint test zen-tput-a -d /src/packages; then
+  docker tag zen-tput-a zen-tput-a-packages
+  sed -i 's|^RUN mono .paket/paket.exe restore|COPY --from=zen-tput-a-packages /src/packages ./packages\nRUN mono .paket/paket.exe restore|' "$W/a/Dockerfile.tput"
+  log "A: packages from the previous A image (zen-tput-a-packages)"
+fi
 if [ -d "$W/b-src/.git" ]; then git -C "$W/b-src" fetch -q "$GH/navoranetwork/zp-pow.git" "$BRANCH_B" && git -C "$W/b-src" checkout -q -f FETCH_HEAD
 else git clone -q -b "$BRANCH_B" "$GH/navoranetwork/zp-pow.git" "$W/b-src"; fi || stop "B source"
 rm -rf "$W/b" "$W/b0" && mkdir -p "$W/b" "$W/b0" && git -C "$W/b-src" archive HEAD | tar -x -C "$W/b" && cp -r "$W/b/src" "$W/b0/" || stop "archive B"
