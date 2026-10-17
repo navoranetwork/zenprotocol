@@ -88,6 +88,61 @@ member.**
   - **Until it says otherwise, assume a Chainlink feed may not be republished as an input to another oracle.** At
     most it can be a private cross-check that never enters the committed value.
 
+## Beyond BTC and ETH (assessed 2026-10-17)
+
+The liquidity figures are each pool's **total value locked** on Uniswap v3, Ethereum, from DexPaprika and GeckoTerminal
+on 2026-10-17. **In-range liquidity is lower**, often much lower. Before a ticker is listed, the reader measures it
+at a block (≥ $5M within ±2% of the price). A token priced against WETH is converted through the WETH/USDC TWAP of
+the same window.
+
+| Ticker | Source | Liquidity (TVL, Ethereum) | Verdict |
+| --- | --- | --- | --- |
+| ETH | WETH/USDC (two fee tiers), WETH/USDT | $82M, $55M; $96M | **yes** (approved) |
+| BTC | WBTC/USDC; WBTC/USDT; WBTC/WETH; cbBTC through WBTC/cbBTC | $22M; $31M + $25M; $40M + $39M; $8M | **yes** (approved). cbBTC/USDC is deep on Base, not on Ethereum, so on Ethereum the WBTC–cbBTC agreement comes from the WBTC/cbBTC pool |
+| UNI | UNI/WETH (× WETH/USDC) | $13.7M (UNI/USDT $2.6M) | **candidate**: measure the in-range liquidity; one pool only, so no second pool to agree with |
+| LINK | LINK/WETH (× WETH/USDC) | $13.6M (LINK/USDC $1.1M) | **candidate**, as UNI |
+| AAVE | AAVE/WETH (× WETH/USDC) | $11.3M | **candidate**, as UNI |
+| ENA, ONDO, wTAO, LDO, PENDLE and others | X/WETH | $0.4–2.9M | **no**: below the threshold |
+| SOL, XRP, DOGE and other non-Ethereum assets | only thin wrapped pools on Ethereum | — | **no** |
+| Gold (XAU) | PAXG/USDC; XAUt/USDT; PAXG/WETH, XAUt/WETH | $2.2M; $4.6–5.3M; $3.0M, $3.7M | **no** (see below) |
+| EUR/USD | ECB reference rate (daily fixing), with EURC/USDC as confirmation | EURC/USDC $2.2M (EURCV/USDC $3.3M) | **yes, daily, on the ECB.** EURC is a soft check only |
+| Stocks, indices | tokenized stocks (e.g. TSLAon/USDC, SPCXon/USDC) | $0.2–0.3M | **no**: not publishable without a licence, and the tokens are too thin |
+| Oil (WTI, Brent) | none on-chain | — | **no**: not without a licence |
+
+**Gold.**
+- No pool reaches $5M in-range against a dollar stablecoin. The largest, XAUt/USDT, is about $4.6–5.3M in total, so
+  less in range, and is in USDT, not USDC.
+- **Tracking:**
+  - The tokens traded at about $4,156 (PAXG) and $4,166 (XAUt) when read. Spot gold closed at $4,143.94 on
+    2026-10-06; the figures are from different days, so this is only an indication.
+  - They usually follow spot within about 0.5–1%, with a premium or discount of their own.
+  - They trade all weekend while spot gold is closed, so a weekend close would settle on token prices that no gold
+    market confirms.
+- A gold market on these pools would be a market on PAXG/XAUt, not on gold. **Not for mainnet** unless the pools
+  deepen (both tokens ≥ $5M in range and agreeing within 1%) and the rules say "tokenized gold".
+
+**Forex.**
+- EUR/USD settles at the ECB fixing (about 14:15 UTC, published around 16:00 CET), once a day, on ECB working days,
+  with "Source: ECB statistics" shown.
+- The markets close at the fixing time. A market closes only on a day with a fixing, and is Void if the ECB publishes
+  none.
+- EURC/USDC (Ethereum $2.2M; the Base pool to be measured) is too thin to settle on. It only flags a fixing more than
+  1% away from it for a manual look; it never blocks the round.
+- Other currencies follow the same rule, if their ECB rate exists and the lawyer clears the use (rounding, the
+  "information only" note).
+
+**Stocks, indices, oil.** Confirmed: none of them is publishable without a licence.
+- Exchange prices of stocks and indices need the exchanges' or a vendor's redistribution licence.
+- Oil prices are CME or ICE data.
+- The tokenized versions on-chain are both thin and derived from licensed data.
+
+Sources:
+- [DexPaprika: Uniswap v3 pools on Ethereum](https://dexpaprika.com/ethereum/uniswap_v3)
+- [GeckoTerminal: PAXG/USDC 0.05%](https://www.geckoterminal.com/eth/pools/0x5ae13baaef0620fdae1d355495dc51a17adb4082)
+- [GeckoTerminal: PAXG/USDC 0.3%](https://www.geckoterminal.com/eth/pools/0xb431c70f800100d87554ac1142c4a94c5fe4c0c4)
+- [GeckoTerminal: XAUt/USDT 0.05%](https://www.geckoterminal.com/eth/pools/0x6546055f46e866a4b9a4a13e81273e3152bae5da)
+- [Gold price, 2026-10-06 (pricegold.net)](https://pricegold.net/2026/october/6/)
+
 ## Cost and work
 
 - **Per member:** nodes for 3 chains, or a light client; a few `eth_call`s per round.
