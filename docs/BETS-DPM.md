@@ -38,6 +38,7 @@ Its tokens, with subtype SHA3 of the market fields and a 4-character tag:
 | Bull, Bear | Up and Down shares | bettors |
 | Paid | a receipt for the money paid in, 1 unit per unit | bettors |
 | QBul, QBea | the record of the shares sold on each side (qUp, qDown) | the contract |
+| MBul, MBea | the record of the money paid into each side, net of sales (the base of the fee) | the contract |
 | Pool | the record of the market's pool (the collateral held for it) | the contract |
 | BuWn, BeWn, Void | the settlement markers, as FixedPayout | the contract |
 
@@ -49,8 +50,9 @@ The collateral of all markets is one asset in one wallet, so the pool of each ma
 | --- | --- | --- | --- | --- |
 | Buy | signed | Position ("Bull" / "Bear"), MinShares | x collateral | s shares and x Paid to the sender; qSide += s, Pool += x |
 | Sell | signed | Position, Shares (n), MinOut | n shares, and P ≥ out Paid | out collateral to the sender; P − out Paid come back; qSide −= n, Pool −= out |
-| Settle, Void | anyone | as FixedPayout | none | as FixedPayout: the oracle round at the close; Void after 24 h without Settle |
-| Redeem | signed | Position (the winner) | n winning shares | `floor(n × Pool / qWin)`; qWin −= n, Pool −= that |
+| Settle | anyone | as FixedPayout, plus Sigs: the round's committee signatures | none | records the winner; pays the fee (above) to the signers and the operator; Pool −= fee |
+| Void | anyone | as FixedPayout | none | Void after 24 h without Settle; no fee |
+| Redeem | signed | Position (the winner) | n winning shares | `floor(n × Pool / qWin)`, with Pool already net of the fee; qWin −= n, Pool −= that |
 | Refund | signed | none | p Paid | after Void, or after Settle when the winning side has no shares: p collateral; Pool −= p |
 
 There is no Cancel and no pairs.
@@ -87,6 +89,45 @@ The state of a market is qUp, qDown and pool.
   a marginal share is a fair bet.
 - **The payout per share if it closed now** is `pool / q_side`.
 
+## Fees (decided by Alon, 2026-10-17)
+
+- **One fee: at Settle, 2% of the pool, taken only from the losing side's money.**
+  - The contract keeps the money paid into each side, net of sales, as two more records: "MBul" and "MBea".
+  - `fee = min(pool × 200 / 10000, money of the losing side, pool − qWin)`. The last term keeps the payout per winning
+    share at least 1, so a winner never gets back less than a share's price.
+  - The pool for Redeem is `pool − fee`.
+- **No fee on Buy, Sell or Refund.** A void market, or a settled one whose winning side has no shares, pays everyone
+  back in full.
+- **The split, fixed in the contract source** (a change means a new contract version, for new markets):
+  - **Committee 60%,** in equal shares to the members whose signatures made the settling round.
+    - How: the 5 member keys are fixed in the source. Settle carries the round's signatures over the commit hash,
+      `(index, signature)` for each signer, at least 3.
+    - The contract verifies each with `Zen.Crypto.verify`, 800 gas, so up to 4,000 gas for 5. It pays
+      `floor(fee × 60% / n)` to each valid signer's key.
+    - This works without the Oracle contract reporting its signers, which it cannot pass through an attestation
+      token.
+    - Who sends Settle chooses which signatures to include, and could leave a member out. The bets service includes
+      every signature the round has, and the members can check that in the log.
+    - **The nearest alternative,** if verifying in Settle is judged too heavy: equal shares to all 5 members, absent
+      or not.
+  - **Operator 40%,** to the operator's address in the source, plus every rounding remainder, so nothing is lost.
+  - **CGP 0%,** a parameter in the source (`CGP_BPS = 0`).
+- **The CGP rule:**
+  - **The documented target is 15% to the CGP, taken from the operator's share:** committee 60%, operator 25%,
+    CGP 15%.
+  - It is switched on through a new contract version, for new markets, once the operator's fee income has covered
+    the running costs for **3 consecutive calendar months**.
+  - **The running-cost budget is published and fixed: €600 a month.** It covers servers and upkeep. It is revised at
+    most once a year, publicly, in this document.
+  - **The check:**
+    - The operator's monthly fee income is the sum of the operator payouts in the per-market log, in zUSDC.
+    - It is compared with the budget converted at the month's average ECB EUR/USD rate.
+    - The trigger is met in the month after 3 consecutive months above the budget.
+- **What users see:**
+  - the rules text, below;
+  - `feeBps` and the split in `/bets/markets`;
+  - `payoutPerShareIfWins` in the quote, **net of the fee**.
+
 ## Market rules (the text users read; the wallet shows it)
 
 **Mainnet, BTC and ETH:**
@@ -99,6 +140,8 @@ The state of a market is qUp, qDown and pool.
 > The result is published about 15 minutes after the close, once Ethereum has finalized it. If no valid settlement
 > price is published within 24 hours, the market is void and every bettor gets back what they paid.
 > Trading stops 30 minutes before the close.
+> **Fee:** 2% of the pool at settlement, taken only from the losing side's money and never so much that a winning share
+> pays less than 1. There is no fee on buying, selling or refunds, and a void market pays everyone back in full.
 
 **Testnet:** the same, except that the settlement price is the hourly round of the testnet oracle, the median of
 Coinbase, Binance and CoinGecko, at the close.
@@ -126,7 +169,10 @@ units; the other numbers are floats:
   "price": { "up": 0.8155, "down": 0.5788 }, "prob": { "up": 0.6650, "down": 0.3350 },
   "payoutPerShare": { "up": 1.2262, "down": 1.7278 },
   "cutoff": 1792272600000, "trading": true, "volume": "41000000", "refundable": false,
-  "minPoolForChance": "10000000", "chanceShown": true
+  "minPoolForChance": "10000000", "chanceShown": true,
+  "money": { "up": "21000000", "down": "11000001" },
+  "fee": { "feeBps": 200, "split": { "committeeBps": 6000, "operatorBps": 4000, "cgpBps": 0 },
+           "ifUpWins": "640000", "ifDownWins": "640000" }
 },
 "dexPrice": { "value": 81962.41, "kind": "twap15", "block": 23581234, "time": 1792270800000, "chain": "ethereum",
               "source": "Uniswap v3 WBTC/USDC, cbBTC/USDC; 15-min TWAP" },
@@ -152,7 +198,7 @@ The answer:
 ```json
 { "action": "buy", "side": "up", "in": "10000000", "shares": "14221634", "avgPrice": 0.7032,
   "priceBefore": 0.5397, "priceAfter": 0.8155, "probBefore": 0.2913, "probAfter": 0.6650,
-  "payoutPerShareIfWins": 1.2262, "returnsIfWins": "17439174", "minShares": "14079417",
+  "payoutPerShareIfWins": 1.2017, "returnsIfWins": "17090391", "minShares": "14079417",
   "call": { "contract": "ctzn1…", "command": "Buy", "bodyHex": "0c…",
             "spends": [{ "asset": "<collateral>", "amount": "10000000" }] } }
 ```
@@ -168,7 +214,8 @@ The answer:
 ## The shared module and the vectors
 
 `site/bets/dpm.mjs` is the integer reference, exactly as the contract computes:
-- `isqrt`, `buy`, `sell`, `redeem`, `refund`, `prices`, `payoutPerShare`.
+- `isqrt`, `buy`, `sell`, `settle` (the fee and its split), `redeem`, `refund`, `prices`, `payoutPerShare`,
+  `payoutPerShareNet`.
 
 `site/test/dpm.test.mjs` checks three things:
 - the vectors below;
@@ -311,7 +358,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "0",
     "qDown": "0",
-    "pool": "0"
+    "pool": "0",
+    "mUp": "0",
+    "mDown": "0"
    },
    "side": "up",
    "x": "1000000"
@@ -322,7 +371,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "1000000",
     "qDown": "0",
-    "pool": "1000000"
+    "pool": "1000000",
+    "mUp": "1000000",
+    "mDown": "0"
    }
   }
  },
@@ -333,7 +384,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "1000000",
     "qDown": "0",
-    "pool": "1000000"
+    "pool": "1000000",
+    "mUp": "1000000",
+    "mDown": "0"
    },
    "side": "down",
    "x": "1000000"
@@ -344,7 +397,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "1000000",
     "qDown": "1732050",
-    "pool": "2000000"
+    "pool": "2000000",
+    "mUp": "1000000",
+    "mDown": "1000000"
    }
   }
  },
@@ -355,7 +410,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "1000000",
     "qDown": "1732050",
-    "pool": "2000000"
+    "pool": "2000000",
+    "mUp": "1000000",
+    "mDown": "1000000"
    },
    "side": "up",
    "x": "10000000"
@@ -366,7 +423,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "11874342",
     "qDown": "1732050",
-    "pool": "12000000"
+    "pool": "12000000",
+    "mUp": "11000000",
+    "mDown": "1000000"
    }
   }
  },
@@ -377,7 +436,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "11874342",
     "qDown": "1732050",
-    "pool": "12000000"
+    "pool": "12000000",
+    "mUp": "11000000",
+    "mDown": "1000000"
    },
    "side": "down",
    "x": "10000000"
@@ -388,7 +449,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "11874342",
     "qDown": "18520259",
-    "pool": "22000000"
+    "pool": "22000000",
+    "mUp": "11000000",
+    "mDown": "11000000"
    }
   }
  },
@@ -399,7 +462,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "11874342",
     "qDown": "18520259",
-    "pool": "22000000"
+    "pool": "22000000",
+    "mUp": "11000000",
+    "mDown": "11000000"
    },
    "side": "up",
    "x": "10000000"
@@ -410,7 +475,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520259",
-    "pool": "32000000"
+    "pool": "32000000",
+    "mUp": "21000000",
+    "mDown": "11000000"
    }
   }
  },
@@ -421,7 +488,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520259",
-    "pool": "32000000"
+    "pool": "32000000",
+    "mUp": "21000000",
+    "mDown": "11000000"
    },
    "side": "up",
    "x": "10000000",
@@ -438,7 +507,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520259",
-    "pool": "32000000"
+    "pool": "32000000",
+    "mUp": "21000000",
+    "mDown": "11000000"
    },
    "side": "down",
    "x": "3990000000"
@@ -454,7 +525,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520259",
-    "pool": "32000000"
+    "pool": "32000000",
+    "mUp": "21000000",
+    "mDown": "11000000"
    },
    "side": "down",
    "x": "1"
@@ -465,7 +538,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    }
   }
  },
@@ -476,7 +551,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "side": "up",
    "shares": "5000000"
@@ -486,7 +563,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "21095976",
     "qDown": "18520261",
-    "pool": "28072055"
+    "pool": "28072055",
+    "mUp": "17072054",
+    "mDown": "11000001"
    }
   }
  },
@@ -497,7 +576,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "28982755",
-    "pool": "39000001"
+    "pool": "39000001",
+    "mUp": "21000000",
+    "mDown": "18000001"
    },
    "side": "down",
    "shares": "10462494"
@@ -507,7 +588,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    }
   }
  },
@@ -518,7 +601,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "side": "up",
    "shares": "26095977"
@@ -534,7 +619,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "side": "up",
    "shares": "5000000",
@@ -551,7 +638,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "side": "down",
    "shares": "1"
@@ -561,28 +650,179 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520260",
-    "pool": "32000000"
+    "pool": "32000000",
+    "mUp": "21000000",
+    "mDown": "11000000"
    }
   }
  },
  {
-  "name": "redeem 10,874,342 Up shares after Up won",
+  "name": "settle: Up wins, 3 signers (fee 2% of the pool)",
+  "op": "settle",
+  "in": {
+   "state": {
+    "qUp": "26095976",
+    "qDown": "18520261",
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
+   },
+   "winner": "up",
+   "signers": "3"
+  },
+  "out": {
+   "fee": "640000",
+   "committeeEach": "128000",
+   "cgp": "0",
+   "operator": "256000",
+   "refundsOnly": false,
+   "state": {
+    "qUp": "26095976",
+    "qDown": "18520261",
+    "pool": "31360001",
+    "mUp": "21000000",
+    "mDown": "11000001"
+   }
+  }
+ },
+ {
+  "name": "settle: Down wins, 5 signers",
+  "op": "settle",
+  "in": {
+   "state": {
+    "qUp": "26095976",
+    "qDown": "18520261",
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
+   },
+   "winner": "down",
+   "signers": "5"
+  },
+  "out": {
+   "fee": "640000",
+   "committeeEach": "76800",
+   "cgp": "0",
+   "operator": "256000",
+   "refundsOnly": false,
+   "state": {
+    "qUp": "26095976",
+    "qDown": "18520261",
+    "pool": "31360001",
+    "mUp": "21000000",
+    "mDown": "11000001"
+   }
+  }
+ },
+ {
+  "name": "settle: the losing side holds less than 2% of the pool (fee = its money)",
+  "op": "settle",
+  "in": {
+   "state": {
+    "qUp": "20000000",
+    "qDown": "1414213",
+    "pool": "21000000",
+    "mUp": "20000000",
+    "mDown": "300000"
+   },
+   "winner": "up",
+   "signers": "3"
+  },
+  "out": {
+   "fee": "300000",
+   "committeeEach": "60000",
+   "cgp": "0",
+   "operator": "120000",
+   "refundsOnly": false,
+   "state": {
+    "qUp": "20000000",
+    "qDown": "1414213",
+    "pool": "20700000",
+    "mUp": "20000000",
+    "mDown": "300000"
+   }
+  }
+ },
+ {
+  "name": "settle: the cap keeps a winning share at 1 (fee = pool - qWin)",
+  "op": "settle",
+  "in": {
+   "state": {
+    "qUp": "31000000",
+    "qDown": "5000000",
+    "pool": "31400802",
+    "mUp": "30000000",
+    "mDown": "2000000"
+   },
+   "winner": "up",
+   "signers": "3"
+  },
+  "out": {
+   "fee": "400802",
+   "committeeEach": "80160",
+   "cgp": "0",
+   "operator": "160322",
+   "refundsOnly": false,
+   "state": {
+    "qUp": "31000000",
+    "qDown": "5000000",
+    "pool": "31000000",
+    "mUp": "30000000",
+    "mDown": "2000000"
+   }
+  }
+ },
+ {
+  "name": "settle: no winning shares (refunds, no fee)",
+  "op": "settle",
+  "in": {
+   "state": {
+    "qUp": "0",
+    "qDown": "5000000",
+    "pool": "5000000",
+    "mUp": "0",
+    "mDown": "5000000"
+   },
+   "winner": "up",
+   "signers": "3"
+  },
+  "out": {
+   "fee": "0",
+   "committeeEach": "0",
+   "cgp": "0",
+   "operator": "0",
+   "refundsOnly": true,
+   "state": {
+    "qUp": "0",
+    "qDown": "5000000",
+    "pool": "5000000",
+    "mUp": "0",
+    "mDown": "5000000"
+   }
+  }
+ },
+ {
+  "name": "redeem 10,874,342 Up shares after Up won (pool net of the fee)",
   "op": "redeem",
   "in": {
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "31360001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "side": "up",
    "n": "10874342"
   },
   "out": {
-   "out": "13334582",
+   "out": "13067891",
    "state": {
     "qUp": "15221634",
     "qDown": "18520261",
-    "pool": "18665419"
+    "pool": "18292110",
+    "mUp": "21000000",
+    "mDown": "11000001"
    }
   }
  },
@@ -593,7 +833,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "p": "11000000"
   },
@@ -602,7 +844,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "21000001"
+    "pool": "21000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    }
   }
  },
@@ -613,7 +857,9 @@ refunds start from the state after C.
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    },
    "p": "32000002"
   },
@@ -622,13 +868,15 @@ refunds start from the state after C.
   }
  },
  {
-  "name": "prices and implied probabilities after C",
+  "name": "prices, implied probabilities and payouts after C",
   "op": "prices",
   "in": {
    "state": {
     "qUp": "26095976",
     "qDown": "18520261",
-    "pool": "32000001"
+    "pool": "32000001",
+    "mUp": "21000000",
+    "mDown": "11000001"
    }
   },
   "out": {
@@ -637,7 +885,9 @@ refunds start from the state after C.
    "probUp": 0.6650390066820382,
    "probDown": 0.33496099331796175,
    "payoutUp": 1.2262427356616208,
-   "payoutDown": 1.7278374748606404
+   "payoutDown": 1.7278374748606404,
+   "payoutUpNet": 1.20171788171479,
+   "payoutDownNet": 1.693280726443326
   }
  }
 ]
@@ -663,7 +913,12 @@ For each market:
 - the result (Up, Down, Void, or no winners);
 - the payout per winning share;
 - the redeems paid, the refunds paid, and the dust left;
-- the service's own result: its 1 + 1 back, minus 2.
+- the service's own result: its 1 + 1 back, minus 2;
+- the fee: the total, each signer's share, the operator's and the CGP's.
+
+**Monthly lines** in the same endpoint: the operator's fee income for the month, in zUSDC and in euros at the month's
+average ECB rate, next to the €600 budget, with the count of consecutive months above it. Anyone can see how far the
+CGP trigger is.
 
 ## Notes for mainnet
 

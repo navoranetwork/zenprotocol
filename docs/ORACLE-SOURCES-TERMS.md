@@ -82,6 +82,9 @@ with attribution.
    Within this question: **publishing the market's chance** (the implied probability from the bets) on the site and
    in the wallet: whether it counts as a forecast, advice or promotion, and what wording it needs. The planned label
    is "Market's chance", "from how participants have bet so far, not our forecast", shown only above a minimum pool.
+   And: **does taking a fee on settled markets** (2% of the pool, from the losing side, split between the committee
+   members and the operator) **make the operator a gambling operator** in the relevant jurisdictions, and what licence
+   would that need? Does paying part of it to committee members change their position?
 7. **Attribution in the product:** the exact source lines the wallet, the site and the explorer must show for each
    ticker.
 
