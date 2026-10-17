@@ -41,7 +41,7 @@ const BETS = () => [
   { event: betEvent('BTC', 105000000, T0 + 3 * 3600e3), bull: BT('1', '1'), bear: BT('1', '2'), status: 'open', result: null },
   { event: betEvent('BTC', 95000000, T0 + 3 * 3600e3), bull: BT('5', '1'), bear: BT('5', '2'), status: 'open', result: null },
   { event: betEvent('BTC', 100500000, T0 + 3 * 3600e3), bull: BT('6', '1'), bear: BT('6', '2'), status: 'open', result: null },
-  { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null },
+  { event: betEvent('ETH', 3800000, T0 + 5 * 3600e3), bull: BT('2', '1'), bear: BT('2', '2'), status: 'open', result: null, spot: 3810 },
   { event: betEvent('BTC', 100000000, CLOSE_SETTLED), bull: BT('3', '1'), bear: BT('3', '2'), status: 'settled', result: 'bull', settlePrice: 101234.5 },
   { event: betEvent('ETH', 3500000, T0 - 30 * 3600e3), bull: BT('4', '1'), bear: BT('4', '2'), status: 'void', result: null }];
 const offers = () => [

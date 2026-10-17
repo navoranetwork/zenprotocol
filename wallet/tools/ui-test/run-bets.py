@@ -32,7 +32,7 @@ with sync_playwright() as p:
     pg.click('nav >> text=Markets'); pg.wait_for_selector('.chain .chainrow', timeout=15000)
     t = pg.inner_text('main')
     chains = pg.query_selector_all('.chain')
-    ok(len(chains) == 2 and 'BTC' in chains[0].inner_text() and 'now 100,000' in chains[0].inner_text() and 'closes' in chains[0].inner_text(), 'one table per ticker and close, with the price now')
+    ok(len(chains) == 2 and 'BTC' in chains[0].inner_text() and 'oracle ' in chains[0].inner_text() and '100,000' in chains[0].inner_text() and 'closes' in chains[0].inner_text() and 'live 3,810' in chains[1].inner_text(), 'one table per ticker and close, with the price: live when the market service has it, else the oracle round and its time')
     lines = [r.query_selector('.line').inner_text().replace(' ◀', '') for r in chains[0].query_selector_all('.chainrow:not(.chaintop)')]
     ok(lines == ['95,000', '100,500', '105,000'], f'BTC lines in order ({lines})')
     ok('100,500' in chains[0].query_selector('.chainrow.near').inner_text(), 'the line nearest the price now (100,000) is marked')

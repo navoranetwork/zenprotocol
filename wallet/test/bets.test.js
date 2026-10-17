@@ -53,6 +53,7 @@ test('the explorer answer: contractId and collateral at the top, statuses, the b
   assert.equal(marketsOf({ ...j, collateral: '00' }).length, 0);                               // rows in another collateral are refused
   const q = marketsOf({ ...j, markets: [{ ...row, fair: 0.53, quoting: true }, { ...row, fair: null, quoting: false }, { ...row, fair: 3 }] });
   assert.deepEqual(q.map(m => [m.fair, m.quoting]), [[0.53, true], [null, false], [null, null]]);
+  assert.deepEqual(marketsOf({ ...j, markets: [{ ...row, spot: 2435.6 }, { ...row, spot: null }, { ...row, spot: -1 }, { ...row, spot: 'x' }] }).map(m => m.spot), [2435.6, null, null, null]);
 });
 
 test('the live testnet BTC market: the wallet Redeem body is byte for byte the market service builder (site/bets/core.mjs)', async () => {

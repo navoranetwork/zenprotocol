@@ -151,6 +151,7 @@ const VOID_NOTE = 'If the oracle has no close price within 24 hours, every token
 // the oracle stamps one round per hour, on the hour (docs/BETS.md, the oracle's slots): say when the next one comes
 const nextRound = m => { if (!m?.round?.timestamp) return ''; const next = new Date(Math.floor(Date.now() / 3600e3) * 3600e3 + 3600e3);
   return `The oracle publishes one round an hour, on the hour: this one is from ${new Date(m.round.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}, the next about ${next.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`; };
+const roundTime = m => m?.round?.timestamp ? new Date(m.round.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
 function betsCard(m, cat) {
   if (!m) return '';
   if (!m.bets) return `<div class="card"><h2>Up or down?</h2><p class="muted small">Bets on these prices open when the bet contract is active on this network. You will pick a market, say Up or Down, and get 1 zUSDC for each token if you are right.</p></div>`;
@@ -164,14 +165,14 @@ function betsCard(m, cat) {
     return o && spendable ? `<button type="button" class="odd ${side === 'up' ? 'buy' : 'sell'}" data-act="bet" data-id="${esc(b.bull)}" data-side="${side}" aria-label="${side === 'up' ? 'Up' : 'Down'} at ${p.toFixed(2)}">${p.toFixed(2)}</button>`
       : `<span class="odd off ${side === 'up' ? 'buy' : 'sell'}" aria-disabled="true">${o ? p.toFixed(2) : '–'}</span>`; };
   const tables = [...groups.values()].map(list => {
-    const b0 = list[0], now = nowOf(b0.ticker), near = now == null ? null : list.reduce((x, y) => Math.abs(y.strike - now) < Math.abs(x.strike - now) ? y : x);
+    const b0 = list[0], live = list.find(x => x.spot != null)?.spot ?? null, round = nowOf(b0.ticker), now = live ?? round, near = now == null ? null : list.reduce((x, y) => Math.abs(y.strike - now) < Math.abs(x.strike - now) ? y : x);
     const rows = list.map(b => `<div class="chainrow${b === near ? ' near' : ''}"><span class="line">${esc(strikeText(b))}${b === near ? ' <span class="nowmark" title="nearest to the price now">◀</span>' : ''}</span>${odd(b, 'up')}${odd(b, 'down')}</div>`).join('');
-    return `<div class="chain"><div class="chainhead"><div class="tname">${tickerBadge(b0.ticker, 26)}<span><b>${esc(b0.ticker)}</b>${now != null ? ` <span class="muted small">now ${esc(now.toLocaleString('en-US', { maximumFractionDigits: 2 }))}</span>` : ''}</span></div><div class="muted small">closes ${esc(closeText(b0.close))}</div></div>
+    return `<div class="chain"><div class="chainhead"><div class="tname">${tickerBadge(b0.ticker, 26)}<span><b>${esc(b0.ticker)}</b>${now != null ? ` <span class="muted small">${live != null ? 'live' : `oracle ${roundTime(m)}`} ${esc(now.toLocaleString('en-US', { maximumFractionDigits: 2 }))}</span>` : ''}</span></div><div class="muted small">closes ${esc(closeText(b0.close))}</div></div>
       <div class="chainrow chaintop muted small"><span>At or above</span><span>▲ Up</span><span>▼ Down</span></div>${rows}
       ${list.every(b => b.quoting === false) ? '<p class="muted small" data-s="mt6">The market maker has stopped quoting (it stops 20 minutes before the close): only other traders\' offers are left.</p>' : ''}</div>`;
   }).join('');
   return `<div class="card"><h2>Up or down?</h2>${tables || '<p class="muted small">No open bets in this group now.</p>'}
-    <p class="muted small" data-s="mt10">Pick a line and a side. The number is the price of one token in zUSDC: it pays 1 zUSDC if the price at the close is at or above the line (Up) or below it (Down), nothing if not. ${VOID_NOTE}</p></div>${yourBets(m)}`;
+    <p class="muted small" data-s="mt10">Pick a line and a side. The number is the price of one token in zUSDC: it pays 1 zUSDC if the oracle's price at the close is at or above the line (Up) or below it (Down), nothing if not. Live: the price the Up / Down quotes follow, updated every minute. ${VOID_NOTE}</p></div>${yourBets(m)}`;
 }
 // how long an order sent from here has waited for its block (a block takes about 4 minutes; Cancel needs it in a block)
 const waitText = at => { const m = Math.floor((Date.now() - at) / 60000);

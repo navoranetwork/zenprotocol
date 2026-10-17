@@ -11,6 +11,13 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.40.2 — 2026-10-17
+
+### Fixed
+- Up / Down tables: the price in the header is the market service's live price ("live", every minute), the one the
+  quotes follow; without it, the oracle's round with its time ("oracle 13:00"). The note says the result uses the
+  oracle's price at the close.
+
 ## 0.40.1 — 2026-10-17
 
 ### Changed

@@ -47,7 +47,8 @@ export function marketOf(row, ctx = {}) {
     result: row?.result === 'bull' || row?.result === 'bear' ? row.result : null,
     settlePrice: row?.settlePrice == null ? null : Number(row.settlePrice), contract: HEX(72).test(cid) ? cid : null,
     book: { up: sideBook(row?.book?.up), down: sideBook(row?.book?.down) },
-    fair: price01(row?.fair), quoting: row?.quoting === false ? false : row?.quoting === true ? true : null };
+    fair: price01(row?.fair), quoting: row?.quoting === false ? false : row?.quoting === true ? true : null,
+    spot: Number.isFinite(Number(row?.spot)) && Number(row?.spot) > 0 && row?.spot !== null ? Number(row.spot) : null };   // the market service's live price (every minute)
   if (!ASSET.test(m.bull) || !ASSET.test(m.bear) || m.bull === m.bear) throw new Error('market: bad position tokens');
   if (ctx.collateral && String(ctx.collateral).toLowerCase() !== m.collateral) throw new Error('market: other collateral');
   return m;
