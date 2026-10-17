@@ -249,11 +249,15 @@ async function betRedeem(b, side) {
   S.modal = { type: 'dex-confirm', kind: 'redeem', key: b.bull + side, prepared, lines: [[b.status === 'void' ? 'Tokens (void market)' : 'Winning tokens', tokenAmount(b.collateral, n)], ['You get', withUnit(b.collateral, pay)], b.status === 'void' ? ['Why', 'No close price within 24 hours: 0.50 per token'] : ['Close price', b.settlePrice == null ? '–' : b.settlePrice.toLocaleString('en-US', { maximumFractionDigits: 3 })]] }; S.error = ''; render();
 }
 
+const DEX_FIRST = 10;
 function dexView(m, base, loading) {
   if (!m?.dex) return `<div class="card"><p class="muted small">${loading ? 'Loading…' : 'This site has no Dex.'}</p></div>`;
   const me = myPub(), spendable = canSpend(S.open.get(active().id));
   const list = (m.orders || []).map(r => { try { return orderOf(r); } catch { return null; } }).filter(Boolean);
-  const rows = list.map(o => {
+  // Up / Down orders are bought and sold in the Oracle tab (the markets table): not repeated here
+  const isBet = o => !!(S.betInfo?.[o.underAsset] || S.betInfo?.[o.pairAsset]), others = list.filter(o => !isBet(o)), betCount = list.length - others.length;
+  const shown = S.keep?.dexallFull ? others : others.slice(0, DEX_FIRST);
+  const rows = shown.map(o => {
     const p = dexPending.get(o.tx), mineO = myOrder(o, me), who = mineO ? 'Your order' : (() => { const n = contractNames[encodeAddress(Uint8Array.from(pkHashOf(o.maker).match(/../g).map(h => parseInt(h, 16))), net())]; return n ? esc(n) : 'Another trader'; })();
     const btn = p ? `<span class="muted small">${p === 'taking' ? 'Being taken…' : 'Being cancelled…'}</span>` : !spendable ? '' : mineO
       ? `<button class="chip mini" data-act="dex-cancel" data-tx="${esc(o.tx)}">Cancel</button>` : `<button class="btn primary mini" data-act="dex-take" data-tx="${esc(o.tx)}">Take</button>`;
@@ -271,6 +275,8 @@ function dexView(m, base, loading) {
   return `${loading ? '<div class="card"><p class="muted small">Loading…</p></div>' : bookView(m, me, spendable)}
     ${mineRows ? `<div class="card"><h2>Your orders</h2><div class="list">${mineRows}</div></div>` : ''}
     <details class="card how" data-keep="dexall" ${S.keep?.dexall ? 'open' : ''}><summary>All orders and other pairs</summary><div class="list" data-s="mt10">${rows || '<p class="muted small">No open orders.</p>'}</div>
+      ${others.length > shown.length ? `<button class="btn small" data-act="dexall-more" data-s="mt10">Show all ${others.length} orders</button>` : ''}
+      ${betCount ? `<p class="muted small" data-s="mt10">${betCount} Up / Down bet order${betCount === 1 ? '' : 's'}: bought and sold in the Oracle tab <button type="button" class="chip mini" data-mtab="oracle">Open</button></p>` : ''}
       <p class="muted small" data-s="mt10">Taking needs no signature from the maker; you can take part of an order.</p>
     ${spendable && want ? `<form data-form="dex-make" data-s="mt10"><h2>Advanced: trade any two tokens</h2><p class="muted small">Offer an amount of one token for an amount of another, at your own rate. For ZP and zUSDC the order book above is easier; Up / Down bets are bought and sold in the Oracle tab.</p>
       <div class="field"><span>You give</span>${pick('dgive', give)}<input name="give" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(S.draft.dgamt || '')}"><span class="muted small">Available ${esc(tokenAmount(give, has?.spendable || 0n))} ${esc(unitOf(give))}</span></div>
@@ -1967,6 +1973,7 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'cc-family') { const f = S.engine?.families?.find(x => x.id === t.dataset.id); if (!f) return; S.cc = { step: 'form', kind: 'make', family: f, values: {} }; return go('create'); }
     if (act === 'cc-open') return go('create');
+    if (act === 'dexall-more') { (S.keep ||= {}).dexallFull = true; return render(); }
     if (act === 'cc-discard') { saveCc(null); S.cc = null; return render(); }
     if (act === 'cc-ask') { S.cc = { step: 'ask', kind: 'ask', text: '' }; return go('create'); }
     if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) { i.value = t.dataset.v; i.classList.remove('invalid'); syncBlockHint(i); } return; }

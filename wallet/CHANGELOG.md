@@ -11,6 +11,12 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.40.0 — 2026-10-17
+
+### Changed
+- Dex, All orders and other pairs: Up / Down bet orders are left to the Oracle tab (a line says how many, with a button
+  to open it); the list shows the first 10 orders, Show all for the rest.
+
 ## 0.39.1 — 2026-10-17
 
 ### Fixed

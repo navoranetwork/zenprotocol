@@ -46,7 +46,11 @@ with sync_playwright() as p:
     pg.click('button[data-mtab=dex]'); pg.wait_for_timeout(800); pg.click('details.how summary'); pg.wait_for_timeout(200)
     chips = ' '.join(e.inner_text() for e in pg.query_selector_all('form[data-form=dex-make] .tokchip'))
     ok('Advanced: trade any two tokens' in pg.inner_text('main') and ' Up' not in chips and ' Down' not in chips and 'zUSDC' in chips, 'the Dex tab\'s advanced form leaves Up / Down tokens out')
-    pg.click('button[data-mtab=oracle]'); pg.wait_for_selector('.chain .chainrow', timeout=15000)
+    lst = pg.inner_text('details.how .list')
+    ok(' Up ' not in lst + ' ' and ' Down ' not in lst + ' ' and 'bet order' in pg.inner_text('details.how'), 'the Dex list leaves Up / Down orders to the Oracle tab and says how many')
+    pg.click('details.how button[data-mtab=oracle]'); pg.wait_for_selector('.chain .chainrow', timeout=15000)
+    ok(pg.query_selector('button[data-mtab=oracle].on') is not None, 'its Open button switches to the Oracle tab')
+
 
     # badges: coin logos, flags for currencies, plain discs for stocks and metals
     shots = []
