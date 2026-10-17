@@ -50,7 +50,7 @@ The collateral of all markets is one asset in one wallet, so the pool of each ma
 | --- | --- | --- | --- | --- |
 | Buy | signed | Position ("Bull" / "Bear"), MinShares | x collateral | s shares and x Paid to the sender; qSide += s, Pool += x |
 | Sell | signed | Position, Shares (n), MinOut | n shares, and P ≥ out Paid | out collateral to the sender; P − out Paid come back; qSide −= n, Pool −= out |
-| Settle | anyone | as FixedPayout, plus Sigs: the round's committee signatures | none | records the winner; pays the fee (above) to the signers and the operator; Pool −= fee |
+| Settle | anyone | as FixedPayout | none | records the winner; pays the fee (above) to the 5 members and the operator; Pool −= fee |
 | Void | anyone | as FixedPayout | none | Void after 24 h without Settle; no fee |
 | Redeem | signed | Position (the winner) | n winning shares | `floor(n × Pool / qWin)`, with Pool already net of the fee; qWin −= n, Pool −= that |
 | Refund | signed | none | p Paid | after Void, or after Settle when the winning side has no shares: p collateral; Pool −= p |
@@ -99,17 +99,16 @@ The state of a market is qUp, qDown and pool.
 - **No fee on Buy, Sell or Refund.** A void market, or a settled one whose winning side has no shares, pays everyone
   back in full.
 - **The split, fixed in the contract source** (a change means a new contract version, for new markets):
-  - **Committee 60%,** in equal shares to the members whose signatures made the settling round.
-    - How: the 5 member keys are fixed in the source. Settle carries the round's signatures over the commit hash,
-      `(index, signature)` for each signer, at least 3.
-    - The contract verifies each with `Zen.Crypto.verify`, 800 gas, so up to 4,000 gas for 5. It pays
-      `floor(fee × 60% / n)` to each valid signer's key.
-    - This works without the Oracle contract reporting its signers, which it cannot pass through an attestation
-      token.
-    - Who sends Settle chooses which signatures to include, and could leave a member out. The bets service includes
-      every signature the round has, and the members can check that in the log.
-    - **The nearest alternative,** if verifying in Settle is judged too heavy: equal shares to all 5 members, absent
-      or not.
+  - **Committee 60%, in equal shares to all 5 members** of the market's committee, on every Settle, whoever signed
+    the round.
+    - The members' payout keys are fixed in the source with the committee: a new committee means a new contract
+      version.
+    - Each gets `floor(fee × 60% / 5)`.
+    - A split by signers was dropped (Alon, 2026-10-17). Every member sees all 5 signatures during a round, so any
+      member could send Settle first with only 3 (its own plus two) and take a third of the committee's share instead
+      of a fifth.
+    - **Reliability is handled in the open:** the log records which members signed each round, from the
+      CommitteeOracle's Commit. An unreliable member is replaced through a new committee version.
   - **Operator 40%,** to the operator's address in the source, plus every rounding remainder, so nothing is lost.
   - **CGP 0%,** a parameter in the source (`CGP_BPS = 0`).
 - **The CGP rule:**
@@ -141,7 +140,8 @@ The state of a market is qUp, qDown and pool.
 > The result is published about 15 minutes after the close, once Ethereum has finalized it. If no valid settlement
 > price is published within 24 hours, the market is void and every bettor gets back what they paid.
 > Trading stops 30 minutes before the close.
-> **Fee:** 2% of the pool at settlement, taken only from the losing side's money and never so much that a winning share
+> **Fee:** 2% of the pool at settlement, taken only from the losing side's money (60% to the oracle committee's 5
+> members, 40% to the operator) and never so much that a winning share
 > pays less than 1. There is no fee on buying, selling or refunds, and a void market pays everyone back in full.
 
 **Testnet:** the same, except that the settlement price is the hourly round of the testnet oracle, the median of
@@ -658,7 +658,7 @@ refunds start from the state after C.
   }
  },
  {
-  "name": "settle: Up wins, 3 signers (fee 2% of the pool)",
+  "name": "settle: Up wins (fee 2% of the pool, 60% split over all 5 members)",
   "op": "settle",
   "in": {
    "state": {
@@ -668,12 +668,11 @@ refunds start from the state after C.
     "mUp": "21000000",
     "mDown": "11000001"
    },
-   "winner": "up",
-   "signers": "3"
+   "winner": "up"
   },
   "out": {
    "fee": "640000",
-   "committeeEach": "128000",
+   "committeeEach": "76800",
    "cgp": "0",
    "operator": "256000",
    "refundsOnly": false,
@@ -687,7 +686,7 @@ refunds start from the state after C.
   }
  },
  {
-  "name": "settle: Down wins, 5 signers",
+  "name": "settle: Down wins",
   "op": "settle",
   "in": {
    "state": {
@@ -697,8 +696,7 @@ refunds start from the state after C.
     "mUp": "21000000",
     "mDown": "11000001"
    },
-   "winner": "down",
-   "signers": "5"
+   "winner": "down"
   },
   "out": {
    "fee": "640000",
@@ -726,12 +724,11 @@ refunds start from the state after C.
     "mUp": "20000000",
     "mDown": "300000"
    },
-   "winner": "up",
-   "signers": "3"
+   "winner": "up"
   },
   "out": {
    "fee": "300000",
-   "committeeEach": "60000",
+   "committeeEach": "36000",
    "cgp": "0",
    "operator": "120000",
    "refundsOnly": false,
@@ -755,12 +752,11 @@ refunds start from the state after C.
     "mUp": "30000000",
     "mDown": "2000000"
    },
-   "winner": "up",
-   "signers": "3"
+   "winner": "up"
   },
   "out": {
    "fee": "400802",
-   "committeeEach": "80160",
+   "committeeEach": "48096",
    "cgp": "0",
    "operator": "160322",
    "refundsOnly": false,
@@ -784,8 +780,7 @@ refunds start from the state after C.
     "mUp": "0",
     "mDown": "5000000"
    },
-   "winner": "up",
-   "signers": "3"
+   "winner": "up"
   },
   "out": {
    "fee": "0",
@@ -915,7 +910,8 @@ For each market:
 - the payout per winning share;
 - the redeems paid, the refunds paid, and the dust left;
 - the service's own result: its 1 + 1 back, minus 2;
-- the fee: the total, each signer's share, the operator's and the CGP's.
+- the fee: the total, each member's share, the operator's and the CGP's;
+- which members signed the settling round (from the Commit), for the reliability record.
 
 **Monthly lines** in the same endpoint: the operator's fee income for the month in zUSDC, next to the $650 budget, with
 the count of consecutive months above it. Anyone can see how far the

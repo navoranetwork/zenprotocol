@@ -43,17 +43,17 @@ export function sell(s, side, shares, minOut = 0n) {
 
 // the settlement fee (docs/BETS-DPM.md, "Fees"): 2% of the pool, taken only from the losing side's money, and never so
 // much that a winning share pays less than 1: fee = min(pool x 200 / 10000, mLose, pool - qWin). None when the winning
-// side has no shares (refunds in full). The split, fixed in the contract: 60% to the committee members whose
-// signatures the Settle carries (equal shares, rounded down), CGP 0 bps for now, the operator the rest (40% plus the
-// rounding), so nothing is lost.
-export const FEE_BPS = 200n, COMMITTEE_BPS = 6000n, CGP_BPS = 0n;
-export function settle(s, winner, signers = 3n) {
+// side has no shares (refunds in full). The split, fixed in the contract: 60% in equal shares to all MEMBERS committee
+// members (whoever signed: a signer-based split would let a member settle with 3 signatures and take a third), CGP
+// 0 bps for now, the operator the rest (40% plus the rounding), so nothing is lost.
+export const FEE_BPS = 200n, COMMITTEE_BPS = 6000n, CGP_BPS = 0n, MEMBERS = 5n;
+export function settle(s, winner) {
   const [qWin] = pick(s, winner), [, mLose] = money(s, winner);
   if (qWin === 0n) return { fee: 0n, committeeEach: 0n, cgp: 0n, operator: 0n, refundsOnly: true, state: s };
   const cap = s.pool - qWin, byPool = s.pool * FEE_BPS / 10000n;
   const fee = [byPool, mLose, cap].reduce((x, y) => (x < y ? x : y));
-  const committeeEach = signers > 0n ? fee * COMMITTEE_BPS / 10000n / signers : 0n, cgp = fee * CGP_BPS / 10000n;
-  const operator = fee - committeeEach * signers - cgp;
+  const committeeEach = fee * COMMITTEE_BPS / 10000n / MEMBERS, cgp = fee * CGP_BPS / 10000n;
+  const operator = fee - committeeEach * MEMBERS - cgp;
   return { fee, committeeEach, cgp, operator, refundsOnly: false, state: { ...s, pool: s.pool - fee } };
 }
 

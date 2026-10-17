@@ -14,7 +14,7 @@ test('the shared vectors of docs/BETS-DPM.md', () => {
     const a = big(v.in);
     const got = v.op === 'isqrt' ? { r: isqrt(a.n) } : v.op === 'buy' ? buy(a.state, a.side, a.x, a.minShares ?? 0n)
       : v.op === 'sell' ? sell(a.state, a.side, a.shares, a.minOut ?? 0n) : v.op === 'redeem' ? redeem(a.state, a.side, a.n)
-      : v.op === 'settle' ? settle(a.state, a.winner, a.signers)
+      : v.op === 'settle' ? settle(a.state, a.winner)
       : v.op === 'refund' ? refund(a.state, a.p) : { ...prices(a.state), payoutUp: payoutPerShare(a.state, 'up'), payoutDown: payoutPerShare(a.state, 'down'), payoutUpNet: payoutPerShareNet(a.state, 'up'), payoutDownNet: payoutPerShareNet(a.state, 'down') };
     assert.deepEqual(S(got), v.out, v.name);
   }
@@ -47,10 +47,11 @@ test('solvency: after any sequence (the 1 + 1 opening included), the pool pays e
     // Settle: the fee is at most 2% of the pool and the losing side's money, a winning share still pays at least 1, the
     // split adds up; then the winner redeems in random pieces and never gets more than the pool net of the fee
     const win = rnd(2) ? 'up' : 'down', qWin = win === 'up' ? s.qUp : s.qDown, mLose = win === 'up' ? s.mDown : s.mUp;
-    const f = settle(s, win, 3n);
+    const f = settle(s, win);
     if (qWin > 0n) {
       assert.ok(f.fee <= s.pool * 2n / 100n && f.fee <= mLose && s.pool - f.fee >= qWin);
-      assert.equal(f.committeeEach * 3n + f.cgp + f.operator, f.fee);
+      assert.equal(f.committeeEach * 5n + f.cgp + f.operator, f.fee);
+      assert.ok(f.committeeEach * 5n <= f.fee * 60n / 100n && f.operator >= f.fee * 40n / 100n);
     }
     let left = qWin, st = f.state, out = 0n;
     while (left > 0n) { const n = left < 3n ? left : 1n + rnd(Number(left)); const r = redeem(st, win, n); st = r.state; out += r.out; left -= n; }
