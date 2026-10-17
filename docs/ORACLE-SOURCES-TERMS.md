@@ -79,6 +79,9 @@ with attribution.
 6. **The markets themselves** (outside the data question, but for the same review): whether Up/Down markets on
    prices are betting or financial instruments in the jurisdictions the service is offered in, what that requires,
    and which users must be excluded.
+   Within this question: **publishing the market's chance** (the implied probability from the bets) on the site and
+   in the wallet: whether it counts as a forecast, advice or promotion, and what wording it needs. The planned label
+   is "Market's chance", "from how participants have bet so far, not our forecast", shown only above a minimum pool.
 7. **Attribution in the product:** the exact source lines the wallet, the site and the explorer must show for each
    ticker.
 

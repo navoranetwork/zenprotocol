@@ -103,6 +103,19 @@ The state of a market is qUp, qDown and pool.
 **Testnet:** the same, except that the settlement price is the hourly round of the testnet oracle, the median of
 Coinbase, Binance and CoinGecko, at the close.
 
+### The chance shown to users
+
+- **The label:** "Market's chance". Under it, one line: *"From how participants have bet so far. It is not our
+  forecast."*
+- **The value:** the implied probability `q_side² / (qUp² + qDown²)`, as a percentage, rounded to whole percent.
+- **Next to it, the pool:** "based on 40 zUSDC".
+- **Below a minimum pool, no percentage.** Instead: "Not enough bets yet".
+  - The minimum is **100 zUSDC on mainnet and 10 on the testnet**.
+  - The service sets it (`BETS_MIN_POOL_FOR_CHANCE`). The API gives `minPoolForChance` and `chanceShown` per market,
+    so the wallet and the site apply the same rule.
+  - The service's 1 + 1 opening counts towards the pool like any bet.
+- **The price per share** (0.707 at 50/50) is shown only on the buy screen, as "price per share", never as a chance.
+
 ## The explorer API
 
 `GET /explorer/api/bets/markets`: each market of the new contract has a `pool` object. Amounts are strings in base
@@ -112,7 +125,8 @@ units; the other numbers are floats:
   "contract": "ctzn1…", "qUp": "26095976", "qDown": "18520261", "pool": "32000001",
   "price": { "up": 0.8155, "down": 0.5788 }, "prob": { "up": 0.6650, "down": 0.3350 },
   "payoutPerShare": { "up": 1.2262, "down": 1.7278 },
-  "cutoff": 1792272600000, "trading": true, "volume": "41000000", "refundable": false
+  "cutoff": 1792272600000, "trading": true, "volume": "41000000", "refundable": false,
+  "minPoolForChance": "10000000", "chanceShown": true
 },
 "dexPrice": { "value": 81962.41, "kind": "twap15", "block": 23581234, "time": 1792270800000, "chain": "ethereum",
               "source": "Uniswap v3 WBTC/USDC, cbBTC/USDC; 15-min TWAP" },
@@ -125,6 +139,8 @@ units; the other numbers are floats:
   CoinGecko do not allow redistribution (docs/ORACLE-SOURCES-TERMS.md). On the testnet `dexPrice` is null and the
   oracle's current sources stay.
 - The example is the state after C (the vectors). The quote is C's buy itself: Up 10 after the opening, A and B.
+- **`chanceShown`** is `pool ≥ minPoolForChance`. While it is false, `prob` is still given (for the quote screen), but the
+  wallet and the site show "Not enough bets yet" instead of a percentage.
 - **The wallet shows:** Bull and Bear as shares, and Paid as "refundable if void". It hides the records and markers.
 - **`cutoff` is as is:** the wallet stops offering trades 5 minutes earlier.
 
