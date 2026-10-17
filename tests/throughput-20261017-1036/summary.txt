@@ -1,0 +1,3 @@
+[2026-10-17 10:36] throughput comparison: rates 300,600,1500,3000,6000,15000 /min x 3 runs, shuffled (seed 1), 6 min steps (1 min warm-up); Release + LOCALCHAIN, 10 s blocks
+[2026-10-17 10:36] A: packages from the previous A image (zen-tput-a-packages)
+[2026-10-17 10:36] B: 41f52f76 docs/CGP-V1-PLAN.md: CGP and voting on V1 contracts, plan for; load tool: zenprotocol 3c1b00ad ZP Wallet 0.40.2: live price in the Up / 
