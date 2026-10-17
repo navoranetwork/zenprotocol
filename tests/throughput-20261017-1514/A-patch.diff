@@ -1,0 +1,220 @@
+diff -ru a0/src/Blockchain/BlockHandler.fs a/src/Blockchain/BlockHandler.fs
+--- a0/src/Blockchain/BlockHandler.fs	2026-10-17 15:14:15.130491056 +0000
++++ a/src/Blockchain/BlockHandler.fs	2026-10-17 15:14:15.148490988 +0000
+@@ -83,7 +83,7 @@
+     }
+ 
+ /// Undo blocks from current state in order to get the state of the forkblock
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let undoBlocks
+ #else
+ let private undoBlocks
+diff -ru a0/src/Blockchain/Tally_Voting.fs a/src/Blockchain/Tally_Voting.fs
+--- a0/src/Blockchain/Tally_Voting.fs	2026-10-17 15:14:15.130491056 +0000
++++ a/src/Blockchain/Tally_Voting.fs	2026-10-17 15:14:15.148490988 +0000
+@@ -135,7 +135,7 @@
+         else
+             byte ((bigint (uint64 l) * wl + bigint (uint64 h) * wh) / (wl + wh))
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let weightedMedianTest = weightedMedian
+ #endif
+ 
+diff -ru a0/src/Cli/Program.fs a/src/Cli/Program.fs
+--- a0/src/Cli/Program.fs	2026-10-17 15:14:15.131491052 +0000
++++ a/src/Cli/Program.fs	2026-10-17 15:14:15.148490988 +0000
+@@ -75,7 +75,7 @@
+ type Arguments =
+     | [<AltCommandLine("-p");UniqueAttribute>] Port of port:uint16
+     | [<AltCommandLine("-t")>] Test
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     | Local of uint16
+ #endif
+     | [<CliPrefix(CliPrefix.None)>] Balance of ParseResults<NoArgs>
+@@ -107,7 +107,7 @@
+     interface IArgParserTemplate with
+         member arg.Usage =
+             match arg with
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+             | Local _ -> "use local"
+ #endif
+             | Port _ -> "port of zen-node API"
+@@ -171,7 +171,7 @@
+     List.iter (function
+         | Port p -> getUri <- getUri' (string p)
+         | Test -> getUri <- getUri' "31567"
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         | Local idx -> getUri <- getURL (int idx)
+ #endif
+         | _ -> ()
+diff -ru a0/src/Consensus/Chain.fs a/src/Consensus/Chain.fs
+--- a0/src/Consensus/Chain.fs	2026-10-17 15:14:15.134491041 +0000
++++ a/src/Consensus/Chain.fs	2026-10-17 15:14:15.176490883 +0000
+@@ -92,7 +92,7 @@
+ let localParameters = {
+     testParameters with
+         proofOfWorkLimit=Difficulty.uncompress 0x20fffffful;
+-        blockInterval=1000UL * 60UL;
++        blockInterval=10000UL;   // throughput comparison (lab-throughput.sh)
+         name="local"
+         genesisHashHash =
+             localGenesisHash
+diff -ru a0/src/Consensus/EMA.fs a/src/Consensus/EMA.fs
+--- a0/src/Consensus/EMA.fs	2026-10-17 15:14:15.135491037 +0000
++++ a/src/Consensus/EMA.fs	2026-10-17 15:14:15.180490868 +0000
+@@ -37,7 +37,7 @@
+     let solveTime = (bigint newDelayed.[l-1]) - (bigint newDelayed.[l-2])     // may be negative
+     let unclampedNextTarget = nextDifficultyTarget chain.blockInterval chain.smoothingFactor solveTime ema.difficulty
+     let nextTarget = clamp  (Hash.toBigInt <| Difficulty.maximum)   // maximum difficulty => low target
+-                            (Hash.toBigInt <| chain.proofOfWorkLimit)   // high target
++                            (Hash.toBigInt <| (if chain.name = "local" then Difficulty.uncompress 0x1f0bfbd5ul else chain.proofOfWorkLimit))   // high target
+                             unclampedNextTarget
+     let nextDifficulty = Difficulty.compress <| Hash.fromBigInt nextTarget
+     {ema with delayed = newDelayed; difficulty = nextDifficulty}
+diff -ru a0/src/Consensus/TransactionValidation.fs a/src/Consensus/TransactionValidation.fs
+--- a0/src/Consensus/TransactionValidation.fs	2026-10-17 15:14:15.135491037 +0000
++++ a/src/Consensus/TransactionValidation.fs	2026-10-17 15:14:15.169490909 +0000
+@@ -131,7 +131,7 @@
+         }) (Ok acs)
+ }
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let checkAmounts (txSkeleton:TxSkeleton.T) =
+ #else
+ let private checkAmounts (txSkeleton:TxSkeleton.T) =
+@@ -191,7 +191,7 @@
+     else
+         Ok tx
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let checkStructure =
+ #else
+ let private checkStructure =
+diff -ru a0/src/Infrastructure/ZFStar.fs a/src/Infrastructure/ZFStar.fs
+--- a0/src/Infrastructure/ZFStar.fs	2026-10-17 15:14:15.138491026 +0000
++++ a/src/Infrastructure/ZFStar.fs	2026-10-17 15:14:15.161490939 +0000
+@@ -95,13 +95,13 @@
+         sprintf "%A\n%A" errorResult error)
+     |> Result.map (fun _ -> File.ReadAllText outputFile)
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ let mutable unitTesting = false
+ #endif
+ 
+ let initOutputDir moduleName =
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     let oDir =
+         if unitTesting then
+             Platform.workingDirectory / "../../test-contracts"
+@@ -122,7 +122,7 @@
+     let elaboratedFile = changeExtention ".fst" file
+     let extractedFile = changeExtention ".fs" file
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     if unitTesting && File.Exists extractedFile then
+         File.ReadAllText extractedFile
+         |> Ok
+@@ -148,7 +148,7 @@
+                 ]
+             |> wrapFStar "extract" extractedFile)
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "extract output directory: {dir}"
+         >> setField "dir" oDir
+         |> Log.debug
+@@ -183,7 +183,7 @@
+         with _ as ex ->
+             Exception.toError "limits" ex
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "calculate metrics output: {file}"
+         >> setField "file" file
+         |> Log.debug
+@@ -197,7 +197,7 @@
+     let hintsFile = oDir / changeExtention ".fst.hints" file
+     let elaboratedFile = changeExtention ".fst" file
+ 
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     if unitTesting && File.Exists hintsFile then
+         File.ReadAllText hintsFile
+         |> Ok
+@@ -217,7 +217,7 @@
+                  ]
+             |> wrapFStar "record hints" hintsFile)
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "record hints output directory: {dir}"
+         >> setField "dir" oDir
+         |> Log.debug
+@@ -261,7 +261,7 @@
+         <@> ( Hints.total_num_queries
+               >> uint32 )
+     finally
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+         eventX "total queries output : {file}"
+         >> setField "file" file
+         |> Log.debug
+diff -ru a0/src/Node/Program.fs a/src/Node/Program.fs
+--- a0/src/Node/Program.fs	2026-10-17 15:14:15.140491018 +0000
++++ a/src/Node/Program.fs	2026-10-17 15:14:15.174490890 +0000
+@@ -26,7 +26,7 @@
+     | Ip of string
+     | Wipe of full:Wipe option
+     | Miner of threads:int option
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+     // non-zero indexed nodes act as outbound nodes which connect to the zero-indexed inbound node
+     | Local of int
+ #endif
+@@ -56,7 +56,7 @@
+                 | ConnectWallet _ -> "connect the new desktop wallet"
+                 | Origin _ -> "add CORS origin"
+                 | Remote -> "automatically configure for remote usages"
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+                 | Local _ -> "local mode, used for debugging. specify zero value for host, other for client"
+ #endif
+ 
+@@ -86,7 +86,7 @@
+         origin: Http.Origin
+         isRemote: bool
+     }
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+ module Local =
+     let addGenesis (config:MainConfig) =
+         if config.chain = Chain.Local then
+@@ -187,7 +187,7 @@
+                 | None ->
+                     origin <- Http.No
+             | Test _ -> ()
+-#if DEBUG
++#if DEBUG || LOCALCHAIN
+             | Local idx ->
+                 chain <- Chain.Local
+                 config.dataPath <- sprintf "./data/local/%i" idx
+@@ -329,7 +329,7 @@
+     use addressDbActor  = Init.addressDb config
+ 
+     use minerActor      = Init.miner config
+-#if DEBUG        
++#if DEBUG || LOCALCHAIN
+     Local.addGenesis config
+ #endif
+ 
