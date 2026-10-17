@@ -871,7 +871,7 @@ function myContractsCard() {
       ${ended ? '' : `<div class="row"><button class="btn small" data-act="cc-open-mine" data-addr="${esc(addr)}">Open</button>${i >= 0 ? `<button class="btn small ${soon ? 'accent' : ''}" data-act="extend" data-i="${i}">Extend</button>` : ''}</div>`}</div>`;
   }).join('');
   return `<div class="card"><h2>My contracts</h2><div class="mcs">${made ? `<div class="mc"><div class="between"><b>${esc(c.family ? famName(c.family) : 'Described contract')}</b><span class="muted small">Made, not active</span></div>
-      <div class="muted small">Checked and tested · kept for a day</div><div class="row"><button class="btn small" data-act="cc-open">Review</button><button class="btn small primary" data-act="cc-activate-open">Activate</button></div></div>` : ''}${rows}</div></div>`;
+      <div class="muted small">Checked and tested · kept for a day unless activated or discarded</div><div class="row"><button class="btn small" data-act="cc-open">Review</button><button class="btn small primary" data-act="cc-activate-open">Activate</button><button class="btn small" data-act="cc-discard">Discard</button></div></div>` : ''}${rows}</div></div>`;
 }
 const dateIn = blocks => { const m = blocks * BLOCK_MINUTES; return m < 90 ? `${Math.max(1, Math.round(m))} min` : m < 2880 ? `${Math.round(m / 60)} hours` : m < 60 * 24 * 60 ? `${Math.round(m / 1440)} days` : `${Math.round(m / 43200)} months`; };
 function refusalHtml(chk) {
@@ -1967,6 +1967,7 @@ $app.addEventListener('click', async e => {
     }
     if (act === 'cc-family') { const f = S.engine?.families?.find(x => x.id === t.dataset.id); if (!f) return; S.cc = { step: 'form', kind: 'make', family: f, values: {} }; return go('create'); }
     if (act === 'cc-open') return go('create');
+    if (act === 'cc-discard') { saveCc(null); S.cc = null; return render(); }
     if (act === 'cc-ask') { S.cc = { step: 'ask', kind: 'ask', text: '' }; return go('create'); }
     if (act === 'cc-fill') { const i = $app.querySelector(`input[name="p_${t.dataset.name}"]`); if (i) { i.value = t.dataset.v; i.classList.remove('invalid'); syncBlockHint(i); } return; }
     if (act === 'cc-again') { S.cc = { ...S.cc, step: S.cc.kind === 'ask' ? 'ask' : 'form' }; S.error = ''; return render(); }

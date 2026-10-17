@@ -11,6 +11,11 @@ settings. 1.0.0 is kept for the release that runs on mainnet with V1 contracts a
 
 Nothing yet.
 
+## 0.39.1 — 2026-10-17
+
+### Fixed
+- My contracts: a contract made but not activated can be discarded (it stayed for up to a day with no way to remove it).
+
 ## 0.39.0 — 2026-10-17
 
 ### Added
