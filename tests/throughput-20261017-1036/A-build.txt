@@ -1,0 +1,256 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tput
+#1 transferring dockerfile: 2.42kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/zen-tput-a-packages:latest
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/mono:6.12
+#3 DONE 0.8s
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 DONE 0.8s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [certs 1/2] FROM docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+#6 resolve docker.io/library/debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 0.0s done
+#6 DONE 0.0s
+
+#7 [stage-1  1/13] FROM docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5
+#7 resolve docker.io/library/mono:6.12@sha256:34d816779b1248b5cfd095770b64ecbaf1798e2aca693a91c11a018dce9c7ad5 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 994.16kB 0.0s done
+#8 DONE 0.0s
+
+#9 FROM docker.io/library/zen-tput-a-packages:latest@sha256:4cc26cd8c07e3ffed07e7136569ba972a49dace15a4cfcd6239232edafabee81
+#9 resolve docker.io/library/zen-tput-a-packages:latest@sha256:4cc26cd8c07e3ffed07e7136569ba972a49dace15a4cfcd6239232edafabee81 0.0s done
+#9 DONE 0.1s
+
+#10 [stage-1  3/13] COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates-current.crt
+#10 CACHED
+
+#11 [certs 2/2] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [stage-1  4/13] RUN cert-sync /etc/ssl/certs/ca-certificates-current.crt > /dev/null  && cp /etc/ssl/certs/ca-certificates-current.crt /etc/ssl/certs/ca-certificates.crt
+#12 CACHED
+
+#13 [stage-1  2/13] RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g; s|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g; /buster-updates/d' /etc/apt/sources.list  && apt-get -o Acquire::Check-Valid-Until=false update  && apt-get install -y --no-install-recommends libgomp1 libstdc++6 liblmdb0 curl unzip  && rm -rf /var/lib/apt/lists/*  && command -v msbuild && command -v fsharpc
+#13 CACHED
+
+#14 [stage-1  5/13] WORKDIR /src
+#14 CACHED
+
+#15 [stage-1  6/13] COPY src ./src
+#15 DONE 0.1s
+
+#16 [stage-1  7/13] COPY .paket ./.paket
+#16 DONE 0.0s
+
+#17 [stage-1  8/13] COPY paket.dependencies paket.lock ./
+#17 DONE 0.0s
+
+#18 [stage-1  9/13] COPY --from=zen-tput-a-packages /src/packages ./packages
+#18 DONE 0.7s
+
+#19 [stage-1 10/13] RUN mono .paket/paket.exe restore  && chmod +x packages/zen_z3_linux/output/z3-linux  && msbuild src/zenprotocol.sln /p:Configuration=Release /p:DefineConstants=LOCALCHAIN /v:minimal  && cp packages/zen_secp256k1_linux/output/libsecp256k1.so /usr/lib/  && test -f src/Node/bin/Release/zen-node.exe  && mkdir -p /zen && cp -r src/Node/bin/Release/. /zen/
+#19 2.422 paket.exe is deprecated and will no longer be published from Paket 12.0 onwards. The .NET tool is now the only supported way to run Paket: dotnet tool install paket
+#19 2.429 Paket version 11.0.1+2a2b5bc904ab6ba68497d7ba5079266bf5c45384
+#19 2.921 Starting full restore process.
+#19 3.007 Downloading System.Reactive.Compatibility 4.1.2
+#19 3.007 Downloading FSharp.Control.Reactive 4.1
+#19 3.007 Downloading System.Security.Cryptography.Encoding 4.3
+#19 3.007 Downloading NetMQ 4.0.0.207-pre
+#19 3.007 Downloading Argu 5.1
+#19 5.171 Download of FSharp.Control.Reactive 4.1 done in 2 seconds. (738 kbit/s, 0 MB)
+#19 5.171 Download of System.Reactive.Compatibility 4.1.2 done in 2 seconds. (77 kbit/s, 0 MB)
+#19 5.171 Download of System.Security.Cryptography.Encoding 4.3 done in 2 seconds. (532 kbit/s, 0 MB)
+#19 5.173 Download of Argu 5.1 done in 2 seconds. (1166 kbit/s, 0 MB)
+#19 5.188 Download of NetMQ 4.0.0.207-pre done in 2 seconds. (2098 kbit/s, 0 MB)
+#19 5.355 Downloading System.Reactive.Core 4.1.2
+#19 5.355 Downloading FSharp.Core 4.3.4
+#19 5.356 Downloading AsyncIO 0.1.69
+#19 5.360 Downloading System.Security.Cryptography.Primitives 4.3
+#19 5.371 Downloading Newtonsoft.Json 12.0.1
+#19 5.606 Download of System.Security.Cryptography.Primitives 4.3 done in 246 milliseconds. (2646 kbit/s, 0 MB)
+#19 5.627 Download of System.Reactive.Core 4.1.2 done in 271 milliseconds. (1418 kbit/s, 0 MB)
+#19 5.631 Downloading System.Security.Cryptography.X509Certificates 4.3.2
+#19 5.645 Downloading System.Reactive.Experimental 4.1.2
+#19 5.658 Download of AsyncIO 0.1.69 done in 302 milliseconds. (1898 kbit/s, 0 MB)
+#19 5.686 Downloading Base58Check 0.2
+#19 5.727 Download of FSharp.Core 4.3.4 done in 371 milliseconds. (61658 kbit/s, 2 MB)
+#19 5.799 Download of Newtonsoft.Json 12.0.1 done in 427 milliseconds. (63849 kbit/s, 3 MB)
+#19 5.898 Download of System.Reactive.Experimental 4.1.2 done in 253 milliseconds. (921 kbit/s, 0 MB)
+#19 5.908 Downloading System.Reactive.Interfaces 4.1.2
+#19 5.942 Download of Base58Check 0.2 done in 255 milliseconds. (497 kbit/s, 0 MB)
+#19 5.951 Downloading BouncyCastle 1.8.4
+#19 5.967 Download of System.Security.Cryptography.X509Certificates 4.3.2 done in 335 milliseconds. (8691 kbit/s, 0 MB)
+#19 6.025 Downloading System.Threading.Tasks.Extensions 4.5.1
+#19 6.052 Downloading FSharp.Data 3.0
+#19 6.095 Downloading NodaTime 1.3.2
+#19 6.160 Download of System.Reactive.Interfaces 4.1.2 done in 251 milliseconds. (1493 kbit/s, 0 MB)
+#19 6.176 Downloading System.Reactive.Linq 4.1.2
+#19 6.270 Download of BouncyCastle 1.8.4 done in 318 milliseconds. (21608 kbit/s, 0 MB)
+#19 6.323 Downloading CGPContract 0.0.3
+#19 6.374 Download of NodaTime 1.3.2 done in 278 milliseconds. (15292 kbit/s, 0 MB)
+#19 6.411 Download of System.Threading.Tasks.Extensions 4.5.1 done in 385 milliseconds. (2558 kbit/s, 0 MB)
+#19 6.432 Download of System.Reactive.Linq 4.1.2 done in 255 milliseconds. (1479 kbit/s, 0 MB)
+#19 6.436 Downloading NUnit 3.11
+#19 6.449 Downloading System.ValueTuple 4.5
+#19 6.451 Downloading System.Reactive.PlatformServices 4.1.2
+#19 6.529 Download of FSharp.Data 3.0 done in 477 milliseconds. (79105 kbit/s, 4 MB)
+#19 6.704 Download of System.Reactive.PlatformServices 4.1.2 done in 252 milliseconds. (1478 kbit/s, 0 MB)
+#19 6.720 Downloading System.Reactive.Providers 4.1.2
+#19 6.733 Download of System.ValueTuple 4.5 done in 284 milliseconds. (5771 kbit/s, 0 MB)
+#19 6.782 Downloading Zen.FSharp.Compiler.Service 17.0.2
+#19 6.808 Downloading FSharpx.Async 1.13.2
+#19 6.884 Download of NUnit 3.11 done in 448 milliseconds. (73651 kbit/s, 3 MB)
+#19 6.959 Download of CGPContract 0.0.3 done in 636 milliseconds. (185 kbit/s, 0 MB)
+#19 6.968 Downloading FAKE 4.64.13
+#19 6.973 Download of System.Reactive.Providers 4.1.2 done in 252 milliseconds. (1478 kbit/s, 0 MB)
+#19 6.992 Downloading System.Reactive.Runtime.Remoting 4.1.2
+#19 7.111 Download of FSharpx.Async 1.13.2 done in 303 milliseconds. (3217 kbit/s, 0 MB)
+#19 7.127 Downloading FSharpx.Collections 1.17
+#19 7.175 Downloading NUnit.ConsoleRunner 3.9
+#19 7.184 Download of Zen.FSharp.Compiler.Service 17.0.2 done in 401 milliseconds. (87333 kbit/s, 4 MB)
+#19 7.284 Download of System.Reactive.Runtime.Remoting 4.1.2 done in 291 milliseconds. (800 kbit/s, 0 MB)
+#19 7.297 Downloading System.Reactive.Windows.Forms 4.1.2
+#19 7.393 Downloading zen_secp256k1_linux 0.1.0.26-v6ad5cdb42a1a
+#19 7.434 Download of NUnit.ConsoleRunner 3.9 done in 259 milliseconds. (12525 kbit/s, 0 MB)
+#19 7.457 Download of FSharpx.Collections 1.17 done in 329 milliseconds. (5379 kbit/s, 0 MB)
+#19 7.485 Downloading FSharpx.Extras 2.2.1
+#19 7.496 Downloading secp256k1-vc140 0.1.0.16
+#19 7.530 Download of zen_secp256k1_linux 0.1.0.26-v6ad5cdb42a1a done in 136 milliseconds. (10670 kbit/s, 0 MB)
+#19 7.532 Download of System.Reactive.Windows.Forms 4.1.2 done in 235 milliseconds. (992 kbit/s, 0 MB)
+#19 7.543 Downloading System.Reactive.Windows.Threading 4.1.2
+#19 7.544 Downloading zen_secp256k1_osx 0.1.0.26-v6ad5cdb42a1a
+#19 7.619 Download of FAKE 4.64.13 done in 651 milliseconds. (142051 kbit/s, 11 MB)
+#19 7.633 Download of zen_secp256k1_osx 0.1.0.26-v6ad5cdb42a1a done in 88 milliseconds. (9868 kbit/s, 0 MB)
+#19 7.645 Downloading zen_z3_linux 4.5.1.8-v1f29cebd4df
+#19 7.789 Download of FSharpx.Extras 2.2.1 done in 303 milliseconds. (11363 kbit/s, 0 MB)
+#19 7.807 Download of System.Reactive.Windows.Threading 4.1.2 done in 263 milliseconds. (1159 kbit/s, 0 MB)
+#19 7.822 Downloading System.Reflection.Metadata 1.6
+#19 7.829 Downloading FsNetMQ 0.2.8
+#19 7.853 Download of secp256k1-vc140 0.1.0.16 done in 356 milliseconds. (36510 kbit/s, 1 MB)
+#19 8.039 Downloading SpecFlow 2.3.2
+#19 8.106 Download of FsNetMQ 0.2.8 done in 276 milliseconds. (1155 kbit/s, 0 MB)
+#19 8.118 Downloading FsPickler 5.2
+#19 8.162 Download of System.Reflection.Metadata 1.6 done in 339 milliseconds. (20108 kbit/s, 0 MB)
+#19 8.199 Download of zen_z3_linux 4.5.1.8-v1f29cebd4df done in 553 milliseconds. (132747 kbit/s, 8 MB)
+#19 8.237 Downloading System.Runtime 4.3
+#19 8.312 Download of SpecFlow 2.3.2 done in 272 milliseconds. (18992 kbit/s, 0 MB)
+#19 8.396 Download of FsPickler 5.2 done in 277 milliseconds. (23239 kbit/s, 0 MB)
+#19 8.401 Downloading SpecFlow.NUnit 2.3.2
+#19 8.463 Downloading FsUnit 3.4
+#19 8.470 Downloading FParsec 1.0.3
+#19 8.514 Downloading zen_z3_osx 4.5.1.8-v1f29cebd4df6
+#19 8.695 Download of SpecFlow.NUnit 2.3.2 done in 293 milliseconds. (331 kbit/s, 0 MB)
+#19 8.703 Downloading System.Buffers 4.5
+#19 8.717 Download of FsUnit 3.4 done in 253 milliseconds. (1932 kbit/s, 0 MB)
+#19 8.737 Downloading Hopac 0.3.23
+#19 8.776 Download of FParsec 1.0.3 done in 305 milliseconds. (11196 kbit/s, 0 MB)
+#19 8.841 Downloading FsBech32 0.1.5
+#19 8.865 Download of System.Runtime 4.3 done in 628 milliseconds. (92531 kbit/s, 6 MB)
+#19 8.908 Download of zen_z3_osx 4.5.1.8-v1f29cebd4df6 done in 393 milliseconds. (154671 kbit/s, 7 MB)
+#19 8.978 Download of System.Buffers 4.5 done in 274 milliseconds. (3098 kbit/s, 0 MB)
+#19 8.980 Download of FsBech32 0.1.5 done in 139 milliseconds. (870 kbit/s, 0 MB)
+#19 8.986 Downloading FsCheck 3.0.0-alpha4
+#19 9.018 Download of Hopac 0.3.23 done in 280 milliseconds. (17462 kbit/s, 0 MB)
+#19 9.022 Downloading System.Collections.Immutable 1.5
+#19 9.113 Downloading LightningDB 0.10
+#19 9.180 Downloading zen_z3_windows 4.5.1.7-v1f29cebd4df
+#19 9.263 Download of FsCheck 3.0.0-alpha4 done in 277 milliseconds. (20989 kbit/s, 0 MB)
+#19 9.343 Downloading FsCheck.NUnit 3.0.0-alpha4
+#19 9.362 Download of System.Collections.Immutable 1.5 done in 339 milliseconds. (18983 kbit/s, 0 MB)
+#19 9.435 Download of LightningDB 0.10 done in 322 milliseconds. (15185 kbit/s, 0 MB)
+#19 9.460 Downloading System.IO 4.3
+#19 9.502 Download of zen_z3_windows 4.5.1.7-v1f29cebd4df done in 322 milliseconds. (143797 kbit/s, 5 MB)
+#19 9.503 Downloading Logary 4.2.1
+#19 9.607 Download of FsCheck.NUnit 3.0.0-alpha4 done in 263 milliseconds. (1141 kbit/s, 0 MB)
+#19 9.622 Downloading FSharp.Compatibility.OCaml 0.1.14
+#19 9.625 Downloading System.Runtime.CompilerServices.Unsafe 4.5.2
+#19 9.691 Downloading ZFS-Tools 0.0.24
+#19 9.773 Download of System.IO 4.3 done in 313 milliseconds. (17984 kbit/s, 0 MB)
+#19 9.803 Download of Logary 4.2.1 done in 300 milliseconds. (15583 kbit/s, 0 MB)
+#19 9.841 Downloading Microsoft.Extensions.Logging.Abstractions 2.1.1
+#19 9.887 Download of FSharp.Compatibility.OCaml 0.1.14 done in 264 milliseconds. (9570 kbit/s, 0 MB)
+#19 9.920 Downloading FSharp.Compiler.Tools 10.2.1
+#19 9.927 Downloading System.Net.Http 4.3.4
+#19 9.940 Download of ZFS-Tools 0.0.24 done in 249 milliseconds. (1258 kbit/s, 0 MB)
+#19 9.947 Downloading ZFStar 0.0.26
+#19 9.952 Download of System.Runtime.CompilerServices.Unsafe 4.5.2 done in 327 milliseconds. (2562 kbit/s, 0 MB)
+#19 9.981 Downloading System.Security.Cryptography.Algorithms 4.3.1
+#19 10.13 Download of Microsoft.Extensions.Logging.Abstractions 2.1.1 done in 291 milliseconds. (1418 kbit/s, 0 MB)
+#19 10.15 Downloading NBitcoin 4.1.1.72
+#19 10.26 Download of System.Security.Cryptography.Algorithms 4.3.1 done in 276 milliseconds. (11683 kbit/s, 0 MB)
+#19 10.29 Download of System.Net.Http 4.3.4 done in 364 milliseconds. (13640 kbit/s, 0 MB)
+#19 10.34 Download of ZFStar 0.0.26 done in 389 milliseconds. (70163 kbit/s, 3 MB)
+#19 10.36 Downloading System.Net.Requests 4.3
+#19 10.47 Download of FSharp.Compiler.Tools 10.2.1 done in 546 milliseconds. (111475 kbit/s, 7 MB)
+#19 10.60 Download of NBitcoin 4.1.1.72 done in 455 milliseconds. (81037 kbit/s, 4 MB)
+#19 10.64 Downloading Zulib 0.3.43
+#19 10.71 Download of System.Net.Requests 4.3 done in 352 milliseconds. (8697 kbit/s, 0 MB)
+#19 10.87 Downloading System.Reactive 4.1.2
+#19 10.96 Downloading FSharp.Configuration 1.5
+#19 11.16 Download of Zulib 0.3.43 done in 520 milliseconds. (174403 kbit/s, 10 MB)
+#19 11.23 Download of System.Reactive 4.1.2 done in 362 milliseconds. (54076 kbit/s, 2 MB)
+#19 11.26 Download of FSharp.Configuration 1.5 done in 306 milliseconds. (22185 kbit/s, 0 MB)
+#19 11.44 Downloading FSharp.Control.AsyncSeq 2.0.21
+#19 11.71 Download of FSharp.Control.AsyncSeq 2.0.21 done in 266 milliseconds. (7578 kbit/s, 0 MB)
+#19 12.30 Total time taken: 15 seconds
+#19 12.52 Microsoft (R) Build Engine version 16.10.1 for Mono
+#19 12.52 Copyright (C) Microsoft Corporation. All rights reserved.
+#19 12.52 
+#19 19.70   Infrastructure -> /src/src/Infrastructure/bin/Release/Infrastructure.dll
+#19 26.22   Consensus -> /src/src/Consensus/bin/Release/Consensus.dll
+#19 29.86   DataAccess -> /src/src/DataAccess/bin/Release/DataAccess.dll
+#19 33.75   Messaging -> /src/src/Messaging/bin/Release/Messaging.dll
+#19 38.70   Wallet -> /src/src/Wallet/bin/Release/Wallet.dll
+#19 44.94   Blockchain -> /src/src/Blockchain/bin/Release/Blockchain.dll
+#19 47.58   TestsInfrastructure -> /src/src/TestsInfrastructure/bin/Release/TestsInfrastructure.dll
+#19 54.57   Consensus.Tests -> /src/src/Consensus.Tests/bin/Release/Consensus.Tests.dll
+#19 59.24   AddressDB -> /src/src/AddressDB/bin/Release/AddressDB.dll
+#19 65.88   Api -> /src/src/Api/bin/Release/Api.dll
+#19 70.50   Cli -> /src/src/Cli/bin/Release/zen-cli.exe
+#19 74.31   Miner -> /src/src/Miner/bin/Release/Miner.dll
+#19 79.80   Network -> /src/src/Network/bin/Release/Network.dll
+#19 85.25   Node -> /src/src/Node/bin/Release/zen-node.exe
+#19 88.74   Network.Tests -> /src/src/Network.Tests/bin/Release/Network.Tests.dll
+#19 94.81   Blockchain.Tests -> /src/src/Blockchain.Tests/bin/Release/Blockchain.Tests.dll
+#19 100.0   Api.Tests -> /src/src/Api.Tests/bin/Release/Api.Tests.dll
+#19 104.1   Wallet.Tests -> /src/src/Wallet.Tests/bin/Release/Wallet.Tests.dll
+#19 108.9   Infrastructure.Tests -> /src/src/Infrastructure.Tests/bin/Release/Infrastructure.Tests.dll
+#19 113.6   Zulib.Tests -> /src/src/Zulib.Tests/bin/Release/Zulib.Tests.dll
+#19 113.9   -> Using app.config
+#19 115.3   Consensus.Features.Tests -> /src/src/Consensus.Features.Tests/bin/Release/Consensus.Features.Tests.dll
+#19 118.2   AddressDB.Tests -> /src/src/AddressDB.Tests/bin/Release/AddressDB.Tests.dll
+#19 120.6   SerializationBenchmark -> /src/src/SerializationBenchmark/bin/Release/SerializationBenchmark.exe
+#19 DONE 121.3s
+
+#20 [stage-1 11/13] COPY devnet-entrypoint.sh /entrypoint.sh
+#20 DONE 0.1s
+
+#21 [stage-1 12/13] RUN sed -i "s/\r$//" /entrypoint.sh && chmod +x /entrypoint.sh
+#21 DONE 0.2s
+
+#22 [stage-1 13/13] WORKDIR /zen
+#22 DONE 0.0s
+
+#23 exporting to image
+#23 exporting layers
+#23 exporting layers 144.8s done
+#23 exporting manifest sha256:443573e81bbefe1459f6337cde0acdc796e8605ecc3137c52263b0b936af13ec done
+#23 exporting config sha256:8639941e0ea1522377ad773c228defce1b59d36a7582fb4b90d2f929f8415679 done
+#23 exporting attestation manifest sha256:cbbe64865a9b50a78d6f61c58ae6f11e7f18760c1a53c76388b11b57fe05da95 0.0s done
+#23 exporting manifest list sha256:1fa2efea4eeaf969d62118e86ac53a9639e6cad9dfdfea7c0111dfd5ad282db5 done
+#23 naming to docker.io/library/zen-tput-a:latest done
+#23 unpacking to docker.io/library/zen-tput-a:latest
+#23 unpacking to docker.io/library/zen-tput-a:latest 14.3s done
+#23 DONE 159.2s
