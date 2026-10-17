@@ -452,6 +452,25 @@ changes nothing.
 ]
 ```
 
+## Tickers beyond crypto (forex, stocks, commodities): when they are added
+
+Crypto comes first. Nothing fixed in percent fits every ticker: EUR/USD moves about 0.3–0.5% a day, BTC 2–4%. So
+everything is per ticker, scaled by its own volatility σ (the annual figure of `BETS_VOL`, to be re-estimated from the
+oracle's own rounds):
+1. **Lines,** when there is more than one per close: offsets in multiples of the expected move to the close,
+   e.g. ±0.5σ√T and ±1σ√T, not ±1% / ±3%. With one line per ticker and close (the FPMM plan), the line is the
+   price at seed time.
+2. **Option A's jump threshold:** a multiple of the ticker's normal one-minute move, e.g. 3 × σ × √(1 min / 1 year),
+   not a fixed 0.5%. The same scaling already drives the spread (`spreadFor`).
+3. **Closes and trading windows:**
+   - Closes only within the market's trading hours: FX Monday to Friday, stocks on exchange days, and the same for
+     gold.
+   - No trading in a window around scheduled releases: rate decisions, payrolls, CPI for FX; earnings for stocks.
+     The windows come from an economic calendar; the service stops quoting (option A), and the contract cutoff covers
+     the close.
+   - With FPMM, a release before the cutoff can still be traded against the reserve. Either the market's cutoff is
+     moved before the release, or no market closes within a few hours after one.
+
 ## For mainnet
 
 - The U64 cap on `k` (4,000 zUSDC a side) is for the testnet. Mainnet needs one of these:
